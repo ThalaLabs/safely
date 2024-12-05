@@ -3,8 +3,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 
-const program = new Command();
-
 import {
   Aptos,
   AptosConfig,
@@ -24,6 +22,9 @@ import {
   AccountAddress,
   MoveString,
 } from '@aptos-labs/ts-sdk';
+import { knownAddresses } from './label.js';
+
+const program = new Command();
 
 const config = new AptosConfig({ network: Network.MAINNET });
 const aptos = new Aptos(config);
@@ -107,7 +108,12 @@ program
 
 program.parse();
 
-async function decode(hexStrWithPrefix: string) {
+async function decode(hexStrWithPrefix: string): Promise<{
+  function_id: string;
+  type_args: string[];
+  args: SimpleEntryFunctionArgumentTypes[];
+  contract?: string;
+}> {
   const hexStrWithoutPrefix = hexStrWithPrefix.slice(2);
   const bytes = new Uint8Array(
     hexStrWithoutPrefix.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
@@ -115,22 +121,22 @@ async function decode(hexStrWithPrefix: string) {
   const deserializer = new Deserializer(bytes);
   const payload = MultiSigTransactionPayload.deserialize(deserializer);
   const { module_name, function_name, type_args, args } = payload.transaction_payload;
-  const functionId = `${module_name.address.toString()}::${module_name.name.identifier}::${function_name.identifier}`;
+  const packageAddress = module_name.address.toString();
+  const packageName = module_name.name.identifier;
+  const functionName = function_name.identifier;
+  const functionId = `${packageAddress}::${packageName}::${functionName}`;
+  const contract = knownAddresses[packageAddress] || 'unknown';
 
-  const abi = await fetchEntryFunctionAbi(
-    module_name.address.toString(),
-    module_name.name.identifier,
-    function_name.identifier,
-    config
-  );
+  const abi = await fetchEntryFunctionAbi(packageAddress, packageName, functionName, config);
   const functionArgs = abi.parameters.map((typeTag, i) => {
     return parseArg(typeTag, args[i]);
   });
   const typeArgs = type_args.map((arg) => arg.toString());
   return {
-    functionId,
-    typeArgs,
-    functionArgs,
+    function_id: functionId,
+    type_args: typeArgs,
+    args: functionArgs,
+    contract,
   };
 }
 
