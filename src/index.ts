@@ -34,7 +34,13 @@ program.name('dontrust').description('CLI tool for Aptos multisig management').v
 program
   .command('pending')
   .description('List pending transactions for a multisig')
-  .requiredOption('-m, --multisig <address>', 'multisig contract address')
+  .requiredOption('-m, --multisig <address>', 'multisig contract address', (value) => {
+    if (!/^0x[0-9a-f]{64}$/i.test(value)) {
+      console.error(chalk.red('Multisig address must be 0x followed by 64 hex characters'));
+      process.exit(1);
+    }
+    return value;
+  })
   .action(async (options) => {
     try {
       console.log(chalk.blue(`Fetching pending transactions for multisig: ${options.multisig}`));
@@ -96,7 +102,17 @@ program
 program
   .command('decode')
   .description('Decode multisig transaction bytes')
-  .requiredOption('-b, --bytes <bytes>', 'transaction bytes to decode')
+  .requiredOption(
+    '-b, --bytes <bytes>',
+    'transaction bytes to decode (hex string starting with 0x)',
+    (value) => {
+      if (!value.startsWith('0x') || !/^0x[0-9a-fA-F]+$/.test(value)) {
+        console.error(chalk.red('Error: bytes must be a hex string starting with 0x'));
+        process.exit(1);
+      }
+      return value;
+    }
+  )
   .action(async (options) => {
     try {
       console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));
