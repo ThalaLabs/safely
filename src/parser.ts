@@ -3,7 +3,9 @@ import {
   Aptos,
   fetchEntryFunctionAbi,
   MoveString,
+  MoveVector,
   MultiSigTransactionPayload,
+  U256,
 } from '@aptos-labs/ts-sdk';
 
 import {
@@ -78,6 +80,9 @@ function parseArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunc
   if (tt === 'u128') {
     return U128.deserialize(deserializer).value;
   }
+  if (tt === 'u256') {
+    return U256.deserialize(deserializer).value;
+  }
   if (tt === 'bool') {
     return Bool.deserialize(deserializer).value;
   }
@@ -90,6 +95,46 @@ function parseArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunc
   if (tt.startsWith('0x1::object::Object')) {
     return AccountAddress.deserialize(deserializer).toString();
   }
-  // TODO: vector, bytes
+  if (tt === 'vector<u8>') {
+    // TODO: very likely input params is a string
+    return arg.bcsToBytes();
+  }
+  if (tt.startsWith('vector')) {
+    if (tt === 'vector<u16>') {
+      return MoveVector.deserialize(deserializer, U16).values;
+    }
+    if (tt === 'vector<u32>') {
+      return MoveVector.deserialize(deserializer, U32).values;
+    }
+    if (tt === 'vector<u64>') {
+      return MoveVector.deserialize(deserializer, U64).values;
+    }
+    if (tt === 'vector<u128>') {
+      return MoveVector.deserialize(deserializer, U128).values;
+    }
+    if (tt === 'vector<u256>') {
+      return MoveVector.deserialize(deserializer, U256).values;
+    }
+    if (tt === 'vector<bool>') {
+      return MoveVector.deserialize(deserializer, Bool).values;
+    }
+    if (tt === 'vector<address>') {
+      return MoveVector.deserialize(deserializer, AccountAddress).values;
+    }
+    if (tt === 'vector<0x1::string::String>') {
+      return MoveVector.deserialize(deserializer, MoveString).values;
+    }
+    if (tt === 'vector<0x1::object::Object>') {
+      return MoveVector.deserialize(deserializer, AccountAddress).values;
+    }
+    if (tt === 'vector<vector<u8>>') {
+      // TODO: handle publish_package payload
+      return arg.bcsToBytes();
+    }
+    if (tt.startsWith('vector<vector')) {
+      // TODO: not sure how to handle this
+      return arg.bcsToBytes();
+    }
+  }
   throw new Error(`Unsupported type tag: ${tt}`);
 }
