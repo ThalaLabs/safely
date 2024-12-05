@@ -1,6 +1,7 @@
 import { decode } from './parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from './addressBook.js';
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, WriteSetChange } from '@aptos-labs/ts-sdk';
+import chalk from 'chalk';
 
 export interface MultisigTransaction {
   payload: { vec: [string] };
@@ -127,4 +128,49 @@ export async function numPendingTxns(aptos: Aptos, multisig: string): Promise<nu
   ]);
 
   return Number(nextSnMove as string) - Number(lastResolvedSnMove as string) - 1;
+}
+
+export async function summarizeTransactionSimulation(changes: WriteSetChange[]) {
+  const groupedByAddress = changes.reduce(
+    (acc, change) => {
+      // @ts-ignore
+      const { address } = change;
+      if (!acc[address]) acc[address] = [];
+      acc[address].push(change);
+      return acc;
+    },
+    {} as Record<string, any[]>
+  );
+
+  const addressBook = await getAllAddressesFromBook();
+  for (const [address, changes] of Object.entries(groupedByAddress)) {
+    const aliasedAddress = fetchAliasIfPresent(addressBook, address);
+    console.log(chalk.green.bold(`Address: ${aliasedAddress}`));
+
+    changes.forEach(({ data, type }) => {
+      const resourceName = type.split('::').slice(-1)[0];
+      console.log(chalk.yellow(`  - Resource: ${resourceName}`));
+
+      Object.entries(data).forEach(([key, value]) => {
+        const summary = summarizeData(value);
+        console.log(chalk.gray(`    ${key}: ${summary}`));
+      });
+    });
+
+    console.log(); // Add spacing between addresses
+  }
+}
+
+function summarizeData(data: any): string {
+  if (!data) return 'No data available';
+  if (Array.isArray(data)) return `${data.length} item(s)`;
+  if (typeof data === 'object') {
+    return Object.entries(data)
+      .map(([key, value]) => `${key}: ${summarizeData(value)}`)
+      .join(', ');
+  }
+  if (typeof data == 'boolean') {
+    return data.toString();
+  }
+  return data.toString();
 }
