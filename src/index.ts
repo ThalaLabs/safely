@@ -27,7 +27,7 @@ import { knownAddresses } from './label.js';
 interface MultisigTransaction {
   payload: { vec: [string] };
   payload_hash: { vec: [string] };
-  // votes: {map: [[string, boolean]]},
+  votes: { data: [{ key: string; value: boolean }] };
   creator: string;
   creation_time_secs: string;
 }
@@ -120,11 +120,17 @@ program
         );
         pendingMove = pending;
       }
-      const payloads = await Promise.all(pendingMove.map((p) => decode(p.payload.vec[0])));
+      // TODO: handle payload_hash
+      const kept = pendingMove.map(({ votes, payload, payload_hash, ...rest }) => rest);
+      const payloadsDecoded = await Promise.all(pendingMove.map((p) => decode(p.payload.vec[0])));
+      const votesDecoded = pendingMove.map((p) =>
+        p.votes.data.map(({ key, value }) => `${key} ${value ? '✅' : '❌'}`)
+      );
       const txns = sequenceNumbers.map((sn, i) => ({
         sequence_number: sn,
-        ...pendingMove[i],
-        payload_decoded: payloads[i],
+        ...kept[i],
+        payload_decoded: payloadsDecoded[i],
+        votes: votesDecoded[i],
       }));
 
       for (const txn of txns) {
