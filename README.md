@@ -15,6 +15,12 @@ A **highly visible** CLI tool for managing multisig on Aptos.
 
 ## Usage
 
+List executed transactions for a multisig:
+`dontrust executed -m <multisig-address>`
+
+List last N executed transactions for a multisig:
+`dontrust executed -m <multisig-address> -l <number>`
+
 List pending transactions for a multisig:
 `dontrust pending -m <multisig-address>`
 
