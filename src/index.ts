@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import inquirer from 'inquirer';
 import chalk from 'chalk';
 
 const program = new Command();
@@ -12,6 +11,18 @@ import {
   Deserializer,
   MultiSigTransactionPayload,
   Network,
+  fetchEntryFunctionAbi,
+  SimpleEntryFunctionArgumentTypes,
+  U128,
+  EntryFunctionArgument,
+  TypeTag,
+  U8,
+  U64,
+  U32,
+  U16,
+  Bool,
+  AccountAddress,
+  MoveString,
 } from '@aptos-labs/ts-sdk';
 
 const config = new AptosConfig({ network: Network.MAINNET });
@@ -66,12 +77,16 @@ program
         (_, i) => lastResolvedSn + (i + 1)
       );
       const pending = pendingMove as any[];
-      const zipped = sequenceNumbers.map((sn, i) => ({
-        sequenceNumber: sn,
+      const payloads = await Promise.all(pending.map((p) => decode(p.payload.vec[0])));
+      const txns = sequenceNumbers.map((sn, i) => ({
+        sequence_number: sn,
         ...pending[i],
-        payload_decoded: decode(pending[i].payload.vec[0]),
+        payload_decoded: payloads[i],
       }));
-      console.log(zipped);
+
+      for (const txn of txns) {
+        console.log(txn);
+      }
     } catch (error) {
       console.error(chalk.red(`Error: ${(error as Error).message}`));
     }
@@ -84,7 +99,7 @@ program
   .action(async (options) => {
     try {
       console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));
-      console.log(decode(options.bytes));
+      console.log(await decode(options.bytes));
     } catch (error) {
       console.error(chalk.red(`Error: ${(error as Error).message}`));
     }
@@ -92,7 +107,7 @@ program
 
 program.parse();
 
-function decode(hexStrWithPrefix: string) {
+async function decode(hexStrWithPrefix: string) {
   const hexStrWithoutPrefix = hexStrWithPrefix.slice(2);
   const bytes = new Uint8Array(
     hexStrWithoutPrefix.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
@@ -100,12 +115,55 @@ function decode(hexStrWithPrefix: string) {
   const deserializer = new Deserializer(bytes);
   const payload = MultiSigTransactionPayload.deserialize(deserializer);
   const { module_name, function_name, type_args, args } = payload.transaction_payload;
-  const functionId = `${module_name.address.toString()}:${module_name.name.identifier}::${function_name.identifier}`;
+  const functionId = `${module_name.address.toString()}::${module_name.name.identifier}::${function_name.identifier}`;
+
+  const abi = await fetchEntryFunctionAbi(
+    module_name.address.toString(),
+    module_name.name.identifier,
+    function_name.identifier,
+    config
+  );
+  const functionArgs = abi.parameters.map((typeTag, i) => {
+    return parseArg(typeTag, args[i]);
+  });
   const typeArgs = type_args.map((arg) => arg.toString());
-  const functionArgs = args.map((arg) => arg.bcsToHex());
   return {
     functionId,
     typeArgs,
     functionArgs,
   };
+}
+
+function parseArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunctionArgumentTypes {
+  const tt = typeTag.toString();
+  const deserializer = new Deserializer(arg.bcsToBytes());
+  if (tt === 'u8') {
+    return U8.deserialize(deserializer).value;
+  }
+  if (tt === 'u16') {
+    return U16.deserialize(deserializer).value;
+  }
+  if (tt === 'u32') {
+    return U32.deserialize(deserializer).value;
+  }
+  if (tt === 'u64') {
+    return U64.deserialize(deserializer).value;
+  }
+  if (tt === 'u128') {
+    return U128.deserialize(deserializer).value;
+  }
+  if (tt === 'bool') {
+    return Bool.deserialize(deserializer).value;
+  }
+  if (tt === 'address') {
+    return AccountAddress.deserialize(deserializer).toString();
+  }
+  if (tt === 'string') {
+    return MoveString.deserialize(deserializer).value;
+  }
+  if (tt.startsWith('0x1::object::Object')) {
+    return AccountAddress.deserialize(deserializer).toString();
+  }
+  // TODO: vector, bytes
+  throw new Error(`Unsupported type tag: ${tt}`);
 }
