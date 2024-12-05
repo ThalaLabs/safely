@@ -11,12 +11,15 @@ A **highly visible** CLI tool for managing multisig on Aptos.
 3. Build: `npm run build`
 4. Link locally: `npm link`
 5. Format code: `npm run format`
-6. Run in dev mode: `dontrust`
+6. Run in dev mode: `npm run start`
 
 ## Usage
 
 List pending transactions for a multisig:
 `dontrust pending -m <multisig-address>`
+
+List a specific pending transaction for a multisig:
+`dontrust pending -m <multisig-address> -s <sequence-number>`
 
 Decode transaction bytes:
 `dontrust decode -b <transaction-bytes>`
