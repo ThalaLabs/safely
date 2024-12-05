@@ -29,3 +29,12 @@ List a specific pending transaction for a multisig:
 
 Decode transaction bytes:
 `dontrust decode -b <transaction-bytes>`
+
+List addresses in address book:
+`dontrust addresses list`
+
+Add address to address book:
+`dontrust addresses add --alias bob-treasury --address 0x123`
+
+Remove address from address book:
+`dontrust addresses remove --alias bob-treasury`

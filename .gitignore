@@ -26,6 +26,9 @@ build/
 .env
 .env.*
 
+# Address book DB
+addressbook.json
+
 # Logs
 logs/
 *.log

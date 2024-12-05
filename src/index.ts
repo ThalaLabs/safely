@@ -2,6 +2,8 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { Low } from 'lowdb';
+import { JSONFilePreset } from 'lowdb/node';
 
 import {
   Aptos,
@@ -32,6 +34,15 @@ interface MultisigTransaction {
   creator: string;
   creation_time_secs: string;
 }
+
+type Address = {
+  alias: string;
+  address: string;
+};
+
+type AddressBook = {
+  addresses: Address[];
+};
 
 const program = new Command();
 
@@ -179,8 +190,16 @@ program
       // TODO: handle payload_hash
       const kept = pendingMove.map(({ votes, payload, payload_hash, ...rest }) => rest);
       const payloadsDecoded = await Promise.all(pendingMove.map((p) => decode(p.payload.vec[0])));
+      const addressBook = await getAllAddressesFromBook();
       const votesDecoded = pendingMove.map((p) =>
-        p.votes.data.map(({ key, value }) => `${key} ${value ? '✅' : '❌'}`)
+        p.votes.data.map(({ key, value }) => {
+          // Find the index of the entry with the matching alias
+          const index = addressBook.addresses.findIndex((entry) => entry.address === key);
+
+          // Use alias if it exists in the map, otherwise fallback to the address
+          const humanReadable = addressBook.addresses[index]?.alias || key;
+          return `${humanReadable} ${value ? '✅' : '❌'}`;
+        })
       );
       const txns = sequenceNumbers.map((sn, i) => ({
         sequence_number: sn,
@@ -215,6 +234,75 @@ program
     try {
       console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));
       console.log(await decode(options.bytes));
+    } catch (error) {
+      console.error(chalk.red(`Error: ${(error as Error).message}`));
+    }
+  });
+
+// Parent command: `addresses`
+const addressesCommand = program.command('addresses').description('Manage the local address book');
+
+// Subcommand: `addresses add`
+addressesCommand
+  .command('add')
+  .description('Add a new alias and address to the local address book')
+  .requiredOption<string>('--alias <alias>', 'Alias for the address', (value) =>
+    value.trim().toLowerCase()
+  )
+  .requiredOption<string>('--address <address>', 'Hexadecimal address (e.g., 0xabc)', (value) => {
+    const trimmed = value.trim();
+
+    // Validate address format (must be a hexadecimal string starting with 0x)
+    if (!trimmed.startsWith('0x') || !/^0x[0-9a-fA-F]+$/.test(trimmed)) {
+      throw new Error('Address must be a valid hex string starting with 0x.');
+    }
+    return trimmed;
+  })
+  .action(async (options: { alias: string; address: string }) => {
+    try {
+      // Add alias and address to the storage
+      await addAddressToBook(options.alias, options.address);
+      console.log(chalk.green(`Successfully added: ${options.alias} -> ${options.address}`));
+    } catch (error) {
+      console.error(chalk.red(`Error: ${(error as Error).message}`));
+    }
+  });
+
+// Subcommand: `addresses list`
+addressesCommand
+  .command('list')
+  .description('List all saved aliases and addresses')
+  .action(async () => {
+    try {
+      const addressBook = await getAllAddressesFromBook();
+
+      if (!addressBook.addresses || Object.keys(addressBook).length === 0) {
+        console.log(chalk.yellow('No addresses found in the address book.'));
+        return;
+      }
+
+      console.log(chalk.blue('Address Book:'));
+
+      // Iterate through the addresses and print each alias-address pair
+      addressBook.addresses.forEach(({ alias, address }, index) => {
+        console.log(chalk.green(`${index + 1}. ${alias}: ${address}`));
+      });
+    } catch (error) {
+      console.error(chalk.red(`Error: ${(error as Error).message}`));
+    }
+  });
+
+addressesCommand
+  .command('remove')
+  .description('Remove an alias from the local address book')
+  .requiredOption<string>('--alias <alias>', 'Alias to remove', (value) =>
+    value.trim().toLowerCase()
+  )
+  .action(async (options: { alias: string }) => {
+    try {
+      // Remove the alias
+      await removeAddressFromBook(options.alias);
+      console.log(chalk.green(`Successfully removed alias "${options.alias}".`));
     } catch (error) {
       console.error(chalk.red(`Error: ${(error as Error).message}`));
     }
@@ -290,4 +378,40 @@ function parseArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunc
   }
   // TODO: vector, bytes
   throw new Error(`Unsupported type tag: ${tt}`);
+}
+
+async function ensureDb(): Promise<Low<AddressBook>> {
+  const defaultData: AddressBook = { addresses: [] };
+  return await JSONFilePreset<AddressBook>('addressbook.json', defaultData);
+}
+async function getAllAddressesFromBook(): Promise<AddressBook> {
+  const db = await ensureDb();
+  await db.read();
+  return db.data;
+}
+
+async function addAddressToBook(alias: string, address: string) {
+  const addressBookEntry = { alias, address };
+
+  const db = await ensureDb();
+  await db.update(({ addresses }) => addresses.push(addressBookEntry));
+}
+
+async function removeAddressFromBook(alias: string) {
+  const db = await ensureDb();
+
+  // Find the index of the entry with the matching alias
+  const index = db.data.addresses.findIndex((entry) => entry.alias === alias);
+
+  if (index === -1) {
+    throw new Error(`Alias "${alias}" does not exist in address book.`);
+  }
+
+  // Remove the entry from the array
+  db.data.addresses.splice(index, 1);
+
+  // Save the updated data back to the database
+  await db.write();
+
+  console.log(`Alias "${alias}" has been successfully removed.`);
 }
