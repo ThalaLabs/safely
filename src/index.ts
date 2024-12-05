@@ -22,7 +22,8 @@ import {
   AccountAddress,
   MoveString,
 } from '@aptos-labs/ts-sdk';
-import { knownAddresses } from './label.js';
+import { knownAddresses } from './labels.js';
+import { getTransactionExplanation } from './templates.js';
 
 interface MultisigTransaction {
   payload: { vec: [string] };
@@ -171,6 +172,7 @@ async function decode(hexStrWithPrefix: string): Promise<{
   type_args: string[];
   args: SimpleEntryFunctionArgumentTypes[];
   contract?: string;
+  explanation: string;
 }> {
   const hexStrWithoutPrefix = hexStrWithPrefix.slice(2);
   const bytes = new Uint8Array(
@@ -190,11 +192,14 @@ async function decode(hexStrWithPrefix: string): Promise<{
     return parseArg(typeTag, args[i]);
   });
   const typeArgs = type_args.map((arg) => arg.toString());
+  const explanation = getTransactionExplanation(functionId, typeArgs, functionArgs);
+
   return {
     function_id: functionId,
     type_args: typeArgs,
     args: functionArgs,
     contract,
+    explanation,
   };
 }
 
