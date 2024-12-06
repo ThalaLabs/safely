@@ -1,7 +1,7 @@
 import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { getAllAddressesFromBook } from '../addressBook.js';
+import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { numPendingTxns } from '../transactions.js';
 
 export const registerSummaryCommand = (program: Command, aptos: Aptos) => {
@@ -26,11 +26,7 @@ export const registerSummaryCommand = (program: Command, aptos: Aptos) => {
 
       const addressBook = await getAllAddressesFromBook();
       const aliasedSigners = signers.map((signer) => {
-        // Find the index of the entry with the matching alias
-        const index = addressBook.addresses.findIndex((entry) => entry.address === signer);
-
-        // Use alias if it exists in the map, otherwise fallback to the address
-        return addressBook.addresses[index]?.alias || signer;
+        return fetchAliasIfPresent(addressBook, signer);
       });
 
       console.log(chalk.blue('Multisig Signers:'));

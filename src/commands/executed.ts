@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { decode } from '../parser.js';
+import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 
 export function registerExecutedCommand(program: Command, aptos: Aptos) {
   program
@@ -46,10 +47,12 @@ export function registerExecutedCommand(program: Command, aptos: Aptos) {
       const payloadsDecoded = await Promise.all(
         events.map((e) => decode(aptos, e.data.transaction_payload))
       );
+      const addressBook = await getAllAddressesFromBook();
       for (const [i, event] of events.entries()) {
         const version = event.transaction_version as number;
         const sn = Number(event.data.sequence_number);
-        const executor = event.data.executor;
+        const executor = fetchAliasIfPresent(addressBook, event.data.executor);
+
         console.log({
           sequence_number: sn,
           executor,

@@ -1,5 +1,5 @@
 import { decode } from './parser.js';
-import { getAllAddressesFromBook } from './addressBook.js';
+import { fetchAliasIfPresent, getAllAddressesFromBook } from './addressBook.js';
 import { Aptos } from '@aptos-labs/ts-sdk';
 
 export interface MultisigTransaction {
@@ -82,15 +82,12 @@ export async function fetchPendingTxns(
   const payloadsDecoded = await Promise.all(
     pendingMove.map((p) => decode(aptos, p.payload.vec[0]))
   );
+
   const addressBook = await getAllAddressesFromBook();
   const votesDecoded = pendingMove.map((p) =>
     p.votes.data.map(({ key, value }) => {
-      // Find the index of the entry with the matching alias
-      const index = addressBook.addresses.findIndex((entry) => entry.address === key);
-
-      // Use alias if it exists in the map, otherwise fallback to the address
-      const humanReadable = addressBook.addresses[index]?.alias || key;
-      return `${humanReadable} ${value ? '✅' : '❌'}`;
+      const voter = fetchAliasIfPresent(addressBook, key);
+      return `${voter} ${value ? '✅' : '❌'}`;
     })
   );
 
@@ -129,5 +126,5 @@ export async function numPendingTxns(aptos: Aptos, multisig: string): Promise<nu
     nextSnPromise,
   ]);
 
-  return Number(nextSnMove as string) - Number(lastResolvedSnMove as string);
+  return Number(nextSnMove as string) - Number(lastResolvedSnMove as string) - 1;
 }
