@@ -2,7 +2,7 @@ import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { getAllAddressesFromBook } from '../addressBook.js';
-import { fetchPendingTxns } from '../transactions.js'
+import { numPendingTxns } from '../transactions.js';
 
 export const registerSummaryCommand = (program: Command, aptos: Aptos) => {
   program
@@ -16,7 +16,6 @@ export const registerSummaryCommand = (program: Command, aptos: Aptos) => {
       return value;
     })
     .action(async (options: { multisig: string }) => {
-
       // 1. Fetch Signer Info
       const [signers] = await aptos.view<string[][]>({
         payload: {
@@ -56,11 +55,9 @@ export const registerSummaryCommand = (program: Command, aptos: Aptos) => {
       console.log(chalk.blue(`Signatures Required: ${numSignaturesRequired}`));
 
       // 3. Fetch Pending SN Txns
-      console.log('\n');
-
-      console.log(chalk.blue('Pending Txns:'));
       try {
-        fetchPendingTxns(aptos, options.multisig, undefined)
+        const txCount = await numPendingTxns(aptos, options.multisig);
+        console.log(chalk.blue(`\nNum Pending Txns: ${txCount}`));
       } catch (e) {
         console.error(chalk.red(`No pending transactions found: ${(e as Error).message}`));
       }

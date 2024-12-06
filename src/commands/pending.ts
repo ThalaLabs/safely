@@ -29,7 +29,10 @@ export const registerPendingCommand = (program: Command, aptos: Aptos) => {
     .action(async (options: { multisig: string; sequence_number?: number }) => {
       try {
         console.log(chalk.blue(`Fetching pending transactions for multisig: ${options.multisig}`));
-        fetchPendingTxns(aptos, options.multisig, options.sequence_number)
+        let txns = await fetchPendingTxns(aptos, options.multisig, options.sequence_number);
+        for (const txn of txns) {
+          console.log(txn);
+        }
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
