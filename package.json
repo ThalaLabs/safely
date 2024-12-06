@@ -26,5 +26,9 @@
     "commander": "^12.1.0",
     "inquirer": "^12.1.0",
     "lowdb": "^7.0.1"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
   }
 }

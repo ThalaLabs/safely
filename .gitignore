@@ -34,10 +34,9 @@ logs/
 # Testing
 coverage/
 
-# Production build
-build/
-dist/
-
 # Misc
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Add pnpm specific files
+.pnpm-store/
