@@ -45,3 +45,10 @@ export async function removeAddressFromBook(alias: string) {
 
   console.log(`Alias "${alias}" has been successfully removed.`);
 }
+
+export function fetchAliasIfPresent(addressBook: AddressBook, address: string): string {
+  // Find the index of the entry with the matching alias
+  const index = addressBook.addresses.findIndex((entry) => entry.address === address);
+
+  return addressBook.addresses[index]?.alias || address;
+}
