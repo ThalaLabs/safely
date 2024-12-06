@@ -12,7 +12,13 @@
     "format": "prettier --write \"**/*.{js,ts,json,md}\" --ignore-path .gitignore"
   },
   "keywords": [],
-  "description": "",
+  "description": "A highly visible CLI tool for managing multisig on Aptos.",
+  "author": "ThalaLabs",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
     "@types/node": "^22.10.1",
