@@ -7,6 +7,7 @@ import { registerPendingCommand } from './commands/pending.js';
 import { registerAddressesCommand } from './commands/addresses.js';
 import { registerExecutedCommand } from './commands/executed.js';
 import { registerDecodeCommand } from './commands/decode.js';
+import { registerSummaryCommand } from './commands/summary.js';
 
 const program = new Command();
 
@@ -19,5 +20,6 @@ registerPendingCommand(program, aptos);
 registerExecutedCommand(program, aptos);
 registerDecodeCommand(program, aptos);
 registerAddressesCommand(program);
+registerSummaryCommand(program, aptos);
 
 program.parse();
