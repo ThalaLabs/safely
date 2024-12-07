@@ -8,6 +8,7 @@ import { registerAddressesCommand } from './commands/addresses.js';
 import { registerExecutedCommand } from './commands/executed.js';
 import { registerDecodeCommand } from './commands/decode.js';
 import { registerSummaryCommand } from './commands/summary.js';
+import { registerSimulateCommand } from './commands/simulate.js';
 
 const program = new Command();
 
@@ -21,5 +22,6 @@ registerExecutedCommand(program, aptos);
 registerDecodeCommand(program, aptos);
 registerAddressesCommand(program);
 registerSummaryCommand(program, aptos);
+registerSimulateCommand(program, aptos);
 
 program.parse();
