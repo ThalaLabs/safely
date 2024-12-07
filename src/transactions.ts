@@ -2,6 +2,7 @@ import { decode } from './parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from './addressBook.js';
 import { Aptos, WriteSetChange } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
+import { loadAccount } from './accounts.js';
 
 export interface MultisigTransaction {
   payload: { vec: [string] };
@@ -18,6 +19,8 @@ export interface MultisigTransactionDecoded {
   payload_decoded: unknown;
   votes: string[];
 }
+
+// Pending Txns
 
 export async function fetchPendingTxns(
   aptos: Aptos,
@@ -160,6 +163,45 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
     console.log(); // Add spacing between addresses
   }
 }
+
+// Approve/Reject Transcations
+
+export async function voteTransaction(
+  aptos: Aptos,
+  multisig: string,
+  sequence_number: number,
+  profile: string,
+  approve: boolean
+) {
+  const account = loadAccount(profile);
+
+  // build transaction
+  let txn = await aptos.transaction.build.simple({
+    sender: account.accountAddress,
+    data: {
+      function: `0x1::multisig_account::vote_transaction`,
+      functionArguments: [multisig, sequence_number, approve],
+    },
+  });
+
+  // sign & submit vote
+  const pendingTxn = await aptos.signAndSubmitTransaction({
+    signer: account,
+    transaction: txn,
+  });
+
+  const { success, vm_status } = await aptos.waitForTransaction({
+    transactionHash: pendingTxn.hash,
+  });
+
+  if (success) {
+    console.log(chalk.blue(`Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}`));
+  } else {
+    console.log(`Vote nok:`, vm_status);
+  }
+}
+
+// Tx Data
 
 function summarizeData(data: any): string {
   if (!data) return 'No data available';
