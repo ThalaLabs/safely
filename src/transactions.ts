@@ -1,8 +1,7 @@
 import { decode } from './parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from './addressBook.js';
-import { Aptos, WriteSetChange } from '@aptos-labs/ts-sdk';
+import { Aptos, InputEntryFunctionData, WriteSetChange } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
-import { loadAccount } from './accounts.js';
 
 export interface MultisigTransaction {
   payload: { vec: [string] };
@@ -16,7 +15,7 @@ export interface MultisigTransactionDecoded {
   sequence_number: number;
   creation_time_secs: string;
   creator: string;
-  payload_decoded: unknown;
+  payload_decoded: InputEntryFunctionData;
   votes: string[];
 }
 

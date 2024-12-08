@@ -1,6 +1,7 @@
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { select } from '@inquirer/prompts';
 import { fetchPendingTxns } from '../transactions.js';
 
 export const registerPendingCommand = (program: Command) => {
@@ -32,13 +33,37 @@ export const registerPendingCommand = (program: Command) => {
 
       try {
         console.log(chalk.blue(`Fetching pending transactions for multisig: ${options.multisig}`));
-        // const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
-        let txns = await fetchPendingTxns(aptos, options.multisig, options.sequence_number);
-        for (const txn of txns) {
-          console.log(txn);
+        const txns = await fetchPendingTxns(aptos, options.multisig, options.sequence_number);
+
+        while (true) {
+          const choices = txns.map((txn) => ({
+            name: `#${txn.sequence_number} ${chalk.yellow(truncateString(txn.payload_decoded.function, 30))}`,
+            value: txn.sequence_number.toString(),
+          }));
+
+          choices.push({
+            name: 'Exit',
+            value: 'quit',
+          });
+
+          const answer = await select({
+            message: 'Select a pending transaction:',
+            choices,
+            pageSize: 20,
+          });
+
+          if (answer === 'quit') {
+            break;
+          }
+          console.log(txns.find((txn) => txn.sequence_number.toString() === answer));
         }
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
     });
 };
+
+// Helper function to truncate long strings
+function truncateString(str: string, length: number): string {
+  return str.length > length ? str.substring(0, length) + '...' : str;
+}
