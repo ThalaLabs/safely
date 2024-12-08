@@ -1,10 +1,10 @@
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { MultisigTransaction, summarizeTransactionSimulation } from '../transactions.js';
 import { decode } from '../parser.js';
 
-export const registerSimulateCommand = (program: Command, aptos: Aptos) => {
+export const registerSimulateCommand = (program: Command) => {
   program
     .command('simulate')
     .description('Simulate transaction for a multisig (ignoring signer thresholds)')
@@ -28,6 +28,9 @@ export const registerSimulateCommand = (program: Command, aptos: Aptos) => {
       }
     )
     .action(async (options: { multisig: string; sequence_number: number }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
+
       try {
         console.log(
           chalk.blue(

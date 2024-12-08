@@ -1,10 +1,10 @@
 import * as fs from 'node:fs';
 import { Command } from 'commander';
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { encode } from '../parser.js';
 
-export function registerEncodeCommand(program: Command, aptos: Aptos) {
+export function registerEncodeCommand(program: Command) {
   program
     .command('encode')
     .description('Encode entry function payload')
@@ -17,6 +17,9 @@ export function registerEncodeCommand(program: Command, aptos: Aptos) {
       }
     )
     .action(async (options: { txnPayloadFile: string }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
+
       try {
         console.log(chalk.blue(`Encoding transaction payload: ${options.txnPayloadFile}`));
         // TODO: verify the file is a valid json with function_id, type_args, and args

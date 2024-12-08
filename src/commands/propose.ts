@@ -1,12 +1,12 @@
 import { Command } from 'commander';
 import fs from 'fs';
 import path from 'path';
-import { Aptos, generateTransactionPayload } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, generateTransactionPayload, Network } from '@aptos-labs/ts-sdk';
 import { decodeEntryFunction } from '../entryFunction.js';
 import { loadAccount } from '../accounts.js';
 import chalk from 'chalk';
 
-export function registerProposeCommand(program: Command, aptos: Aptos) {
+export function registerProposeCommand(program: Command) {
   program
     .command('propose')
     .description('Propose a multisig transaction')
@@ -15,6 +15,9 @@ export function registerProposeCommand(program: Command, aptos: Aptos) {
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(
       async (options: { multisigAddress: string; profile: string; txnPayloadFile: string }) => {
+        const network = program.getOptionValue('network') as Network;
+        const aptos = new Aptos(new AptosConfig({ network }));
+
         try {
           const { multisigAddress, profile, txnPayloadFile } = options;
           const sender = loadAccount(profile);

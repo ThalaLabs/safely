@@ -1,9 +1,9 @@
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { voteTransaction } from '../transactions.js';
 
-export const registerVoteCommand = (program: Command, aptos: Aptos) => {
+export const registerVoteCommand = (program: Command) => {
   const voteCommand = program.command('vote').description('Vote on pending transaction');
 
   voteCommand
@@ -32,6 +32,9 @@ export const registerVoteCommand = (program: Command, aptos: Aptos) => {
       return value;
     })
     .action(async (options: { multisig: string; sequence_number: number; profile: string }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
+
       try {
         console.log(
           chalk.blue(
@@ -77,6 +80,9 @@ export const registerVoteCommand = (program: Command, aptos: Aptos) => {
       return value;
     })
     .action(async (options: { multisig: string; sequence_number: number; profile: string }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
+
       try {
         console.log(
           chalk.blue(

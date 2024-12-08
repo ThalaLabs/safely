@@ -1,9 +1,9 @@
 import { Command } from 'commander';
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { decode } from '../parser.js';
 
-export function registerDecodeCommand(program: Command, aptos: Aptos) {
+export function registerDecodeCommand(program: Command) {
   program
     .command('decode')
     .description('Decode multisig transaction bytes')
@@ -19,6 +19,9 @@ export function registerDecodeCommand(program: Command, aptos: Aptos) {
       }
     )
     .action(async (options: { bytes: string }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
+
       try {
         console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));
         console.log(await decode(aptos, options.bytes));
