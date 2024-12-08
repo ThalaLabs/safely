@@ -15,4 +15,4 @@ A **highly visible** CLI tool for managing multisig on Aptos.
 
 ## Docs
 
-See [DOCS.txt](./DOCS.txt).
+See [docs.md](./docs.md).
