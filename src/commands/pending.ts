@@ -1,9 +1,9 @@
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { fetchPendingTxns } from '../transactions.js';
 
-export const registerPendingCommand = (program: Command, aptos: Aptos) => {
+export const registerPendingCommand = (program: Command) => {
   program
     .command('pending')
     .description('Get pending transaction(s) for a multisig')
@@ -27,8 +27,12 @@ export const registerPendingCommand = (program: Command, aptos: Aptos) => {
       }
     )
     .action(async (options: { multisig: string; sequence_number?: number }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
+
       try {
         console.log(chalk.blue(`Fetching pending transactions for multisig: ${options.multisig}`));
+        // const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
         let txns = await fetchPendingTxns(aptos, options.multisig, options.sequence_number);
         for (const txn of txns) {
           console.log(txn);

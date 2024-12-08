@@ -1,10 +1,10 @@
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { numPendingTxns } from '../transactions.js';
 
-export const registerSummaryCommand = (program: Command, aptos: Aptos) => {
+export const registerSummaryCommand = (program: Command) => {
   program
     .command('summary')
     .description('Get summary information for a multisig')
@@ -16,6 +16,9 @@ export const registerSummaryCommand = (program: Command, aptos: Aptos) => {
       return value;
     })
     .action(async (options: { multisig: string }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
+
       // 1. Fetch Signer Info
       const [signers] = await aptos.view<string[][]>({
         payload: {

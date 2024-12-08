@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 
-import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import { registerPendingCommand } from './commands/pending.js';
 import { registerAddressesCommand } from './commands/addresses.js';
 import { registerExecutedCommand } from './commands/executed.js';
@@ -17,22 +16,23 @@ import { registerExecuteCommand } from './commands/execute.js';
 
 const program = new Command();
 
-// TODO: configurable network
-const config = new AptosConfig({ network: Network.DEVNET });
-const aptos = new Aptos(config);
-
 program.name('dontrust').description('CLI tool for Aptos multisig management').version('1.0.0');
+program.addOption(
+  new Option('-n, --network <network>', 'network to use')
+    .choices(['devnet', 'testnet', 'mainnet'])
+    .default('mainnet')
+);
 
-registerPendingCommand(program, aptos);
-registerExecutedCommand(program, aptos);
-registerDecodeCommand(program, aptos);
-registerEncodeCommand(program, aptos);
+registerPendingCommand(program);
+registerExecutedCommand(program);
+registerDecodeCommand(program);
+registerEncodeCommand(program);
 registerAddressesCommand(program);
-registerSummaryCommand(program, aptos);
-registerSimulateCommand(program, aptos);
-registerVoteCommand(program, aptos);
+registerSummaryCommand(program);
+registerSimulateCommand(program);
+registerVoteCommand(program);
 registerDocgenCommand(program);
-registerProposeCommand(program, aptos);
-registerExecuteCommand(program, aptos);
+registerProposeCommand(program);
+registerExecuteCommand(program);
 
 program.parse();

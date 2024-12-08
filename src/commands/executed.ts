@@ -1,11 +1,11 @@
 import { Command } from 'commander';
-import { Aptos } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { decode } from '../parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { knownAddresses } from '../labels.js';
 
-export function registerExecutedCommand(program: Command, aptos: Aptos) {
+export function registerExecutedCommand(program: Command) {
   program
     .command('executed')
     .description('Get successfully executed transactions for a multisig')
@@ -29,6 +29,8 @@ export function registerExecutedCommand(program: Command, aptos: Aptos) {
       }
     )
     .action(async (options: { multisig: string; limit?: number }) => {
+      const network = program.getOptionValue('network') as Network;
+      const aptos = new Aptos(new AptosConfig({ network }));
       const n = options.limit || 10;
       console.log(
         chalk.blue(
