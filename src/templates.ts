@@ -2,6 +2,8 @@ import { SimpleEntryFunctionArgumentTypes } from '@aptos-labs/ts-sdk';
 
 type TemplateFunction = (typeArgs: string[], args: SimpleEntryFunctionArgumentTypes[]) => string;
 
+// TODO: rework
+
 export const transactionTemplates: Record<string, TemplateFunction> = {
   '0x024c90c44edf46aa02c3e370725b918a59c52b5aa551388feb258bd5a1e82271::isolated_lending::create_pair_with_jump_model_fa_entry':
     (_typeArgs, args) =>

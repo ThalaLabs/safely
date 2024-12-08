@@ -26,19 +26,11 @@ import {
   U64,
   U8,
 } from '@aptos-labs/ts-sdk';
-import { knownAddresses } from './labels.js';
-import { getTransactionExplanation } from './templates.js';
 
-// TODO: return type should be InputEntryFunctionData
 export async function decode(
   aptos: Aptos,
   hexStrWithPrefix: string
-): Promise<
-  InputEntryFunctionData & {
-    contract?: string;
-    explanation: string;
-  }
-> {
+): Promise<InputEntryFunctionData> {
   const hexStrWithoutPrefix = hexStrWithPrefix.slice(2);
   const bytes = new Uint8Array(
     hexStrWithoutPrefix.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
@@ -50,21 +42,17 @@ export async function decode(
   const packageName = module_name.name.identifier;
   const functionName = function_name.identifier;
   const functionId = `${packageAddress}::${packageName}::${functionName}`;
-  const contract = knownAddresses[packageAddress] || 'unknown';
 
   const abi = await fetchEntryFunctionAbi(packageAddress, packageName, functionName, aptos.config);
   const functionArguments = abi.parameters.map((typeTag, i) => {
     return decodeArg(typeTag, args[i]);
   });
   const typeArguments = type_args.map((arg) => arg.toString());
-  const explanation = getTransactionExplanation(functionId, typeArguments, functionArguments);
 
   return {
     function: functionId as MoveFunctionId,
     typeArguments,
     functionArguments,
-    contract,
-    explanation,
   };
 }
 
