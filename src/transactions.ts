@@ -164,47 +164,6 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
   }
 }
 
-// Approve/Reject Transcations
-
-export async function voteTransaction(
-  aptos: Aptos,
-  multisig: string,
-  sequence_number: number,
-  profile: string,
-  approve: boolean
-) {
-  const account = loadAccount(profile);
-
-  // build transaction
-  let txn = await aptos.transaction.build.simple({
-    sender: account.accountAddress,
-    data: {
-      function: `0x1::multisig_account::vote_transaction`,
-      functionArguments: [multisig, sequence_number, approve],
-    },
-  });
-
-  // sign & submit vote
-  const pendingTxn = await aptos.signAndSubmitTransaction({
-    signer: account,
-    transaction: txn,
-  });
-
-  const { success, vm_status } = await aptos.waitForTransaction({
-    transactionHash: pendingTxn.hash,
-  });
-
-  if (success) {
-    console.log(
-      chalk.blue(
-        `Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
-      )
-    );
-  } else {
-    console.log(`Vote nok:`, vm_status);
-  }
-}
-
 // Tx Data
 
 function summarizeData(data: any): string {
