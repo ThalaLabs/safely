@@ -4,7 +4,9 @@ import {
   EntryFunction,
   fetchEntryFunctionAbi,
   Identifier,
+  InputEntryFunctionData,
   ModuleId,
+  MoveFunctionId,
   MoveString,
   MoveVector,
   MultiSigTransactionPayload,
@@ -27,16 +29,16 @@ import {
 import { knownAddresses } from './labels.js';
 import { getTransactionExplanation } from './templates.js';
 
+// TODO: return type should be InputEntryFunctionData
 export async function decode(
   aptos: Aptos,
   hexStrWithPrefix: string
-): Promise<{
-  function_id: string;
-  type_args: string[];
-  args: SimpleEntryFunctionArgumentTypes[];
-  contract?: string;
-  explanation: string;
-}> {
+): Promise<
+  InputEntryFunctionData & {
+    contract?: string;
+    explanation: string;
+  }
+> {
   const hexStrWithoutPrefix = hexStrWithPrefix.slice(2);
   const bytes = new Uint8Array(
     hexStrWithoutPrefix.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
@@ -51,21 +53,23 @@ export async function decode(
   const contract = knownAddresses[packageAddress] || 'unknown';
 
   const abi = await fetchEntryFunctionAbi(packageAddress, packageName, functionName, aptos.config);
-  const functionArgs = abi.parameters.map((typeTag, i) => {
+  const functionArguments = abi.parameters.map((typeTag, i) => {
     return decodeArg(typeTag, args[i]);
   });
-  const typeArgs = type_args.map((arg) => arg.toString());
-  const explanation = getTransactionExplanation(functionId, typeArgs, functionArgs);
+  const typeArguments = type_args.map((arg) => arg.toString());
+  const explanation = getTransactionExplanation(functionId, typeArguments, functionArguments);
 
   return {
-    function_id: functionId,
-    type_args: typeArgs,
-    args: functionArgs,
+    function: functionId as MoveFunctionId,
+    typeArguments,
+    functionArguments,
     contract,
     explanation,
   };
 }
 
+// TODO: do we still need this?
+// TODO: refactor using generateTransactionPayload
 export async function encode(
   aptos: Aptos,
   functionId: string,

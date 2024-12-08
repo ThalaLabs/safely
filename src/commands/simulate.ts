@@ -52,12 +52,7 @@ export const registerSimulateCommand = (program: Command, aptos: Aptos) => {
 
         const transactionToSimulate = await aptos.transaction.build.simple({
           sender: options.multisig,
-          data: {
-            // @ts-ignore
-            function: decodedTxn.function_id,
-            typeArguments: decodedTxn.type_args,
-            functionArguments: decodedTxn.args,
-          },
+          data: decodedTxn,
           withFeePayer: true,
         });
 
