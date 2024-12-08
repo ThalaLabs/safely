@@ -3,37 +3,31 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
 import { fetchPendingTxns } from '../transactions.js';
+import { validateMultisigAddress, validateSequenceNumber } from '../validators.js';
 
 export const registerPendingCommand = (program: Command) => {
   program
     .command('pending')
-    .description('Get pending transaction(s) for a multisig')
-    .requiredOption('-m, --multisig <address>', 'multisig contract address', (value) => {
-      if (!/^0x[0-9a-f]{64}$/i.test(value)) {
-        console.error(chalk.red('Multisig address must be 0x followed by 64 hex characters'));
-        process.exit(1);
-      }
-      return value;
-    })
-    .option(
-      '-s, --sequence_number <number>',
-      'fetch transaction with specific sequence number',
-      (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num < 0) {
-          console.error(chalk.red('Sequence number must be a non-negative integer'));
-          process.exit(1);
-        }
-        return num;
-      }
+    .description('List pending transactions for a multisig')
+    .requiredOption(
+      '-m, --multisig-address <address>',
+      'multisig account address',
+      validateMultisigAddress
     )
-    .action(async (options: { multisig: string; sequence_number?: number }) => {
+    .option(
+      '-s, --sequence-number <number>',
+      'fetch transaction with specific sequence number',
+      validateSequenceNumber
+    )
+    .action(async (options: { multisigAddress: string; sequenceNumber?: number }) => {
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
 
       try {
-        console.log(chalk.blue(`Fetching pending transactions for multisig: ${options.multisig}`));
-        const txns = await fetchPendingTxns(aptos, options.multisig, options.sequence_number);
+        console.log(
+          chalk.blue(`Fetching pending transactions for multisig: ${options.multisigAddress}`)
+        );
+        const txns = await fetchPendingTxns(aptos, options.multisigAddress, options.sequenceNumber);
 
         while (true) {
           const choices = txns.map((txn) => ({

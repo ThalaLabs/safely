@@ -1,22 +1,22 @@
 ## safely pending [options]
 
-Get pending transaction(s) for a multisig
+List pending transactions for a multisig
 
 ```
 Options:
-  -m, --multisig <address>        multisig contract address
-  -s, --sequence_number <number>  fetch transaction with specific sequence number
-  -h, --help                      display help for command
+  -m, --multisig-address <address>  multisig account address
+  -s, --sequence-number <number>    fetch transaction with specific sequence number
+  -h, --help                        display help for command
 ```
 ## safely executed [options]
 
-Get successfully executed transactions for a multisig
+List executed transactions for a multisig
 
 ```
 Options:
-  -m, --multisig <address>  multisig contract address
-  -l, --limit <number>      number of executed transactions to fetch (default: 10)
-  -h, --help                display help for command
+  -m, --multisig-address <address>  multisig account address
+  -l, --limit <number>              number of executed transactions to fetch (default: 10)
+  -h, --help                        display help for command
 ```
 ## safely decode [options]
 
@@ -78,12 +78,12 @@ Options:
 ```
 ## safely summary [options]
 
-Get summary information for a multisig
+Get summary of a multisig account
 
 ```
 Options:
-  -m, --multisig <address>  multisig contract address
-  -h, --help                display help for command
+  -m, --multisig-address <address>  multisig account address
+  -h, --help                        display help for command
 ```
 ## safely simulate [options]
 
@@ -91,9 +91,9 @@ Simulate transaction for a multisig (ignoring signer thresholds)
 
 ```
 Options:
-  -m, --multisig <address>        multisig contract address
-  -s, --sequence_number <number>  fetch transaction with specific sequence number
-  -h, --help                      display help for command
+  -m, --multisig-address <address>  multisig account address
+  -s, --sequence-number <number>    fetch transaction with specific sequence number
+  -h, --help                        display help for command
 ```
 ## safely vote [options]
 
@@ -101,22 +101,22 @@ Vote on a pending transaction
 
 ```
 Options:
-  -m, --multisig <address>        multisig contract address
-  -s, --sequence_number <number>  sequence number of transaction to vote on
-  -a, --approve <boolean>         true to approve, false to reject
-  -p, --profile <address>         profile name of voter
-  -h, --help                      display help for command
+  -m, --multisig-address <address>  multisig account address
+  -s, --sequence-number <number>    sequence number of transaction to vote on
+  -a, --approve <boolean>           true to approve, false to reject
+  -p, --profile <address>           profile name of voter
+  -h, --help                        display help for command
 ```
 ## safely propose [options]
 
-Propose a multisig transaction
+Propose a new transaction for a multisig
 
 ```
 Options:
-  -m, --multisig-address <multisig-address>  Multisig address
-  -p, --profile <profile>                    Profile to use for the transaction
-  -f, --txn-payload-file <file>              Path to the transaction payload file
-  -h, --help                                 display help for command
+  -m, --multisig-address <address>  multisig account address
+  -p, --profile <profile>           Profile to use for the transaction
+  -f, --txn-payload-file <file>     Path to the transaction payload file
+  -h, --help                        display help for command
 ```
 ## safely execute [options]
 
@@ -124,8 +124,9 @@ Execute a multisig transaction
 
 ```
 Options:
-  -m, --multisig-address <multisig-address>  Multisig address
-  -a, --approve <boolean>                    true to approve, false to reject
-  -p, --profile <profile>                    Profile to use for the transaction
-  -h, --help                                 display help for command
+  -m, --multisig-address <address>  multisig account address
+  -s, --sequence-number <number>    sequence number of transaction to execute
+  -a, --approve <boolean>           true to approve, false to reject
+  -p, --profile <profile>           Profile to use for the transaction
+  -h, --help                        display help for command
 ```
