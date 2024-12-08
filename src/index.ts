@@ -11,6 +11,7 @@ import { registerSummaryCommand } from './commands/summary.js';
 import { registerSimulateCommand } from './commands/simulate.js';
 import { registerEncodeCommand } from './commands/encode.js';
 import { registerVoteCommand } from './commands/vote.js';
+import { registerDocgenCommand } from './commands/docgen.js';
 
 const program = new Command();
 
@@ -28,5 +29,6 @@ registerAddressesCommand(program);
 registerSummaryCommand(program, aptos);
 registerSimulateCommand(program, aptos);
 registerVoteCommand(program, aptos);
+registerDocgenCommand(program);
 
 program.parse();
