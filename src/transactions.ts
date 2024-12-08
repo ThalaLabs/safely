@@ -195,7 +195,11 @@ export async function voteTransaction(
   });
 
   if (success) {
-    console.log(chalk.blue(`Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}`));
+    console.log(
+      chalk.blue(
+        `Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+      )
+    );
   } else {
     console.log(`Vote nok:`, vm_status);
   }

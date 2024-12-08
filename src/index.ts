@@ -12,11 +12,13 @@ import { registerSimulateCommand } from './commands/simulate.js';
 import { registerEncodeCommand } from './commands/encode.js';
 import { registerVoteCommand } from './commands/vote.js';
 import { registerDocgenCommand } from './commands/docgen.js';
+import { registerProposeCommand } from './commands/propose.js';
+import { registerExecuteCommand } from './commands/execute.js';
 
 const program = new Command();
 
 // TODO: configurable network
-const config = new AptosConfig({ network: Network.MAINNET });
+const config = new AptosConfig({ network: Network.DEVNET });
 const aptos = new Aptos(config);
 
 program.name('dontrust').description('CLI tool for Aptos multisig management').version('1.0.0');
@@ -30,5 +32,7 @@ registerSummaryCommand(program, aptos);
 registerSimulateCommand(program, aptos);
 registerVoteCommand(program, aptos);
 registerDocgenCommand(program);
+registerProposeCommand(program, aptos);
+registerExecuteCommand(program, aptos);
 
 program.parse();
