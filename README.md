@@ -1,8 +1,6 @@
-# dontrust
+# safely
 
-Don't trust, verify.
-
-A **highly visible** CLI tool for managing multisig on Aptos.
+Manage your Aptos multisig, **safely**.
 
 ## Development
 

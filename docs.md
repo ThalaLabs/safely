@@ -1,4 +1,4 @@
-## dontrust pending [options]
+## safely pending [options]
 
 Get pending transaction(s) for a multisig
 
@@ -9,7 +9,7 @@ Options:
   -h, --help                      display help for command
 ```
 
-## dontrust executed [options]
+## safely executed [options]
 
 Get successfully executed transactions for a multisig
 
@@ -20,7 +20,7 @@ Options:
   -h, --help                display help for command
 ```
 
-## dontrust decode [options]
+## safely decode [options]
 
 Decode multisig transaction bytes
 
@@ -30,7 +30,7 @@ Options:
   -h, --help           display help for command
 ```
 
-## dontrust encode [options]
+## safely encode [options]
 
 Encode entry function payload
 
@@ -40,7 +40,7 @@ Options:
   -h, --help                                 display help for command
 ```
 
-## dontrust addresses [options] [command]
+## safely addresses [options] [command]
 
 Manage the local address book
 
@@ -54,7 +54,7 @@ Commands:
   help [command]    display help for command
 ```
 
-## dontrust addresses add [options]
+## safely addresses add [options]
 
 Add a new alias and address to the local address book
 
@@ -65,7 +65,7 @@ Options:
   -h, --help           display help for command
 ```
 
-## dontrust addresses list [options]
+## safely addresses list [options]
 
 List all saved aliases and addresses
 
@@ -74,7 +74,7 @@ Options:
   -h, --help  display help for command
 ```
 
-## dontrust addresses remove [options]
+## safely addresses remove [options]
 
 Remove an alias from the local address book
 
@@ -84,7 +84,7 @@ Options:
   -h, --help       display help for command
 ```
 
-## dontrust summary [options]
+## safely summary [options]
 
 Get summary information for a multisig
 
@@ -94,7 +94,7 @@ Options:
   -h, --help                display help for command
 ```
 
-## dontrust simulate [options]
+## safely simulate [options]
 
 Simulate transaction for a multisig (ignoring signer thresholds)
 
@@ -105,7 +105,7 @@ Options:
   -h, --help                      display help for command
 ```
 
-## dontrust vote [options] [command]
+## safely vote [options] [command]
 
 Vote on pending transaction
 
@@ -118,7 +118,7 @@ Commands:
   help [command]     display help for command
 ```
 
-## dontrust vote approve [options]
+## safely vote approve [options]
 
 Approve pending transaction for a multisig
 
@@ -130,7 +130,7 @@ Options:
   -h, --help                      display help for command
 ```
 
-## dontrust vote reject [options]
+## safely vote reject [options]
 
 Reject pending transaction for a multisig
 
@@ -142,7 +142,7 @@ Options:
   -h, --help                      display help for command
 ```
 
-## dontrust propose [options]
+## safely propose [options]
 
 Propose a multisig transaction
 
@@ -154,7 +154,7 @@ Options:
   -h, --help                                 display help for command
 ```
 
-## dontrust execute [options]
+## safely execute [options]
 
 Execute a multisig transaction
 

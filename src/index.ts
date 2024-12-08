@@ -16,7 +16,7 @@ import { registerExecuteCommand } from './commands/execute.js';
 
 const program = new Command();
 
-program.name('dontrust').description('CLI tool for Aptos multisig management').version('1.0.0');
+program.name('safely').description('CLI tool for multisig management').version('0.0.1');
 program.addOption(
   new Option('-n, --network <network>', 'network to use')
     .choices(['devnet', 'testnet', 'mainnet'])
