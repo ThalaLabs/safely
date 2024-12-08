@@ -16,26 +16,44 @@ export function registerExecuteCommand(program: Command) {
     .command('execute')
     .description('Execute a multisig transaction')
     .requiredOption('-m, --multisig-address <multisig-address>', 'Multisig address')
+    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject')
     .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction')
-    .action(async (options: { multisigAddress: string; profile: string }) => {
+    .action(async (options: { multisigAddress: string; approve: boolean; profile: string }) => {
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
 
       try {
         const sender = loadAccount(options.profile);
-        // TODO: this throws error when there's no executable txn
-        const [txnPayloadBytes] = await aptos.view<[string]>({
-          payload: {
-            function: '0x1::multisig_account::get_next_transaction_payload',
-            functionArguments: [options.multisigAddress, '0x0'],
-          },
-        });
-        const entryFunction = await decode(aptos, txnPayloadBytes);
-        const txnPayload = await generateTransactionPayload({
-          multisigAddress: options.multisigAddress,
-          ...entryFunction,
-          aptosConfig: aptos.config,
-        });
+
+        let txnPayload;
+        if (options.approve) {
+          const [txnPayloadBytes] = await aptos.view<[string]>({
+            payload: {
+              function: '0x1::multisig_account::get_next_transaction_payload',
+              functionArguments: [options.multisigAddress, '0x0'],
+            },
+          });
+          const entryFunction = await decode(aptos, txnPayloadBytes);
+          txnPayload = await generateTransactionPayload({
+            multisigAddress: options.multisigAddress,
+            ...entryFunction,
+            aptosConfig: aptos.config,
+          });
+        } else {
+          const [txnPayloadBytes] = await aptos.view<[string]>({
+            payload: {
+              function: '0x1::multisig_account::get_next_transaction_payload',
+              functionArguments: [options.multisigAddress, '0x0'],
+            },
+          });
+          const entryFunction = await decode(aptos, txnPayloadBytes);
+          txnPayload = await generateTransactionPayload({
+            multisigAddress: options.multisigAddress,
+            ...entryFunction,
+            aptosConfig: aptos.config,
+          });
+        }
+
         const rawTxn = await generateRawTransaction({
           sender: sender.accountAddress,
           payload: txnPayload,
@@ -60,8 +78,7 @@ export function registerExecuteCommand(program: Command) {
           )
         );
       } catch (error) {
-        console.error('Error executing transaction:', error);
-        process.exit(1);
+        console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
     });
 }
