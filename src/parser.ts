@@ -1,10 +1,14 @@
 import {
   AccountAddress,
   Aptos,
+  EntryFunction,
   fetchEntryFunctionAbi,
+  Identifier,
+  ModuleId,
   MoveString,
   MoveVector,
   MultiSigTransactionPayload,
+  parseTypeTag,
   U256,
 } from '@aptos-labs/ts-sdk';
 
@@ -48,7 +52,7 @@ export async function decode(
 
   const abi = await fetchEntryFunctionAbi(packageAddress, packageName, functionName, aptos.config);
   const functionArgs = abi.parameters.map((typeTag, i) => {
-    return parseArg(typeTag, args[i]);
+    return decodeArg(typeTag, args[i]);
   });
   const typeArgs = type_args.map((arg) => arg.toString());
   const explanation = getTransactionExplanation(functionId, typeArgs, functionArgs);
@@ -62,7 +66,28 @@ export async function decode(
   };
 }
 
-function parseArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunctionArgumentTypes {
+export async function encode(
+  aptos: Aptos,
+  functionId: string,
+  typeArgs: string[],
+  args: SimpleEntryFunctionArgumentTypes[]
+): Promise<MultiSigTransactionPayload> {
+  const [packageAddress, packageName, functionName] = functionId.split('::');
+  const typeArgsTT = typeArgs.map((typeArg) => parseTypeTag(typeArg, { allowGenerics: false }));
+  const abi = await fetchEntryFunctionAbi(packageAddress, packageName, functionName, aptos.config);
+  const functionArgs = abi.parameters.map((typeTag, i) => {
+    return encodeArg(typeTag, args[i]);
+  });
+  const entryFunction = new EntryFunction(
+    ModuleId.fromStr(`${packageAddress}::${packageName}`),
+    new Identifier(functionName),
+    typeArgsTT,
+    functionArgs
+  );
+  return new MultiSigTransactionPayload(entryFunction);
+}
+
+function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunctionArgumentTypes {
   const tt = typeTag.toString();
   const deserializer = new Deserializer(arg.bcsToBytes());
   if (tt === 'u8') {
@@ -136,5 +161,35 @@ function parseArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunc
       return arg.bcsToBytes();
     }
   }
-  throw new Error(`Unsupported type tag: ${tt}`);
+  throw new Error(`[decodeArg] Unsupported type tag: ${tt}`);
+}
+
+function encodeArg(typeTag: TypeTag, arg: SimpleEntryFunctionArgumentTypes): EntryFunctionArgument {
+  const tt = typeTag.toString();
+  if (tt === 'u8') {
+    return new U8(arg as number);
+  }
+  if (tt === 'u16') {
+    return new U16(arg as number);
+  }
+  if (tt === 'u32') {
+    return new U32(arg as number);
+  }
+  if (tt === 'u64') {
+    return new U64(arg as bigint);
+  }
+  if (tt === 'u128') {
+    return new U128(arg as bigint);
+  }
+  if (tt === 'u256') {
+    return new U256(arg as bigint);
+  }
+  if (tt === 'bool') {
+    return new Bool(arg as boolean);
+  }
+  if (tt === 'address') {
+    return AccountAddress.from(arg as string);
+  }
+  // TODO: 0x1::string::String, 0x1::object::Object, vector<u8> and all vector<T> types
+  throw new Error(`[encodeArg] Unsupported type tag: ${tt}`);
 }

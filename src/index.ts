@@ -9,10 +9,12 @@ import { registerExecutedCommand } from './commands/executed.js';
 import { registerDecodeCommand } from './commands/decode.js';
 import { registerSummaryCommand } from './commands/summary.js';
 import { registerSimulateCommand } from './commands/simulate.js';
+import { registerEncodeCommand } from './commands/encode.js';
 import { registerVoteCommand } from './commands/vote.js';
 
 const program = new Command();
 
+// TODO: configurable network
 const config = new AptosConfig({ network: Network.MAINNET });
 const aptos = new Aptos(config);
 
@@ -21,6 +23,7 @@ program.name('dontrust').description('CLI tool for Aptos multisig management').v
 registerPendingCommand(program, aptos);
 registerExecutedCommand(program, aptos);
 registerDecodeCommand(program, aptos);
+registerEncodeCommand(program, aptos);
 registerAddressesCommand(program);
 registerSummaryCommand(program, aptos);
 registerSimulateCommand(program, aptos);
