@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { numPendingTxns } from '../transactions.js';
+import Table from 'cli-table3';
 
 export const registerSummaryCommand = (program: Command) => {
   program
@@ -19,46 +20,46 @@ export const registerSummaryCommand = (program: Command) => {
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
 
-      // 1. Fetch Signer Info
-      const [signers] = await aptos.view<string[][]>({
-        payload: {
-          function: '0x1::multisig_account::owners',
-          functionArguments: [options.multisig],
-        },
-      });
-
-      const addressBook = await getAllAddressesFromBook();
-      const aliasedSigners = signers.map((signer) => {
-        return fetchAliasIfPresent(addressBook, signer);
-      });
-
-      console.log(chalk.blue('Multisig Signers:'));
-
-      // Iterate through the addresses and print each alias-address pair
-      aliasedSigners.forEach((signer, index) => {
-        console.log(chalk.green(`${index + 1}. ${signer}`));
-      });
-
-      // 2. Fetch Signing Threshold
-      const [signaturesRequired] = await aptos.view<string[]>({
-        payload: {
-          function: '0x1::multisig_account::num_signatures_required',
-          functionArguments: [options.multisig],
-        },
-      });
-
-      const numSignaturesRequired = Number(signaturesRequired);
-
-      console.log('\n');
-
-      console.log(chalk.blue(`Signatures Required: ${numSignaturesRequired}`));
-
-      // 3. Fetch Pending SN Txns
       try {
+        const table = new Table();
+
+        // owners
+        const [signers] = await aptos.view<string[][]>({
+          payload: {
+            function: '0x1::multisig_account::owners',
+            functionArguments: [options.multisig],
+          },
+        });
+        const addressBook = await getAllAddressesFromBook();
+        const aliasedSigners = signers.map((signer) => {
+          const alias = fetchAliasIfPresent(addressBook, signer);
+          return `${signer} ${alias !== signer ? alias : ''}`.trim();
+        });
+        table.push({
+          Signers: aliasedSigners.join('\n'),
+        });
+
+        // # signatures required
+        const [signaturesRequired] = await aptos.view<string[]>({
+          payload: {
+            function: '0x1::multisig_account::num_signatures_required',
+            functionArguments: [options.multisig],
+          },
+        });
+        const numSignaturesRequired = Number(signaturesRequired);
+        table.push({
+          'Signatures Required': numSignaturesRequired,
+        });
+
+        // # pending txns
         const txCount = await numPendingTxns(aptos, options.multisig);
-        console.log(chalk.blue(`\nNum Pending Txns: ${txCount}`));
+        table.push({
+          'Pending Txns': txCount,
+        });
+
+        console.log(table.toString());
       } catch (e) {
-        console.error(chalk.red(`No pending transactions found: ${(e as Error).message}`));
+        console.error(chalk.red(`Error: ${(e as Error).message}`));
       }
     });
 };
