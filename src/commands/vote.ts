@@ -2,44 +2,30 @@ import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { loadAccount } from '../accounts.js';
+import { validateMultisigAddress, validateSequenceNumber, validateApprove } from '../validators.js';
 
 export const registerVoteCommand = (program: Command) => {
   program
     .command('vote')
     .description('Vote on a pending transaction')
-    .requiredOption('-m, --multisig <address>', 'multisig contract address', (value) => {
-      if (!/^0x[0-9a-f]{64}$/i.test(value)) {
-        console.error(chalk.red('Multisig address must be 0x followed by 64 hex characters'));
-        process.exit(1);
-      }
-      return value;
-    })
     .requiredOption(
-      '-s, --sequence_number <number>',
-      'sequence number of transaction to vote on',
-      (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num < 0) {
-          console.error(chalk.red('Sequence number must be a non-negative integer'));
-          process.exit(1);
-        }
-        return num;
-      }
+      '-m, --multisig-address <address>',
+      'multisig account address',
+      validateMultisigAddress
     )
-    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', (value) => {
-      if (value.toLowerCase() !== 'true' && value.toLowerCase() !== 'false') {
-        console.error(chalk.red('Approve must be either "true" or "false"'));
-        process.exit(1);
-      }
-      return value.toLowerCase() === 'true';
-    })
+    .requiredOption(
+      '-s, --sequence-number <number>',
+      'sequence number of transaction to vote on',
+      validateSequenceNumber
+    )
+    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateApprove)
     .requiredOption('-p, --profile <address>', 'profile name of voter', (value) => {
       return value;
     })
     .action(
       async (options: {
-        multisig: string;
-        sequence_number: number;
+        multisigAddress: string;
+        sequenceNumber: number;
         approve: boolean;
         profile: string;
       }) => {
@@ -50,8 +36,8 @@ export const registerVoteCommand = (program: Command) => {
           console.log(
             chalk.blue(
               `Voting ${options.approve ? '✅' : '❌'} on transaction with sequence number ${
-                options.sequence_number
-              } for multisig: ${options.multisig}`
+                options.sequenceNumber
+              } for multisig: ${options.multisigAddress}`
             )
           );
 
@@ -61,7 +47,7 @@ export const registerVoteCommand = (program: Command) => {
             sender: account.accountAddress,
             data: {
               function: `0x1::multisig_account::vote_transaction`,
-              functionArguments: [options.multisig, options.sequence_number, options.approve],
+              functionArguments: [options.multisigAddress, options.sequenceNumber, options.approve],
             },
           });
 

@@ -4,18 +4,17 @@ import chalk from 'chalk';
 import { decode } from '../parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { knownAddresses } from '../labels.js';
+import { validateMultisigAddress } from '../validators.js';
 
-export function registerExecutedCommand(program: Command) {
+export const registerExecutedCommand = (program: Command) => {
   program
     .command('executed')
-    .description('Get successfully executed transactions for a multisig')
-    .requiredOption('-m, --multisig <address>', 'multisig contract address', (value) => {
-      if (!/^0x[0-9a-f]{64}$/i.test(value)) {
-        console.error(chalk.red('Multisig address must be 0x followed by 64 hex characters'));
-        process.exit(1);
-      }
-      return value;
-    })
+    .description('List executed transactions for a multisig')
+    .requiredOption(
+      '-m, --multisig-address <address>',
+      'multisig account address',
+      validateMultisigAddress
+    )
     .option(
       '-l, --limit <number>',
       'number of executed transactions to fetch (default: 10)',
@@ -28,18 +27,18 @@ export function registerExecutedCommand(program: Command) {
         return num;
       }
     )
-    .action(async (options: { multisig: string; limit?: number }) => {
+    .action(async (options: { multisigAddress: string; limit?: number }) => {
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
       const n = options.limit || 10;
       console.log(
         chalk.blue(
-          `Fetching the most recent ${n} executed transactions for multisig: ${options.multisig}`
+          `Fetching the most recent ${n} executed transactions for multisig: ${options.multisigAddress}`
         )
       );
 
       const events = await aptos.getAccountEventsByEventType({
-        accountAddress: options.multisig,
+        accountAddress: options.multisigAddress,
         eventType: '0x1::multisig_account::TransactionExecutionSucceededEvent',
         options: {
           limit: n,
@@ -68,4 +67,4 @@ export function registerExecutedCommand(program: Command) {
         });
       }
     });
-}
+};

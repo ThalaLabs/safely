@@ -4,19 +4,18 @@ import { Command } from 'commander';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { numPendingTxns } from '../transactions.js';
 import Table from 'cli-table3';
+import { validateMultisigAddress } from '../validators.js';
 
 export const registerSummaryCommand = (program: Command) => {
   program
     .command('summary')
-    .description('Get summary information for a multisig')
-    .requiredOption('-m, --multisig <address>', 'multisig contract address', (value) => {
-      if (!/^0x[0-9a-f]{64}$/i.test(value)) {
-        console.error(chalk.red('Multisig address must be 0x followed by 64 hex characters'));
-        process.exit(1);
-      }
-      return value;
-    })
-    .action(async (options: { multisig: string }) => {
+    .description('Get summary of a multisig account')
+    .requiredOption(
+      '-m, --multisig-address <address>',
+      'multisig account address',
+      validateMultisigAddress
+    )
+    .action(async (options: { multisigAddress: string }) => {
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
 
@@ -27,7 +26,7 @@ export const registerSummaryCommand = (program: Command) => {
         const [signers] = await aptos.view<string[][]>({
           payload: {
             function: '0x1::multisig_account::owners',
-            functionArguments: [options.multisig],
+            functionArguments: [options.multisigAddress],
           },
         });
         const addressBook = await getAllAddressesFromBook();
@@ -43,7 +42,7 @@ export const registerSummaryCommand = (program: Command) => {
         const [signaturesRequired] = await aptos.view<string[]>({
           payload: {
             function: '0x1::multisig_account::num_signatures_required',
-            functionArguments: [options.multisig],
+            functionArguments: [options.multisigAddress],
           },
         });
         const numSignaturesRequired = Number(signaturesRequired);
@@ -52,7 +51,7 @@ export const registerSummaryCommand = (program: Command) => {
         });
 
         // # pending txns
-        const txCount = await numPendingTxns(aptos, options.multisig);
+        const txCount = await numPendingTxns(aptos, options.multisigAddress);
         table.push({
           'Pending Txns': txCount,
         });

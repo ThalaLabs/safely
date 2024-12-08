@@ -5,12 +5,17 @@ import { Aptos, AptosConfig, generateTransactionPayload, Network } from '@aptos-
 import { decodeEntryFunction } from '../entryFunction.js';
 import { loadAccount } from '../accounts.js';
 import chalk from 'chalk';
+import { validateMultisigAddress } from '../validators.js';
 
-export function registerProposeCommand(program: Command) {
+export const registerProposeCommand = (program: Command) => {
   program
     .command('propose')
-    .description('Propose a multisig transaction')
-    .requiredOption('-m, --multisig-address <multisig-address>', 'Multisig address')
+    .description('Propose a new transaction for a multisig')
+    .requiredOption(
+      '-m, --multisig-address <address>',
+      'multisig account address',
+      validateMultisigAddress
+    )
     .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(
@@ -85,4 +90,4 @@ export function registerProposeCommand(program: Command) {
         }
       }
     );
-}
+};

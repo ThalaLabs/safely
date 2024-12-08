@@ -3,38 +3,30 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { MultisigTransaction, summarizeTransactionSimulation } from '../transactions.js';
 import { decode } from '../parser.js';
+import { validateMultisigAddress, validateSequenceNumber } from '../validators.js';
 
 export const registerSimulateCommand = (program: Command) => {
   program
     .command('simulate')
     .description('Simulate transaction for a multisig (ignoring signer thresholds)')
-    .requiredOption('-m, --multisig <address>', 'multisig contract address', (value) => {
-      if (!/^0x[0-9a-f]{64}$/i.test(value)) {
-        console.error(chalk.red('Multisig address must be 0x followed by 64 hex characters'));
-        process.exit(1);
-      }
-      return value;
-    })
     .requiredOption(
-      '-s, --sequence_number <number>',
-      'fetch transaction with specific sequence number',
-      (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num < 0) {
-          console.error(chalk.red('Sequence number must be a non-negative integer'));
-          process.exit(1);
-        }
-        return num;
-      }
+      '-m, --multisig-address <address>',
+      'multisig account address',
+      validateMultisigAddress
     )
-    .action(async (options: { multisig: string; sequence_number: number }) => {
+    .requiredOption(
+      '-s, --sequence-number <number>',
+      'fetch transaction with specific sequence number',
+      validateSequenceNumber
+    )
+    .action(async (options: { multisigAddress: string; sequenceNumber: number }) => {
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
 
       try {
         console.log(
           chalk.blue(
-            `Simulating pending transaction with sn ${options.sequence_number} for multisig: ${options.multisig}...`
+            `Simulating pending transaction with sn ${options.sequenceNumber} for multisig: ${options.multisigAddress}...`
           )
         );
 
@@ -42,7 +34,7 @@ export const registerSimulateCommand = (program: Command) => {
         const [txn] = await aptos.view<[MultisigTransaction]>({
           payload: {
             function: '0x1::multisig_account::get_transaction',
-            functionArguments: [options.multisig, options.sequence_number],
+            functionArguments: [options.multisigAddress, options.sequenceNumber],
           },
         });
 
@@ -54,7 +46,7 @@ export const registerSimulateCommand = (program: Command) => {
         console.log(decodedTxn);
 
         const transactionToSimulate = await aptos.transaction.build.simple({
-          sender: options.multisig,
+          sender: options.multisigAddress,
           data: decodedTxn,
           withFeePayer: true,
         });
