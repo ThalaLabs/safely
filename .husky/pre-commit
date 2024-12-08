@@ -1,0 +1,5 @@
+pnpm build
+git diff --name-only --cached > /tmp/staged-files
+pnpm format
+node ./dist/index.js docgen
+git add $(cat /tmp/staged-files)

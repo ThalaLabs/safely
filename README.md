@@ -13,30 +13,6 @@ A **highly visible** CLI tool for managing multisig on Aptos.
 5. Format code: `pnpm format`
 6. Run in dev mode: `pnpm start`
 
-## Installation
+## Docs
 
-## Usage
-
-List executed transactions for a multisig:
-`dontrust executed -m <multisig-address>`
-
-List last N executed transactions for a multisig:
-`dontrust executed -m <multisig-address> -l <number>`
-
-List pending transactions for a multisig:
-`dontrust pending -m <multisig-address>`
-
-List a specific pending transaction for a multisig:
-`dontrust pending -m <multisig-address> -s <sequence-number>`
-
-Decode transaction bytes:
-`dontrust decode -b <transaction-bytes>`
-
-List addresses in address book:
-`dontrust addresses list`
-
-Add address to address book:
-`dontrust addresses add --alias bob-treasury --address 0x123`
-
-Remove address from address book:
-`dontrust addresses remove --alias bob-treasury`
+See [DOCS.txt](./DOCS.txt).
