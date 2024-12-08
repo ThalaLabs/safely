@@ -1,10 +1,10 @@
 {
   "type": "module",
-  "name": "dontrust",
-  "version": "1.0.0",
+  "name": "safely",
+  "version": "0.0.1",
   "main": "index.js",
   "bin": {
-    "dontrust": "./dist/index.js"
+    "safely": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
