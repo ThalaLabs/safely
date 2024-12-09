@@ -15,7 +15,7 @@ List executed transactions for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  -l, --limit <number>              number of executed transactions to fetch (default: 10)
+  -l, --limit <number>              number of executed transactions to fetch (default: 20)
   -h, --help                        display help for command
 ```
 ## safely decode [options]

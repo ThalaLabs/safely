@@ -31,7 +31,7 @@ export const registerPendingCommand = (program: Command) => {
 
         while (true) {
           const choices = txns.map((txn) => ({
-            name: `#${txn.sequence_number} ${chalk.yellow(truncateString(txn.payload_decoded.function, 30))}`,
+            name: `#${txn.sequence_number} ${chalk.yellow(txn.payload_decoded.function)}`,
             value: txn.sequence_number.toString(),
           }));
 
@@ -56,8 +56,3 @@ export const registerPendingCommand = (program: Command) => {
       }
     });
 };
-
-// Helper function to truncate long strings
-function truncateString(str: string, length: number): string {
-  return str.length > length ? str.substring(0, length) + '...' : str;
-}
