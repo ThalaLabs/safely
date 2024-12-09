@@ -5,6 +5,7 @@ import { decode } from '../parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { knownAddresses } from '../labels.js';
 import { validateMultisigAddress } from '../validators.js';
+import { select } from '@inquirer/prompts';
 
 export const registerExecutedCommand = (program: Command) => {
   program
@@ -17,7 +18,7 @@ export const registerExecutedCommand = (program: Command) => {
     )
     .option(
       '-l, --limit <number>',
-      'number of executed transactions to fetch (default: 10)',
+      'number of executed transactions to fetch (default: 20)',
       (value) => {
         const num = parseInt(value);
         if (isNaN(num) || num < 0) {
@@ -30,7 +31,7 @@ export const registerExecutedCommand = (program: Command) => {
     .action(async (options: { multisigAddress: string; limit?: number }) => {
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
-      const n = options.limit || 10;
+      const n = options.limit || 20;
       console.log(
         chalk.blue(
           `Fetching the most recent ${n} executed transactions for multisig: ${options.multisigAddress}`
@@ -51,20 +52,44 @@ export const registerExecutedCommand = (program: Command) => {
       );
 
       const addressBook = await getAllAddressesFromBook();
-      for (const [i, event] of events.entries()) {
+      const txns = events.map((event, i) => {
         const version = event.transaction_version as number;
         const sn = Number(event.data.sequence_number);
         const executor = fetchAliasIfPresent(addressBook, event.data.executor);
         const [packageAddress] = entryFunctions[i].function.split('::');
+        // TODO: find a more consistent way of adding this
         const contract = knownAddresses[packageAddress] || 'unknown';
 
-        console.log({
+        return {
           sequence_number: sn,
           executor,
           payload_decoded: entryFunctions[i],
           contract,
           version,
+        };
+      });
+
+      while (true) {
+        const choices = txns.map((txn) => ({
+          name: `#${txn.sequence_number} ${chalk.yellow(txn.payload_decoded.function)}`,
+          value: txn.sequence_number.toString(),
+        }));
+
+        choices.push({
+          name: 'Exit',
+          value: 'quit',
         });
+
+        const answer = await select({
+          message: 'Select an executed transaction:',
+          choices,
+          // pageSize: 20,
+        });
+
+        if (answer === 'quit') {
+          break;
+        }
+        console.log(txns.find((txn) => txn.sequence_number.toString() === answer));
       }
     });
 };
