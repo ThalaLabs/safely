@@ -2,9 +2,7 @@
 
 import { Command, Option } from 'commander';
 
-import { registerPendingCommand } from './commands/pending.js';
 import { registerAddressesCommand } from './commands/addresses.js';
-import { registerExecutedCommand } from './commands/executed.js';
 import { registerDecodeCommand } from './commands/decode.js';
 import { registerSummaryCommand } from './commands/summary.js';
 import { registerSimulateCommand } from './commands/simulate.js';
@@ -13,6 +11,7 @@ import { registerVoteCommand } from './commands/vote.js';
 import { registerDocgenCommand } from './commands/docgen.js';
 import { registerProposeCommand } from './commands/propose.js';
 import { registerExecuteCommand } from './commands/execute.js';
+import { registerProposalCommand } from './commands/proposal.js';
 
 const program = new Command();
 
@@ -23,8 +22,7 @@ program.addOption(
     .default('mainnet')
 );
 
-registerPendingCommand(program);
-registerExecutedCommand(program);
+registerProposalCommand(program);
 registerDecodeCommand(program);
 registerEncodeCommand(program);
 registerAddressesCommand(program);
