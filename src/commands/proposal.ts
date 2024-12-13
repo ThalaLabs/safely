@@ -21,9 +21,9 @@ export const registerProposalCommand = (program: Command) => {
       '-f, --filter <status>',
       'filter proposals by status',
       (value) => {
-        const validStatuses = ['pending', 'executed', 'rejected'];
+        const validStatuses = ['pending', 'succeeded', 'failed'];
         if (!validStatuses.includes(value)) {
-          console.error(chalk.red('Filter must be one of: pending, executed, rejected'));
+          console.error(chalk.red('Filter must be one of: pending, succeeded, failed'));
           process.exit(1);
         }
         return value;
@@ -46,7 +46,7 @@ export const registerProposalCommand = (program: Command) => {
     .action(
       async (options: {
         multisigAddress: string;
-        filter: 'pending' | 'executed' | 'rejected';
+        filter: 'pending' | 'succeeded' | 'failed';
         sequenceNumber?: number;
         limit?: number;
       }) => {
@@ -55,17 +55,18 @@ export const registerProposalCommand = (program: Command) => {
         const n = options.limit || 20;
 
         try {
+          // TODO: better type this
           let txns;
           if (options.filter === 'pending') {
             console.log(
               chalk.blue(`Fetching pending transactions for multisig: ${options.multisigAddress}`)
             );
             txns = await fetchPendingTxns(aptos, options.multisigAddress, options.sequenceNumber);
-          } else {
+          } else if (options.filter === 'succeeded' || options.filter === 'failed') {
             const eventType =
-              options.filter === 'executed'
+              options.filter === 'succeeded'
                 ? '0x1::multisig_account::TransactionExecutionSucceededEvent'
-                : '0x1::multisig_account::ExecuteRejectedTransactionEvent';
+                : '0x1::multisig_account::TransactionExecutionFailedEvent';
 
             console.log(
               chalk.blue(
@@ -83,7 +84,7 @@ export const registerProposalCommand = (program: Command) => {
             });
 
             const entryFunctions = await Promise.all(
-              events.map((e) => decode(aptos, e.data.transaction_payload))
+              events.map((event) => decode(aptos, event.data.transaction_payload))
             );
 
             const addressBook = await getAllAddressesFromBook();
@@ -102,6 +103,8 @@ export const registerProposalCommand = (program: Command) => {
                 version,
               };
             });
+          } else {
+            throw new Error(`Unsupported filter: ${options.filter}`);
           }
 
           while (true) {
