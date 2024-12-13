@@ -1,21 +1,13 @@
-## safely pending [options]
+## safely proposal [options]
 
-List pending transactions for a multisig
+List proposals for a multisig
 
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
+  -f, --filter <status>             filter proposals by status (default: "pending")
   -s, --sequence-number <number>    fetch transaction with specific sequence number
-  -h, --help                        display help for command
-```
-## safely executed [options]
-
-List executed transactions for a multisig
-
-```
-Options:
-  -m, --multisig-address <address>  multisig account address
-  -l, --limit <number>              number of executed transactions to fetch (default: 20)
+  -l, --limit <number>              number of transactions to fetch (default: 20)
   -h, --help                        display help for command
 ```
 ## safely decode [options]
