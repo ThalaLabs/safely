@@ -27,6 +27,8 @@ import {
   U8,
 } from '@aptos-labs/ts-sdk';
 
+// TODO: this could throw an error if the payload is not even from a valid
+// entry function, which could happen if we list rejected proposals
 export async function decode(
   aptos: Aptos,
   hexStrWithPrefix: string
@@ -45,8 +47,12 @@ export async function decode(
 
   const abi = await fetchEntryFunctionAbi(packageAddress, packageName, functionName, aptos.config);
   const functionArguments = abi.parameters.map((typeTag, i) => {
+    if (i >= args.length) {
+      return undefined;
+    }
     return decodeArg(typeTag, args[i]);
   });
+
   const typeArguments = type_args.map((arg) => arg.toString());
 
   return {
