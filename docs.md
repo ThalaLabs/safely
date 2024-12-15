@@ -5,9 +5,12 @@ List proposals for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  -f, --filter <status>             filter proposals by status (default: "pending")
-  -s, --sequence-number <number>    fetch transaction with specific sequence number
-  -l, --limit <number>              number of transactions to fetch (default: 20)
+  -f, --filter <status>             filter proposals by status (default:
+                                    "pending")
+  -s, --sequence-number <number>    fetch transaction with specific sequence
+                                    number
+  -l, --limit <number>              number of transactions to fetch (default:
+                                    20)
   -h, --help                        display help for command
 ```
 ## safely decode [options]
@@ -16,7 +19,8 @@ Decode multisig transaction bytes
 
 ```
 Options:
-  -b, --bytes <bytes>  transaction bytes to decode (hex string starting with 0x)
+  -b, --bytes <bytes>  transaction bytes to decode (hex string starting with
+                       0x)
   -h, --help           display help for command
 ```
 ## safely encode [options]
@@ -84,7 +88,8 @@ Simulate transaction for a multisig (ignoring signer thresholds)
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  -s, --sequence-number <number>    fetch transaction with specific sequence number
+  -s, --sequence-number <number>    fetch transaction with specific sequence
+                                    number
   -h, --help                        display help for command
 ```
 ## safely vote [options]
@@ -99,7 +104,7 @@ Options:
   -p, --profile <address>           profile name of voter
   -h, --help                        display help for command
 ```
-## safely propose [options]
+## safely propose [options] [command]
 
 Propose a new transaction for a multisig
 
@@ -107,8 +112,43 @@ Propose a new transaction for a multisig
 Options:
   -m, --multisig-address <address>  multisig account address
   -p, --profile <profile>           Profile to use for the transaction
-  -f, --txn-payload-file <file>     Path to the transaction payload file
   -h, --help                        display help for command
+Commands:
+  raw [options]                     Propose a raw transaction from a payload
+                                    file
+  predefined                        Propose a predefined transaction type
+  help [command]                    display help for command
+```
+## safely propose raw [options]
+
+Propose a raw transaction from a payload file
+
+```
+Options:
+  -f, --txn-payload-file <file>  Path to the transaction payload file
+  -h, --help                     display help for command
+```
+## safely propose predefined [options] [command]
+
+Propose a predefined transaction type
+
+```
+Options:
+  -h, --help                display help for command
+Commands:
+  transfer-coins [options]  Transfer coins to an address
+  help [command]            display help for command
+```
+## safely propose predefined transfer-coins [options]
+
+Transfer coins to an address
+
+```
+Options:
+  --coin-type <type>     Coin type
+  --recipient <address>  Recipient address
+  --amount <number>      Amount to transfer
+  -h, --help             display help for command
 ```
 ## safely execute [options]
 
