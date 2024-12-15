@@ -1,6 +1,6 @@
 # safely
 
-Manage your multisig transactions on Aptos with **safely**.
+Manage your multisig transactions on Aptos **safely**.
 
 ## Background
 
