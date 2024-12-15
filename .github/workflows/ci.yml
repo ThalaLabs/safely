@@ -54,7 +54,15 @@ jobs:
     - name: Build
       run: pnpm build
         
+    - name: Check NPM_TOKEN
+      id: check_token
+      run: |
+        if [ "${{ secrets.NPM_TOKEN }}" != '' ]; then
+          echo "has_token=true" >> $GITHUB_OUTPUT
+        fi
+
     - name: Publish to npm
+      if: steps.check_token.outputs.has_token == 'true'
       run: pnpm publish --no-git-checks
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
