@@ -12,6 +12,7 @@ import { registerDocgenCommand } from './commands/docgen.js';
 import { registerProposeCommand } from './commands/propose.js';
 import { registerExecuteCommand } from './commands/execute.js';
 import { registerProposalCommand } from './commands/proposal.js';
+import { registerOwnersCommand } from './commands/owners.js';
 
 const program = new Command();
 
@@ -32,5 +33,5 @@ registerVoteCommand(program);
 registerDocgenCommand(program);
 registerProposeCommand(program);
 registerExecuteCommand(program);
-
+registerOwnersCommand(program);
 program.parse();
