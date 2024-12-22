@@ -8,6 +8,13 @@ export function validateMultisigAddress(value: string): string {
   return value;
 }
 
+export function validateMultisigAddresses(value: string): string[] {
+  const addresses = value.split(',').map((addr) => addr.trim());
+  addresses.forEach((address) => validateMultisigAddress(address)); // Call validation on each address
+
+  return addresses;
+}
+
 export function validateSequenceNumber(value: string): number {
   const num = parseInt(value);
   if (isNaN(num) || num < 0) {

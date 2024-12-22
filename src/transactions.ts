@@ -1,6 +1,12 @@
 import { decode } from './parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from './addressBook.js';
-import { Aptos, InputEntryFunctionData, WriteSetChange } from '@aptos-labs/ts-sdk';
+import {
+  Account,
+  Aptos,
+  generateTransactionPayload,
+  InputEntryFunctionData,
+  WriteSetChange,
+} from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 
 export interface MultisigTransaction {
@@ -161,6 +167,62 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
 
     console.log(); // Add spacing between addresses
   }
+}
+
+export async function proposeEntryFunction(
+  aptos: Aptos,
+  sender: Account,
+  entryFunction: InputEntryFunctionData,
+  multisigAddress: string
+) {
+  const txnPayload = await generateTransactionPayload({
+    multisigAddress,
+    ...entryFunction,
+    aptosConfig: aptos.config,
+  });
+
+  // simulate the actual txn
+  const actualTxn = await aptos.transaction.build.simple({
+    sender: multisigAddress,
+    data: entryFunction,
+  });
+
+  const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
+    transaction: actualTxn,
+  });
+
+  if (!actualTxnSimulation.success) {
+    throw new Error(`Actual txn simulation failed: ${actualTxnSimulation.vm_status}`);
+  }
+
+  // simulate the create_transaction txn
+  const proposeTxn = await aptos.transaction.build.simple({
+    sender: sender.accountAddress,
+    data: {
+      function: '0x1::multisig_account::create_transaction',
+      functionArguments: [multisigAddress, txnPayload.multiSig.transaction_payload!.bcsToBytes()],
+    },
+  });
+
+  const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
+    transaction: proposeTxn,
+  });
+
+  if (!proposeTxnSimulation.success) {
+    throw new Error(`Propose txn simulation failed: ${proposeTxnSimulation.vm_status}`);
+  }
+
+  const authenticator = aptos.transaction.sign({ signer: sender, transaction: proposeTxn });
+  const proposeTxnResponse = await aptos.transaction.submit.simple({
+    senderAuthenticator: authenticator,
+    transaction: proposeTxn,
+  });
+  await aptos.waitForTransaction({ transactionHash: proposeTxnResponse.hash });
+  console.log(
+    chalk.green(
+      `Transaction proposed successfully: https://explorer.aptoslabs.com/txn/${proposeTxnResponse.hash}?network=${aptos.config.network}`
+    )
+  );
 }
 
 // Tx Data
