@@ -31,3 +31,22 @@ export function validateApprove(value: string): boolean {
   }
   return value.toLowerCase() === 'true';
 }
+
+export function validateLedgerIndex(value: string): number {
+  const num = parseInt(value);
+  if (isNaN(num) || num < 0) {
+    console.error(chalk.red('Ledger index must be a non-negative integer'));
+    process.exit(1);
+  }
+  return num;
+}
+
+export function validateRequiredOptions(options: { profile?: string; ledgerIndex?: string }) {
+  // Check if neither --profile nor --ledger is provided
+  // @ts-ignore
+  if (!options.profile && isNaN(options.ledgerIndex)) {
+    throw new Error('You must specify either --profile or --ledgerIndex.');
+  }
+
+  return options;
+}

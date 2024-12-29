@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import {
+  Account,
   Aptos,
   AptosConfig,
   generateRawTransaction,
@@ -7,10 +8,17 @@ import {
   Network,
   SimpleTransaction,
 } from '@aptos-labs/ts-sdk';
-import { loadAccount } from '../accounts.js';
 import { decode } from '../parser.js';
 import chalk from 'chalk';
-import { validateMultisigAddress, validateSequenceNumber, validateApprove } from '../validators.js';
+import {
+  validateMultisigAddress,
+  validateSequenceNumber,
+  validateApprove,
+  validateLedgerIndex,
+  validateRequiredOptions,
+} from '../validators.js';
+import { getSender, signAndSubmitLedger, signAndSubmitProfile } from '../signing.js';
+import LedgerSigner from '../ledger/LedgerSigner.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
@@ -27,20 +35,29 @@ export const registerExecuteCommand = (program: Command) => {
       validateSequenceNumber
     )
     .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateApprove)
-    .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option(
+      '-l, --ledgerIndex <ledgerIndex>',
+      'Ledger index for the transaction',
+      validateLedgerIndex
+    )
+    .hook('preAction', (thisCommand, actionCommand) => {
+      const options = actionCommand.opts();
+      validateRequiredOptions(options);
+    })
     .action(
       async (options: {
         multisigAddress: string;
         sequenceNumber: number;
         approve: boolean;
         profile: string;
+        ledgerIndex: number;
       }) => {
         const network = program.getOptionValue('network') as Network;
         const aptos = new Aptos(new AptosConfig({ network }));
 
         try {
-          const sender = loadAccount(options.profile);
-
+          // Get Transaction Payload
           let txnPayload;
           if (options.approve) {
             const [txnPayloadBytes] = await aptos.view<[string]>({
@@ -70,8 +87,12 @@ export const registerExecuteCommand = (program: Command) => {
             });
           }
 
+          let { signer, address } = await getSender(options);
+          console.log(chalk.blue(`Signer address: ${address}`));
+
+          // Simulate transaction
           const rawTxn = await generateRawTransaction({
-            sender: sender.accountAddress,
+            sender: address,
             payload: txnPayload,
             aptosConfig: aptos.config,
           });
@@ -82,15 +103,16 @@ export const registerExecuteCommand = (program: Command) => {
           if (!simulation.success) {
             throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
           }
-          const authenticator = aptos.transaction.sign({ signer: sender, transaction: txn });
-          const response = await aptos.transaction.submit.simple({
-            senderAuthenticator: authenticator,
-            transaction: txn,
-          });
-          await aptos.waitForTransaction({ transactionHash: response.hash });
+
+          // Sign & Submit transaction
+          const pendingTxn = options.profile
+            ? await signAndSubmitProfile(aptos, signer as Account, txn)
+            : await signAndSubmitLedger(aptos, signer as LedgerSigner, txn, options.ledgerIndex);
+
+          await aptos.waitForTransaction({ transactionHash: pendingTxn.hash });
           console.log(
             chalk.green(
-              `Transaction executed successfully: https://explorer.aptoslabs.com/txn/${response.hash}?network=${aptos.config.network}`
+              `Transaction executed successfully: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
             )
           );
         } catch (error) {
