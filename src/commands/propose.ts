@@ -3,10 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import { Aptos, AptosConfig, Network, MoveFunctionId } from '@aptos-labs/ts-sdk';
 import { decodeEntryFunction } from '../entryFunction.js';
-import { loadAccount } from '../accounts.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
-import { validateMultisigAddress } from '../validators.js';
+import {
+  validateLedgerIndex,
+  validateMultisigAddress,
+  validateRequiredOptions,
+} from '../validators.js';
+import { getSender } from '../signing.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
@@ -16,16 +20,25 @@ export const registerProposeCommand = (program: Command) => {
       '-m, --multisig-address <address>',
       'multisig account address',
       validateMultisigAddress
-    )
-    .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction');
+    );
 
   // Raw transaction from file
   propose
     .command('raw')
     .description('Propose a raw transaction from a payload file')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
+    .option('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option(
+      '-l, --ledgerIndex <ledgerIndex>',
+      'Ledger index for the transaction',
+      validateLedgerIndex
+    )
+    .hook('preAction', (thisCommand, actionCommand) => {
+      const options = actionCommand.opts();
+      validateRequiredOptions(options);
+    })
     .action(async (options, cmd) => {
-      const { multisigAddress, profile } = cmd.parent.opts();
+      const { multisigAddress } = cmd.parent.opts();
       const { txnPayloadFile } = options;
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
@@ -38,9 +51,15 @@ export const registerProposeCommand = (program: Command) => {
         if (!fs.existsSync(fullPath)) {
           throw new Error(`Transaction payload file not found: ${fullPath}`);
         }
+
+        let { signer, address } = await getSender(options);
+        console.log(chalk.blue(`Signer address: ${address}`));
+
         await proposeEntryFunction(
           aptos,
-          loadAccount(profile),
+          options,
+          signer,
+          address,
           decodeEntryFunction(fullPath),
           multisigAddress
         );
@@ -61,8 +80,18 @@ export const registerProposeCommand = (program: Command) => {
     .requiredOption('--coin-type <type>', 'Coin type')
     .requiredOption('--recipient <address>', 'Recipient address')
     .requiredOption('--amount <number>', 'Amount to transfer', Number)
+    .option('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option(
+      '-l, --ledgerIndex <ledgerIndex>',
+      'Ledger index for the transaction',
+      validateLedgerIndex
+    )
+    .hook('preAction', (thisCommand, actionCommand) => {
+      const options = actionCommand.opts();
+      validateRequiredOptions(options);
+    })
     .action(async (options, cmd) => {
-      const { multisigAddress, profile } = cmd.parent.parent.opts();
+      const { multisigAddress } = cmd.parent.parent.opts();
       const network = program.getOptionValue('network') as Network;
       const aptos = new Aptos(new AptosConfig({ network }));
       const entryFunction = {
@@ -71,7 +100,9 @@ export const registerProposeCommand = (program: Command) => {
         functionArguments: [options.recipient, options.amount],
       };
       try {
-        await proposeEntryFunction(aptos, loadAccount(profile), entryFunction, multisigAddress);
+        let { signer, address } = await getSender(options);
+        console.log(chalk.blue(`Signer address: ${address}`));
+        await proposeEntryFunction(aptos, options, signer, address, entryFunction, multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }

@@ -2,10 +2,15 @@ import { Aptos, AptosConfig, Network, MoveFunctionId } from '@aptos-labs/ts-sdk'
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { getAllAddressesFromBook, fetchAliasIfPresent } from '../addressBook.js';
-import { loadAccount } from '../accounts.js';
 import { proposeEntryFunction } from '../transactions.js';
-import { validateMultisigAddress, validateMultisigAddresses } from '../validators.js';
+import {
+  validateLedgerIndex,
+  validateMultisigAddress,
+  validateMultisigAddresses,
+  validateRequiredOptions,
+} from '../validators.js';
 import Table from 'cli-table3';
+import { getSender } from '../signing.js';
 
 export const registerOwnersCommand = (program: Command) => {
   const propose = program
@@ -62,7 +67,16 @@ export const registerOwnersCommand = (program: Command) => {
       'Comma-separated list of owner addresses',
       validateMultisigAddresses
     )
-    .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option(
+      '-l, --ledgerIndex <ledgerIndex>',
+      'Ledger index for the transaction',
+      validateLedgerIndex
+    )
+    .hook('preAction', (thisCommand, actionCommand) => {
+      const options = actionCommand.opts();
+      validateRequiredOptions(options);
+    })
     .action(async (options) => {
       const { multisigAddress } = propose.opts();
       console.log(multisigAddress);
@@ -76,12 +90,9 @@ export const registerOwnersCommand = (program: Command) => {
         functionArguments: [options.owners],
       };
       try {
-        await proposeEntryFunction(
-          aptos,
-          loadAccount(options.profile),
-          entryFunction,
-          multisigAddress
-        );
+        let { signer, address } = await getSender(options);
+        console.log(chalk.blue(`Signer address: ${address}`));
+        await proposeEntryFunction(aptos, options, signer, address, entryFunction, multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
@@ -96,7 +107,16 @@ export const registerOwnersCommand = (program: Command) => {
       'Comma-separated list of owner addresses',
       validateMultisigAddresses
     )
-    .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option(
+      '-l, --ledgerIndex <ledgerIndex>',
+      'Ledger index for the transaction',
+      validateLedgerIndex
+    )
+    .hook('preAction', (thisCommand, actionCommand) => {
+      const options = actionCommand.opts();
+      validateRequiredOptions(options);
+    })
     .action(async (options) => {
       const { multisigAddress } = propose.opts();
       const network = program.getOptionValue('network') as Network;
@@ -107,12 +127,9 @@ export const registerOwnersCommand = (program: Command) => {
         functionArguments: [options.owners],
       };
       try {
-        await proposeEntryFunction(
-          aptos,
-          loadAccount(options.profile),
-          entryFunction,
-          multisigAddress
-        );
+        let { signer, address } = await getSender(options);
+        console.log(chalk.blue(`Signer address: ${address}`));
+        await proposeEntryFunction(aptos, options, signer, address, entryFunction, multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
@@ -132,7 +149,16 @@ export const registerOwnersCommand = (program: Command) => {
       'Comma-separated list of owner addresses to remove',
       validateMultisigAddresses
     )
-    .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option('-p, --profile <profile>', 'Profile to use for the transaction')
+    .option(
+      '-l, --ledgerIndex <ledgerIndex>',
+      'Ledger index for the transaction',
+      validateLedgerIndex
+    )
+    .hook('preAction', (thisCommand, actionCommand) => {
+      const options = actionCommand.opts();
+      validateRequiredOptions(options);
+    })
     .action(async (options) => {
       const { multisigAddress } = propose.opts();
       const network = program.getOptionValue('network') as Network;
@@ -143,12 +169,9 @@ export const registerOwnersCommand = (program: Command) => {
         functionArguments: [options.ownersIn, options.ownersOut],
       };
       try {
-        await proposeEntryFunction(
-          aptos,
-          loadAccount(options.profile),
-          entryFunction,
-          multisigAddress
-        );
+        let { signer, address } = await getSender(options);
+        console.log(chalk.blue(`Signer address: ${address}`));
+        await proposeEntryFunction(aptos, options, signer, address, entryFunction, multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }

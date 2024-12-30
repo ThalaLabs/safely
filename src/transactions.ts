@@ -8,6 +8,8 @@ import {
   WriteSetChange,
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
+import LedgerSigner from './ledger/LedgerSigner.js';
+import { signAndSubmitLedger, signAndSubmitProfile } from './signing.js';
 
 export interface MultisigTransaction {
   payload: { vec: [string] };
@@ -171,7 +173,9 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
 
 export async function proposeEntryFunction(
   aptos: Aptos,
-  sender: Account,
+  options: { profile: string; ledgerIndex: number },
+  signer: Account | LedgerSigner,
+  senderAddress: string,
   entryFunction: InputEntryFunctionData,
   multisigAddress: string
 ) {
@@ -197,7 +201,7 @@ export async function proposeEntryFunction(
 
   // simulate the create_transaction txn
   const proposeTxn = await aptos.transaction.build.simple({
-    sender: sender.accountAddress,
+    sender: senderAddress,
     data: {
       function: '0x1::multisig_account::create_transaction',
       functionArguments: [multisigAddress, txnPayload.multiSig.transaction_payload!.bcsToBytes()],
@@ -212,15 +216,15 @@ export async function proposeEntryFunction(
     throw new Error(`Propose txn simulation failed: ${proposeTxnSimulation.vm_status}`);
   }
 
-  const authenticator = aptos.transaction.sign({ signer: sender, transaction: proposeTxn });
-  const proposeTxnResponse = await aptos.transaction.submit.simple({
-    senderAuthenticator: authenticator,
-    transaction: proposeTxn,
-  });
-  await aptos.waitForTransaction({ transactionHash: proposeTxnResponse.hash });
+  // Sign & Submit transaction
+  const pendingTxn = options.profile
+    ? await signAndSubmitProfile(aptos, signer as Account, proposeTxn)
+    : await signAndSubmitLedger(aptos, signer as LedgerSigner, proposeTxn, options.ledgerIndex);
+
+  await aptos.waitForTransaction({ transactionHash: pendingTxn.hash });
   console.log(
     chalk.green(
-      `Transaction proposed successfully: https://explorer.aptoslabs.com/txn/${proposeTxnResponse.hash}?network=${aptos.config.network}`
+      `Transaction proposed successfully: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
     )
   );
 }
