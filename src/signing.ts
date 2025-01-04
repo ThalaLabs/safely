@@ -8,7 +8,7 @@ import {
   PrivateKey,
   PrivateKeyVariants,
 } from '@aptos-labs/ts-sdk';
-import LedgerSigner from './ledger/LedgerSigner';
+import LedgerSigner from './ledger/LedgerSigner.js';
 import fs from 'fs';
 import { parse } from 'yaml';
 
@@ -54,9 +54,12 @@ export async function signAndSubmitTransaction(
   signer: Account | LedgerSigner,
   txn: AnyRawTransaction
 ) {
-  return signer instanceof Account
-    ? await signAndSubmitProfile(aptos, signer, txn)
-    : await signAndSubmitLedger(aptos, signer, txn);
+  // Check if it's a LedgerSigner by looking for the close method which is unique to LedgerSigner
+  if ('close' in signer) {
+    return await signAndSubmitLedger(aptos, signer as LedgerSigner, txn);
+  } else {
+    return await signAndSubmitProfile(aptos, signer as Account, txn);
+  }
 }
 
 async function signAndSubmitProfile(aptos: Aptos, signer: Account, txn: AnyRawTransaction) {
