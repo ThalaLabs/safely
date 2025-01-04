@@ -1,6 +1,6 @@
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { select } from '@inquirer/prompts';
 import { fetchPendingTxns } from '../transactions.js';
 import { validateAddress, validateSequenceNumber } from '../validators.js';
@@ -13,6 +13,11 @@ export const registerProposalCommand = (program: Command) => {
     .command('proposal')
     .description('List proposals for a multisig')
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .addOption(
+      new Option('--network <network>', 'network to use')
+        .choices(['devnet', 'testnet', 'mainnet'])
+        .default('mainnet')
+    )
     .option(
       '-f, --filter <status>',
       'filter proposals by status',
@@ -42,12 +47,12 @@ export const registerProposalCommand = (program: Command) => {
     .action(
       async (options: {
         multisigAddress: string;
+        network: string;
         filter: 'pending' | 'succeeded' | 'failed';
         sequenceNumber?: number;
         limit?: number;
       }) => {
-        const network = program.getOptionValue('network') as Network;
-        const aptos = new Aptos(new AptosConfig({ network }));
+        const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
         const n = options.limit || 20;
 
         try {

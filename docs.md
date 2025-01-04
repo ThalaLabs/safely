@@ -5,6 +5,7 @@ List proposals for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
   -f, --filter <status>             filter proposals by status (default: "pending")
   -s, --sequence-number <number>    fetch transaction with specific sequence number
   -l, --limit <number>              number of transactions to fetch (default: 20)
@@ -18,6 +19,7 @@ Decode multisig transaction bytes
 ```
 Options:
   -b, --bytes <bytes>  transaction bytes to decode (hex string starting with 0x)
+  --network <network>  network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
   -h, --help           display help for command
 ```
 
@@ -28,6 +30,7 @@ Encode entry function payload
 ```
 Options:
   -f, --txn-payload-file <txn-payload-file>  transaction payload file to encode
+  --network <network>                        network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
   -h, --help                                 display help for command
 ```
 
@@ -82,6 +85,7 @@ Simulate transaction for a multisig (ignoring signer thresholds)
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
   -s, --sequence-number <number>    fetch transaction with specific sequence number
   -h, --help                        display help for command
 ```
@@ -106,6 +110,7 @@ Propose a new transaction for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
+  -p, --profile <string>            Profile to use for the transaction
   -h, --help                        display help for command
 Commands:
   raw [options]                     Propose a raw transaction from a payload file
@@ -120,7 +125,6 @@ Propose a raw transaction from a payload file
 ```
 Options:
   -f, --txn-payload-file <file>  Path to the transaction payload file
-  -p, --profile <string>         Profile to use for the transaction
   -h, --help                     display help for command
 ```
 
@@ -142,11 +146,10 @@ Transfer coins to an address
 
 ```
 Options:
-  --coin-type <type>      Coin type
-  --recipient <address>   Recipient address
-  --amount <number>       Amount to transfer
-  -p, --profile <string>  Profile to use for the transaction
-  -h, --help              display help for command
+  --coin-type <type>     Coin type
+  --recipient <address>  Recipient address
+  --amount <number>      Amount to transfer
+  -h, --help             display help for command
 ```
 
 ## safely execute [options]
@@ -208,5 +211,6 @@ Show multisig summary
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
   -h, --help                        display help for command
 ```

@@ -7,12 +7,12 @@ import {
   WriteSetChangeWriteResource,
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { getAllAddressesFromBook, fetchAliasIfPresent } from '../addressBook.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses } from '../validators.js';
 import Table from 'cli-table3';
-import { loadAccount, signAndSubmitTransaction } from '../signing.js';
+import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
 export const registerAccountCommand = (program: Command) => {
   const account = program.command('account').description('Multisig account operations');
@@ -43,15 +43,14 @@ export const registerAccountCommand = (program: Command) => {
         numSignaturesRequired: number;
         profile: string;
       }) => {
-        const network = program.getOptionValue('network') as Network;
-        const aptos = new Aptos(new AptosConfig({ network }));
         const entryFunction = {
           function: '0x1::multisig_account::create_with_owners' as MoveFunctionId,
           typeArguments: [],
           functionArguments: [options.additionalOwners, options.numSignaturesRequired, [], []],
         };
         try {
-          const signer = await loadAccount(options.profile);
+          const { network, signer } = await loadProfile(options.profile);
+          const aptos = new Aptos(new AptosConfig({ network }));
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: entryFunction,
@@ -119,8 +118,6 @@ export const registerAccountCommand = (program: Command) => {
         numSignaturesRequired: number;
         profile: string;
       }) => {
-        const network = program.getOptionValue('network') as Network;
-        const aptos = new Aptos(new AptosConfig({ network }));
         const entryFunction = {
           function:
             '0x1::multisig_account::swap_owners_and_update_signatures_required' as MoveFunctionId,
@@ -132,7 +129,8 @@ export const registerAccountCommand = (program: Command) => {
           ],
         };
         try {
-          const signer = await loadAccount(options.profile);
+          const { network, signer } = await loadProfile(options.profile);
+          const aptos = new Aptos(new AptosConfig({ network }));
           await proposeEntryFunction(aptos, signer, entryFunction, options.multisigAddress);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
@@ -145,9 +143,13 @@ export const registerAccountCommand = (program: Command) => {
     .command('show')
     .description('Show multisig summary')
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
-    .action(async (options: { multisigAddress: string }) => {
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+    .addOption(
+      new Option('--network <network>', 'network to use')
+        .choices(['devnet', 'testnet', 'mainnet'])
+        .default('mainnet')
+    )
+    .action(async (options: { multisigAddress: string; network: string }) => {
+      const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
 
       try {
         const table = new Table();

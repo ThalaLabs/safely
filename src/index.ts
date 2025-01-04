@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Command, Option } from 'commander';
+import { Command } from 'commander';
 
 import { registerAddressesCommand } from './commands/addresses.js';
 import { registerDecodeCommand } from './commands/decode.js';
@@ -16,11 +16,6 @@ import { registerAccountCommand } from './commands/account.js';
 const program = new Command();
 
 program.name('safely').description('CLI tool for multisig management').version('0.0.1');
-program.addOption(
-  new Option('--network <network>', 'network to use')
-    .choices(['devnet', 'testnet', 'mainnet'])
-    .default('mainnet')
-);
 
 registerProposalCommand(program);
 registerDecodeCommand(program);
