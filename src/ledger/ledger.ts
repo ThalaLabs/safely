@@ -20,7 +20,7 @@ export async function initLedgerClient(): Promise<AptosLedgerClient> {
 }
 
 // Initializes a LedgerSigner object from a specific key (denoted by key index) on a Ledger hardware wallet.
-export async function initLedgerSigner(ledgerIndex: number = 0): Promise<LedgerSigner> {
+export async function initLedgerSigner(ledgerIndex: number): Promise<LedgerSigner> {
   const ledgerClient = await initLedgerClient();
   const hdPath = getHDPath(ledgerIndex); // Example HD path for Aptos
   const publicKeyResponse = await ledgerClient.getAccount(hdPath);
@@ -44,8 +44,12 @@ export function signerToAddress(signer: LedgerSigner) {
 
 // Generates a Hierarchical Deterministic (HD) path for a specific key on a Ledger hardware wallet
 // This path specifies which private key to use from the wallet’s internal hierarchy.
-export function getHDPath(ledgerIndex: number) {
+export function getHDPath(ledgerIndex: number): string {
   return `m/44'/637'/${ledgerIndex}'/0'/0'`;
+}
+
+export function getLedgerIndex(hdPath: string): number {
+  return parseInt(hdPath.split('/')[3]);
 }
 
 // Terminates a LedgerClient connection.

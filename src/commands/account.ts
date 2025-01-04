@@ -10,15 +10,9 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { getAllAddressesFromBook, fetchAliasIfPresent } from '../addressBook.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
-import {
-  validateLedgerIndex,
-  validateAddress,
-  validateAddresses,
-  validateRequiredOptions,
-} from '../validators.js';
+import { validateAddress, validateAddresses } from '../validators.js';
 import Table from 'cli-table3';
-import { getSender, signAndSubmitProfile } from '../signing.js';
-import { loadAccount } from '../accounts.js';
+import { loadAccount, signAndSubmitTransaction } from '../signing.js';
 
 export const registerAccountCommand = (program: Command) => {
   const account = program.command('account').description('Multisig account operations');
@@ -42,7 +36,7 @@ export const registerAccountCommand = (program: Command) => {
         return num;
       }
     )
-    .requiredOption('-p, --profile <profile>', 'Profile to use for the transaction')
+    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(
       async (options: {
         additionalOwners: string[];
@@ -57,12 +51,12 @@ export const registerAccountCommand = (program: Command) => {
           functionArguments: [options.additionalOwners, options.numSignaturesRequired, [], []],
         };
         try {
-          const signer = loadAccount(options.profile);
+          const signer = await loadAccount(options.profile);
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: entryFunction,
           });
-          const committedTxn = await signAndSubmitProfile(aptos, signer, preparedTxn);
+          const committedTxn = await signAndSubmitTransaction(aptos, signer, preparedTxn);
           const { success, vm_status, changes } = await aptos.waitForTransaction({
             transactionHash: committedTxn.hash,
           });
@@ -116,16 +110,7 @@ export const registerAccountCommand = (program: Command) => {
         return num;
       }
     )
-    .option('-p, --profile <profile>', 'Profile to use for the transaction')
-    .option(
-      '-l, --ledgerIndex <ledgerIndex>',
-      'Ledger index for the transaction',
-      validateLedgerIndex
-    )
-    .hook('preAction', (thisCommand, actionCommand) => {
-      const options = actionCommand.opts();
-      validateRequiredOptions(options);
-    })
+    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(
       async (options: {
         multisigAddress: string;
@@ -133,7 +118,6 @@ export const registerAccountCommand = (program: Command) => {
         ownersRemove: string[];
         numSignaturesRequired: number;
         profile: string;
-        ledgerIndex: number;
       }) => {
         const network = program.getOptionValue('network') as Network;
         const aptos = new Aptos(new AptosConfig({ network }));
@@ -148,8 +132,7 @@ export const registerAccountCommand = (program: Command) => {
           ],
         };
         try {
-          const signer = await getSender(options);
-          console.log(chalk.blue(`Signer address: ${signer.accountAddress}`));
+          const signer = await loadAccount(options.profile);
           await proposeEntryFunction(aptos, signer, entryFunction, options.multisigAddress);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
