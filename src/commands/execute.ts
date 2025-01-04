@@ -50,37 +50,25 @@ export const registerExecuteCommand = (program: Command) => {
         const aptos = new Aptos(new AptosConfig({ network }));
 
         try {
-          // Get Transaction Payload
-          let txnPayload;
-          if (options.approve) {
-            const [txnPayloadBytes] = await aptos.view<[string]>({
-              payload: {
-                function: '0x1::multisig_account::get_next_transaction_payload',
-                functionArguments: [options.multisigAddress, '0x0'],
-              },
-            });
-            const entryFunction = await decode(aptos, txnPayloadBytes);
-            txnPayload = await generateTransactionPayload({
-              multisigAddress: options.multisigAddress,
-              ...entryFunction,
-              aptosConfig: aptos.config,
-            });
-          } else {
-            const [txnPayloadBytes] = await aptos.view<[string]>({
-              payload: {
-                function: '0x1::multisig_account::get_next_transaction_payload',
-                functionArguments: [options.multisigAddress, '0x0'],
-              },
-            });
-            const entryFunction = await decode(aptos, txnPayloadBytes);
-            txnPayload = await generateTransactionPayload({
-              multisigAddress: options.multisigAddress,
-              ...entryFunction,
-              aptosConfig: aptos.config,
-            });
-          }
+          // Get next transaction payload bytes
+          const [txnPayloadBytes] = await aptos.view<[string]>({
+            payload: {
+              function: '0x1::multisig_account::get_next_transaction_payload',
+              functionArguments: [options.multisigAddress, '0x0'],
+            },
+          });
 
-          let { signer, address } = await getSender(options);
+          // Decode payload bytes into entry function
+          const entryFunction = await decode(aptos, txnPayloadBytes);
+
+          // Generate transaction payload
+          const txnPayload = await generateTransactionPayload({
+            multisigAddress: options.multisigAddress,
+            ...entryFunction,
+            aptosConfig: aptos.config,
+          });
+
+          const { signer, address } = await getSender(options);
           console.log(chalk.blue(`Signer address: ${address}`));
 
           // Simulate transaction
