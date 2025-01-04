@@ -1,7 +1,7 @@
 import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { validateAddress, validateSequenceNumber, validateApprove } from '../validators.js';
+import { validateAddress, validateUInt, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
 export const registerVoteCommand = (program: Command) => {
@@ -12,9 +12,9 @@ export const registerVoteCommand = (program: Command) => {
     .requiredOption(
       '-s, --sequence-number <number>',
       'sequence number of transaction to vote on',
-      validateSequenceNumber
+      validateUInt
     )
-    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateApprove)
+    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateBool)
     .requiredOption('-p, --profile <string>', 'profile name of voter')
     .action(
       async (options: {

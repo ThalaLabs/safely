@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { MultisigTransaction, summarizeTransactionSimulation } from '../transactions.js';
 import { decode } from '../parser.js';
-import { validateAddress, validateSequenceNumber } from '../validators.js';
+import { validateAddress, validateUInt } from '../validators.js';
 
 export const registerSimulateCommand = (program: Command) => {
   program
@@ -18,7 +18,7 @@ export const registerSimulateCommand = (program: Command) => {
     .requiredOption(
       '-s, --sequence-number <number>',
       'fetch transaction with specific sequence number',
-      validateSequenceNumber
+      validateUInt
     )
     .action(
       async (options: { multisigAddress: string; netwrok: string; sequenceNumber: number }) => {

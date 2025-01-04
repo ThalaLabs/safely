@@ -10,7 +10,7 @@ import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { getAllAddressesFromBook, fetchAliasIfPresent } from '../addressBook.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
-import { validateAddress, validateAddresses } from '../validators.js';
+import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
 export const registerAccountCommand = (program: Command) => {
@@ -27,13 +27,7 @@ export const registerAccountCommand = (program: Command) => {
     .requiredOption(
       '-n, --num-signatures-required <number>',
       'Number of signatures required for execution',
-      (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num <= 0) {
-          throw new Error('Number of signatures required must be a positive integer');
-        }
-        return num;
-      }
+      validateUInt
     )
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(
@@ -100,13 +94,7 @@ export const registerAccountCommand = (program: Command) => {
     .option(
       '-n, --num-signatures-required <number>',
       'New number of signatures required for execution',
-      (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num <= 0) {
-          throw new Error('Number of signatures required must be a positive integer');
-        }
-        return num;
-      }
+      validateUInt
     )
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(

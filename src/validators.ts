@@ -13,21 +13,23 @@ export function validateAddresses(value: string): string[] {
   return value ? value.split(',').map((addr) => validateAddress(addr.trim())) : [];
 }
 
-// TODO: validateUint
-export function validateSequenceNumber(value: string): number {
+export function validateUInt(value: string): number {
   const num = parseInt(value);
   if (isNaN(num) || num < 0) {
-    console.error(chalk.red('Sequence number must be a non-negative integer'));
+    console.error(chalk.red('Value must be a non-negative integer'));
     process.exit(1);
   }
   return num;
 }
 
-// TODO: validateBool
-export function validateApprove(value: string): boolean {
-  if (value.toLowerCase() !== 'true' && value.toLowerCase() !== 'false') {
-    console.error(chalk.red('Approve must be either "true" or "false"'));
-    process.exit(1);
+export function validateBool(value: string): boolean {
+  const lowercaseValue = value.toLowerCase();
+  if (lowercaseValue === 'true' || lowercaseValue === '1') {
+    return true;
   }
-  return value.toLowerCase() === 'true';
+  if (lowercaseValue === 'false' || lowercaseValue === '0') {
+    return false;
+  }
+  console.error(chalk.red('Value must be true/false or 1/0'));
+  process.exit(1);
 }

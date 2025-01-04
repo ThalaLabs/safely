@@ -8,7 +8,7 @@ import {
 } from '@aptos-labs/ts-sdk';
 import { decode } from '../parser.js';
 import chalk from 'chalk';
-import { validateAddress, validateApprove } from '../validators.js';
+import { validateAddress, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
 export const registerExecuteCommand = (program: Command) => {
@@ -16,7 +16,7 @@ export const registerExecuteCommand = (program: Command) => {
     .command('execute')
     .description('Execute a multisig transaction')
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
-    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateApprove)
+    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateBool)
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(async (options: { multisigAddress: string; approve: boolean; profile: string }) => {
       try {

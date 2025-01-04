@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { select } from '@inquirer/prompts';
 import { fetchPendingTxns } from '../transactions.js';
-import { validateAddress, validateSequenceNumber } from '../validators.js';
+import { validateAddress, validateUInt } from '../validators.js';
 import { decode } from '../parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { knownAddresses } from '../labels.js';
@@ -34,16 +34,9 @@ export const registerProposalCommand = (program: Command) => {
     .option(
       '-s, --sequence-number <number>',
       'fetch transaction with specific sequence number',
-      validateSequenceNumber
+      validateUInt
     )
-    .option('-l, --limit <number>', 'number of transactions to fetch (default: 20)', (value) => {
-      const num = parseInt(value);
-      if (isNaN(num) || num < 0) {
-        console.error(chalk.red('Limit must be a non-negative integer'));
-        process.exit(1);
-      }
-      return num;
-    })
+    .option('-l, --limit <number>', 'number of transactions to fetch (default: 20)', validateUInt)
     .action(
       async (options: {
         multisigAddress: string;
