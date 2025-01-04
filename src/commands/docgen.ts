@@ -12,15 +12,16 @@ export function registerDocgenCommand(program: Command) {
         .slice(1) // Remove root program
         .filter((cmd) => cmd.name() !== 'docgen'); // Remove docgen command
 
-      const docs = allCommands
-        .map((command) => {
-          const helpText = command.helpInformation();
-          const lines = helpText.split('\n').filter((line) => line.trim() !== '');
-          const [fullCommand, description, ...options] = lines;
-          const heading = fullCommand.replace('Usage: ', '## ');
-          return `${heading}\n\n${description}\n\n\`\`\`\n${options.join('\n')}\n\`\`\``;
-        })
-        .join('\n');
+      const docs =
+        allCommands
+          .map((command) => {
+            const helpText = command.helpInformation();
+            const lines = helpText.split('\n').filter((line) => line.trim() !== '');
+            const [fullCommand, description, ...options] = lines;
+            const heading = fullCommand.replace('Usage: ', '## ');
+            return `${heading}\n\n${description}\n\n\`\`\`\n${options.join('\n')}\n\`\`\``;
+          })
+          .join('\n\n') + '\n';
 
       if (options.output) {
         const outputPath = join(process.cwd(), options.output);

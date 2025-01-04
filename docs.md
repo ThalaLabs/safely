@@ -10,6 +10,7 @@ Options:
   -l, --limit <number>              number of transactions to fetch (default: 20)
   -h, --help                        display help for command
 ```
+
 ## safely decode [options]
 
 Decode multisig transaction bytes
@@ -19,6 +20,7 @@ Options:
   -b, --bytes <bytes>  transaction bytes to decode (hex string starting with 0x)
   -h, --help           display help for command
 ```
+
 ## safely encode [options]
 
 Encode entry function payload
@@ -28,6 +30,7 @@ Options:
   -f, --txn-payload-file <txn-payload-file>  transaction payload file to encode
   -h, --help                                 display help for command
 ```
+
 ## safely addresses [options] [command]
 
 Manage the local address book
@@ -41,6 +44,7 @@ Commands:
   remove [options]  Remove an alias from the local address book
   help [command]    display help for command
 ```
+
 ## safely addresses add [options]
 
 Add a new alias and address to the local address book
@@ -51,6 +55,7 @@ Options:
   --address <address>  Hexadecimal address (e.g., 0xabc)
   -h, --help           display help for command
 ```
+
 ## safely addresses list [options]
 
 List all saved aliases and addresses
@@ -59,6 +64,7 @@ List all saved aliases and addresses
 Options:
   -h, --help  display help for command
 ```
+
 ## safely addresses remove [options]
 
 Remove an alias from the local address book
@@ -68,6 +74,7 @@ Options:
   --alias <alias>  Alias to remove
   -h, --help       display help for command
 ```
+
 ## safely simulate [options]
 
 Simulate transaction for a multisig (ignoring signer thresholds)
@@ -78,6 +85,7 @@ Options:
   -s, --sequence-number <number>    fetch transaction with specific sequence number
   -h, --help                        display help for command
 ```
+
 ## safely vote [options]
 
 Vote on a pending transaction
@@ -91,6 +99,7 @@ Options:
   -l, --ledgerIndex <ledgerIndex>   Ledger index for the transaction
   -h, --help                        display help for command
 ```
+
 ## safely propose [options] [command]
 
 Propose a new transaction for a multisig
@@ -104,6 +113,7 @@ Commands:
   predefined                        Propose a predefined transaction type
   help [command]                    display help for command
 ```
+
 ## safely propose raw [options]
 
 Propose a raw transaction from a payload file
@@ -115,6 +125,7 @@ Options:
   -l, --ledgerIndex <ledgerIndex>  Ledger index for the transaction
   -h, --help                       display help for command
 ```
+
 ## safely propose predefined [options] [command]
 
 Propose a predefined transaction type
@@ -126,6 +137,7 @@ Commands:
   transfer-coins [options]  Transfer coins to an address
   help [command]            display help for command
 ```
+
 ## safely propose predefined transfer-coins [options]
 
 Transfer coins to an address
@@ -139,6 +151,7 @@ Options:
   -l, --ledgerIndex <ledgerIndex>  Ledger index for the transaction
   -h, --help                       display help for command
 ```
+
 ## safely execute [options]
 
 Execute a multisig transaction
@@ -151,6 +164,7 @@ Options:
   -l, --ledgerIndex <ledgerIndex>   Ledger index for the transaction
   -h, --help                        display help for command
 ```
+
 ## safely account [options] [command]
 
 Multisig account operations
@@ -164,6 +178,7 @@ Commands:
   show [options]    Show multisig summary
   help [command]    display help for command
 ```
+
 ## safely account create [options]
 
 Create a new multisig account
@@ -175,6 +190,7 @@ Options:
   -p, --profile <profile>                 Profile to use for the transaction
   -h, --help                              display help for command
 ```
+
 ## safely account update [options]
 
 Update multisig owners and optionally the number of required signatures
@@ -189,6 +205,7 @@ Options:
   -l, --ledgerIndex <ledgerIndex>         Ledger index for the transaction
   -h, --help                              display help for command
 ```
+
 ## safely account show [options]
 
 Show multisig summary
