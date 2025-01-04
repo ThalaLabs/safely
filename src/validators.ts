@@ -13,6 +13,7 @@ export function validateAddresses(value: string): string[] {
   return value ? value.split(',').map((addr) => validateAddress(addr.trim())) : [];
 }
 
+// TODO: validateUint
 export function validateSequenceNumber(value: string): number {
   const num = parseInt(value);
   if (isNaN(num) || num < 0) {
@@ -22,6 +23,7 @@ export function validateSequenceNumber(value: string): number {
   return num;
 }
 
+// TODO: validateBool
 export function validateApprove(value: string): boolean {
   if (value.toLowerCase() !== 'true' && value.toLowerCase() !== 'false') {
     console.error(chalk.red('Approve must be either "true" or "false"'));

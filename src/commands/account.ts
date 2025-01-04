@@ -11,7 +11,6 @@ import { Command, Option } from 'commander';
 import { getAllAddressesFromBook, fetchAliasIfPresent } from '../addressBook.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses } from '../validators.js';
-import Table from 'cli-table3';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
 export const registerAccountCommand = (program: Command) => {
@@ -152,8 +151,6 @@ export const registerAccountCommand = (program: Command) => {
       const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
 
       try {
-        const table = new Table();
-
         // owners
         const [signers] = await aptos.view<string[][]>({
           payload: {
@@ -166,9 +163,6 @@ export const registerAccountCommand = (program: Command) => {
           const alias = fetchAliasIfPresent(addressBook, signer);
           return `${signer} ${alias !== signer ? alias : ''}`.trim();
         });
-        table.push({
-          Signers: aliasedSigners.join('\n'),
-        });
 
         const [signaturesRequired] = await aptos.view<string[]>({
           payload: {
@@ -177,17 +171,17 @@ export const registerAccountCommand = (program: Command) => {
           },
         });
         const numSignaturesRequired = Number(signaturesRequired);
-        table.push({
-          'Signatures Required': numSignaturesRequired,
-        });
 
         // # pending txns
         const txCount = await numPendingTxns(aptos, options.multisigAddress);
-        table.push({
-          'Pending Txns': txCount,
-        });
 
-        console.log(table.toString());
+        console.log(
+          JSON.stringify({
+            owners: aliasedSigners,
+            signaturesRequired: numSignaturesRequired,
+            pendingTxns: txCount,
+          })
+        );
       } catch (e) {
         console.error(chalk.red(`Error: ${(e as Error).message}`));
       }
