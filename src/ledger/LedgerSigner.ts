@@ -7,6 +7,7 @@ import {
   Ed25519Signature,
   AccountAuthenticatorEd25519,
   AnyRawTransaction,
+  AccountAddress,
 } from '@aptos-labs/ts-sdk';
 import AptosLedgerClient from './AptosLedgerClient.js';
 
@@ -14,14 +15,17 @@ import AptosLedgerClient from './AptosLedgerClient.js';
 // This object is initialized alongside a LedgerClient connection, and can be used to sign
 // transactions via a ledger hardware wallet.
 export default class LedgerSigner {
-  private readonly publicKey: Ed25519PublicKey;
+  public readonly publicKey: Ed25519PublicKey;
+  public readonly accountAddress: AccountAddress;
 
   public constructor(
     private readonly ledgerClient: AptosLedgerClient,
     private readonly hdPath: string,
-    publicKey: string
+    publicKey: string,
+    accountAddress: AccountAddress
   ) {
     this.publicKey = new Ed25519PublicKey(publicKey);
+    this.accountAddress = accountAddress;
   }
 
   // Prompts user to sign associated transaction on their Ledger hardware wallet.

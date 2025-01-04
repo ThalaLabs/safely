@@ -9,7 +9,12 @@ import {
   validateRequiredOptions,
 } from '../validators.js';
 import { initLedgerSigner, closeLedger } from '../ledger/ledger.js';
-import { getSender, signAndSubmitLedger, signAndSubmitProfile } from '../signing.js';
+import {
+  getSender,
+  signAndSubmitLedger,
+  signAndSubmitProfile,
+  signAndSubmitTransaction,
+} from '../signing.js';
 import LedgerSigner from '../ledger/LedgerSigner';
 
 export const registerVoteCommand = (program: Command) => {
@@ -55,11 +60,11 @@ export const registerVoteCommand = (program: Command) => {
             )
           );
 
-          let { signer, address } = await getSender(options);
-          console.log(chalk.blue(`Signer address: ${address}`));
+          const signer = await getSender(options);
+          console.log(chalk.blue(`Signer address: ${signer.accountAddress}`));
 
           const txn = await aptos.transaction.build.simple({
-            sender: address,
+            sender: signer.accountAddress,
             data: {
               function: `0x1::multisig_account::vote_transaction`,
               functionArguments: [options.multisigAddress, options.sequenceNumber, options.approve],
@@ -67,10 +72,7 @@ export const registerVoteCommand = (program: Command) => {
           });
 
           // Handle signing and submission
-          const pendingTxn = options.profile
-            ? await signAndSubmitProfile(aptos, signer as Account, txn)
-            : await signAndSubmitLedger(aptos, signer as LedgerSigner, txn, options.ledgerIndex);
-
+          const pendingTxn = await signAndSubmitTransaction(aptos, signer, txn);
           const { success, vm_status } = await aptos.waitForTransaction({
             transactionHash: pendingTxn.hash,
           });
@@ -84,7 +86,7 @@ export const registerVoteCommand = (program: Command) => {
           } else {
             console.log(
               chalk.red(
-                `Vote error ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+                `Vote nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
               )
             );
           }

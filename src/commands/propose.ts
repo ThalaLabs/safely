@@ -48,17 +48,9 @@ export const registerProposeCommand = (program: Command) => {
           throw new Error(`Transaction payload file not found: ${fullPath}`);
         }
 
-        let { signer, address } = await getSender(options);
-        console.log(chalk.blue(`Signer address: ${address}`));
-
-        await proposeEntryFunction(
-          aptos,
-          options,
-          signer,
-          address,
-          decodeEntryFunction(fullPath),
-          multisigAddress
-        );
+        const signer = await getSender(options);
+        console.log(chalk.blue(`Signer address: ${signer.accountAddress}`));
+        await proposeEntryFunction(aptos, signer, decodeEntryFunction(fullPath), multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
@@ -96,9 +88,9 @@ export const registerProposeCommand = (program: Command) => {
         functionArguments: [options.recipient, options.amount],
       };
       try {
-        let { signer, address } = await getSender(options);
-        console.log(chalk.blue(`Signer address: ${address}`));
-        await proposeEntryFunction(aptos, options, signer, address, entryFunction, multisigAddress);
+        const signer = await getSender(options);
+        console.log(chalk.blue(`Signer address: ${signer.accountAddress}`));
+        await proposeEntryFunction(aptos, signer, entryFunction, multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
