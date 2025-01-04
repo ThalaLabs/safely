@@ -63,20 +63,28 @@ export const registerAccountCommand = (program: Command) => {
             data: entryFunction,
           });
           const committedTxn = await signAndSubmitProfile(aptos, signer, preparedTxn);
-          const { changes } = await aptos.waitForTransaction({
+          const { success, vm_status, changes } = await aptos.waitForTransaction({
             transactionHash: committedTxn.hash,
           });
-          const isWriteSetChangeWriteResource = (
-            change: WriteSetChange
-          ): change is WriteSetChangeWriteResource => change.type === 'write_resource';
-          const multisigAccountChange = changes
-            .filter(isWriteSetChangeWriteResource)
-            .find((change) => change.data.type === '0x1::multisig_account::MultisigAccount')!;
-          console.log(
-            chalk.green(
-              `Multisig created successfully: https://explorer.aptoslabs.com/account/${multisigAccountChange.address}?network=${aptos.config.network}`
-            )
-          );
+          if (success) {
+            const isWriteSetChangeWriteResource = (
+              change: WriteSetChange
+            ): change is WriteSetChangeWriteResource => change.type === 'write_resource';
+            const multisigAccountChange = changes
+              .filter(isWriteSetChangeWriteResource)
+              .find((change) => change.data.type === '0x1::multisig_account::MultisigAccount')!;
+            console.log(
+              chalk.green(
+                `Create multisig ok: https://explorer.aptoslabs.com/account/${multisigAccountChange.address}?network=${aptos.config.network}`
+              )
+            );
+          } else {
+            console.log(
+              chalk.red(
+                `Create multisig nok ${vm_status}: https://explorer.aptoslabs.com/txn/${committedTxn.hash}?network=${aptos.config.network}`
+              )
+            );
+          }
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }
@@ -140,16 +148,9 @@ export const registerAccountCommand = (program: Command) => {
           ],
         };
         try {
-          const { signer, address } = await getSender(options);
-          console.log(chalk.blue(`Signer address: ${address}`));
-          await proposeEntryFunction(
-            aptos,
-            options,
-            signer,
-            address,
-            entryFunction,
-            options.multisigAddress
-          );
+          const signer = await getSender(options);
+          console.log(chalk.blue(`Signer address: ${signer.accountAddress}`));
+          await proposeEntryFunction(aptos, signer, entryFunction, options.multisigAddress);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }

@@ -16,8 +16,7 @@ import {
   validateLedgerIndex,
   validateRequiredOptions,
 } from '../validators.js';
-import { getSender, signAndSubmitLedger, signAndSubmitProfile } from '../signing.js';
-import LedgerSigner from '../ledger/LedgerSigner.js';
+import { getSender, signAndSubmitTransaction } from '../signing.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
@@ -64,12 +63,12 @@ export const registerExecuteCommand = (program: Command) => {
             aptosConfig: aptos.config,
           });
 
-          const { signer, address } = await getSender(options);
-          console.log(chalk.blue(`Signer address: ${address}`));
+          const signer = await getSender(options);
+          console.log(chalk.blue(`Signer address: ${signer.accountAddress}`));
 
           // Simulate transaction
           const rawTxn = await generateRawTransaction({
-            sender: address,
+            sender: signer.accountAddress,
             payload: txnPayload,
             aptosConfig: aptos.config,
           });
@@ -82,16 +81,23 @@ export const registerExecuteCommand = (program: Command) => {
           }
 
           // Sign & Submit transaction
-          const pendingTxn = options.profile
-            ? await signAndSubmitProfile(aptos, signer as Account, txn)
-            : await signAndSubmitLedger(aptos, signer as LedgerSigner, txn, options.ledgerIndex);
-
-          await aptos.waitForTransaction({ transactionHash: pendingTxn.hash });
-          console.log(
-            chalk.green(
-              `Transaction executed successfully: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
-            )
-          );
+          const pendingTxn = await signAndSubmitTransaction(aptos, signer, txn);
+          const { success, vm_status } = await aptos.waitForTransaction({
+            transactionHash: pendingTxn.hash,
+          });
+          if (success) {
+            console.log(
+              chalk.green(
+                `Execute ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+              )
+            );
+          } else {
+            console.log(
+              chalk.red(
+                `Execute nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+              )
+            );
+          }
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }

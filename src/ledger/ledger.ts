@@ -4,6 +4,7 @@
 import TransportNodeHid from '@ledgerhq/hw-transport-node-hid';
 import AptosLedgerClient, { publicKeyToAddress } from './AptosLedgerClient.js';
 import LedgerSigner from './LedgerSigner.js';
+import { AccountAddress } from '@aptos-labs/ts-sdk';
 
 // Initializes a LedgerClient connection with a Ledger hardware wallet.
 // This connection must be terminated with `closeLedgerClient` when it is no longer needed.
@@ -27,12 +28,14 @@ export async function initLedgerSigner(ledgerIndex: number = 0): Promise<LedgerS
   const signer = new LedgerSigner(
     ledgerClient,
     hdPath,
-    publicKeyResponse.publicKey.toString('hex')
+    publicKeyResponse.publicKey.toString('hex'),
+    AccountAddress.fromString(publicKeyResponse.address)
   );
 
   return signer;
 }
 
+// TODO: use this?
 // Converts a LedgerSigner object to an Aptos address
 export function signerToAddress(signer: LedgerSigner) {
   // @ts-ignore

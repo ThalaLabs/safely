@@ -9,7 +9,7 @@ import {
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import LedgerSigner from './ledger/LedgerSigner.js';
-import { signAndSubmitLedger, signAndSubmitProfile } from './signing.js';
+import { signAndSubmitTransaction } from './signing.js';
 
 export interface MultisigTransaction {
   payload: { vec: [string] };
@@ -171,12 +171,9 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
   }
 }
 
-// TODO: cleanup interface
 export async function proposeEntryFunction(
   aptos: Aptos,
-  options: { profile: string; ledgerIndex: number },
   signer: Account | LedgerSigner,
-  senderAddress: string,
   entryFunction: InputEntryFunctionData,
   multisigAddress: string
 ) {
@@ -204,7 +201,7 @@ export async function proposeEntryFunction(
 
   // simulate the create_transaction txn
   const proposeTxn = await aptos.transaction.build.simple({
-    sender: senderAddress,
+    sender: signer.accountAddress,
     data: {
       function: '0x1::multisig_account::create_transaction',
       functionArguments: [multisigAddress, txnPayload.multiSig.transaction_payload!.bcsToBytes()],
@@ -220,16 +217,23 @@ export async function proposeEntryFunction(
   }
 
   // Sign & Submit transaction
-  const pendingTxn = options.profile
-    ? await signAndSubmitProfile(aptos, signer as Account, proposeTxn)
-    : await signAndSubmitLedger(aptos, signer as LedgerSigner, proposeTxn, options.ledgerIndex);
-
-  await aptos.waitForTransaction({ transactionHash: pendingTxn.hash });
-  console.log(
-    chalk.green(
-      `Transaction proposed successfully: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
-    )
-  );
+  const pendingTxn = await signAndSubmitTransaction(aptos, signer, proposeTxn);
+  const { success, vm_status } = await aptos.waitForTransaction({
+    transactionHash: pendingTxn.hash,
+  });
+  if (success) {
+    console.log(
+      chalk.green(
+        `Propose ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+      )
+    );
+  } else {
+    console.log(
+      chalk.red(
+        `Propose nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+      )
+    );
+  }
 }
 
 // Tx Data

@@ -1,5 +1,5 @@
 import { loadAccount } from './accounts.js';
-import { closeLedger, initLedgerSigner, signerToAddress } from './ledger/ledger.js';
+import { closeLedger, initLedgerSigner } from './ledger/ledger.js';
 import { Account, AnyRawTransaction, Aptos } from '@aptos-labs/ts-sdk';
 import LedgerSigner from './ledger/LedgerSigner';
 
@@ -8,23 +8,21 @@ import LedgerSigner from './ledger/LedgerSigner';
 export async function getSender(options: {
   profile: string;
   ledgerIndex: number;
-}): Promise<{ signer: Account | LedgerSigner; address: string }> {
-  const signer = options.profile
+}): Promise<Account | LedgerSigner> {
+  return options.profile
     ? loadAccount(options.profile)
     : await initLedgerSigner(options.ledgerIndex);
-
-  // @ts-ignore
-  const address = options.profile ? signer.accountAddress : signerToAddress(signer);
-
-  if (!isNaN(options.ledgerIndex)) {
-    await closeLedger(signer as LedgerSigner);
-  }
-
-  return {
-    signer,
-    address,
-  };
 }
+
+export const signAndSubmitTransaction = async (
+  aptos: Aptos,
+  signer: Account | LedgerSigner,
+  txn: AnyRawTransaction
+) => {
+  return signer instanceof Account
+    ? await signAndSubmitProfile(aptos, signer, txn)
+    : await signAndSubmitLedger(aptos, signer, txn);
+};
 
 export const signAndSubmitProfile = async (
   aptos: Aptos,
@@ -37,12 +35,10 @@ export const signAndSubmitProfile = async (
 export const signAndSubmitLedger = async (
   aptos: Aptos,
   signer: LedgerSigner,
-  txn: AnyRawTransaction,
-  ledgerIndex: number
+  txn: AnyRawTransaction
 ) => {
-  const signer_ledger = await initLedgerSigner(ledgerIndex);
-  let signedTxn = await signer_ledger.signTransaction(txn);
-  await closeLedger(signer_ledger);
+  const signedTxn = await signer.signTransaction(txn);
+  await closeLedger(signer);
 
   return await aptos.transaction.submit.simple({
     transaction: txn,
