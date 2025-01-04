@@ -43,7 +43,8 @@ export function validateRequiredOptions(options: { profile?: string; ledgerIndex
   // Check if neither --profile nor --ledger is provided
   // @ts-ignore
   if (!options.profile && isNaN(options.ledgerIndex)) {
-    throw new Error('You must specify either --profile or --ledgerIndex.');
+    console.error(chalk.red('You must specify either --profile or --ledgerIndex.'));
+    process.exit(1);
   }
 
   return options;
