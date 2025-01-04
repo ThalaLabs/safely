@@ -1,21 +1,8 @@
 import { Account, AnyRawTransaction, Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import {
-  validateAddress,
-  validateSequenceNumber,
-  validateApprove,
-  validateLedgerIndex,
-  validateRequiredOptions,
-} from '../validators.js';
-import { initLedgerSigner, closeLedger } from '../ledger/ledger.js';
-import {
-  getSender,
-  signAndSubmitLedger,
-  signAndSubmitProfile,
-  signAndSubmitTransaction,
-} from '../signing.js';
-import LedgerSigner from '../ledger/LedgerSigner';
+import { validateAddress, validateSequenceNumber, validateApprove } from '../validators.js';
+import { loadAccount, signAndSubmitTransaction } from '../signing.js';
 
 export const registerVoteCommand = (program: Command) => {
   program
@@ -28,41 +15,19 @@ export const registerVoteCommand = (program: Command) => {
       validateSequenceNumber
     )
     .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateApprove)
-    .option('-p, --profile <address>', 'profile name of voter', (value) => {
-      return value;
-    })
-    .option(
-      '-l, --ledgerIndex <ledgerIndex>',
-      'Ledger index for the transaction',
-      validateLedgerIndex
-    )
-    .hook('preAction', (thisCommand, actionCommand) => {
-      const options = actionCommand.opts();
-      validateRequiredOptions(options); // Validate options before proceeding
-    })
+    .requiredOption('-p, --profile <string>', 'profile name of voter')
     .action(
       async (options: {
         multisigAddress: string;
         sequenceNumber: number;
         approve: boolean;
         profile: string;
-        ledgerIndex: number;
       }) => {
         const network = program.getOptionValue('network') as Network;
         const aptos = new Aptos(new AptosConfig({ network }));
 
         try {
-          console.log(
-            chalk.blue(
-              `Voting ${options.approve ? '✅' : '❌'} on transaction with sequence number ${
-                options.sequenceNumber
-              } for multisig: ${options.multisigAddress}`
-            )
-          );
-
-          const signer = await getSender(options);
-          console.log(chalk.blue(`Signer address: ${signer.accountAddress}`));
-
+          const signer = await loadAccount(options.profile);
           const txn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: {

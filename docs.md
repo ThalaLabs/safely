@@ -95,8 +95,7 @@ Options:
   -m, --multisig-address <address>  multisig account address
   -s, --sequence-number <number>    sequence number of transaction to vote on
   -a, --approve <boolean>           true to approve, false to reject
-  -p, --profile <address>           profile name of voter
-  -l, --ledgerIndex <ledgerIndex>   Ledger index for the transaction
+  -p, --profile <string>            profile name of voter
   -h, --help                        display help for command
 ```
 
@@ -120,10 +119,9 @@ Propose a raw transaction from a payload file
 
 ```
 Options:
-  -f, --txn-payload-file <file>    Path to the transaction payload file
-  -p, --profile <profile>          Profile to use for the transaction
-  -l, --ledgerIndex <ledgerIndex>  Ledger index for the transaction
-  -h, --help                       display help for command
+  -f, --txn-payload-file <file>  Path to the transaction payload file
+  -p, --profile <string>         Profile to use for the transaction
+  -h, --help                     display help for command
 ```
 
 ## safely propose predefined [options] [command]
@@ -144,12 +142,11 @@ Transfer coins to an address
 
 ```
 Options:
-  --coin-type <type>               Coin type
-  --recipient <address>            Recipient address
-  --amount <number>                Amount to transfer
-  -p, --profile <profile>          Profile to use for the transaction
-  -l, --ledgerIndex <ledgerIndex>  Ledger index for the transaction
-  -h, --help                       display help for command
+  --coin-type <type>      Coin type
+  --recipient <address>   Recipient address
+  --amount <number>       Amount to transfer
+  -p, --profile <string>  Profile to use for the transaction
+  -h, --help              display help for command
 ```
 
 ## safely execute [options]
@@ -160,8 +157,7 @@ Execute a multisig transaction
 Options:
   -m, --multisig-address <address>  multisig account address
   -a, --approve <boolean>           true to approve, false to reject
-  -p, --profile <profile>           Profile to use for the transaction
-  -l, --ledgerIndex <ledgerIndex>   Ledger index for the transaction
+  -p, --profile <string>            Profile to use for the transaction
   -h, --help                        display help for command
 ```
 
@@ -187,7 +183,7 @@ Create a new multisig account
 Options:
   -o, --additional-owners <addresses>     Comma-separated list of additional owner addresses
   -n, --num-signatures-required <number>  Number of signatures required for execution
-  -p, --profile <profile>                 Profile to use for the transaction
+  -p, --profile <string>                  Profile to use for the transaction
   -h, --help                              display help for command
 ```
 
@@ -201,8 +197,7 @@ Options:
   -a, --owners-add <addresses>            Comma-separated list of owner addresses to add
   -r, --owners-remove <addresses>         Comma-separated list of owner addresses to remove
   -n, --num-signatures-required <number>  New number of signatures required for execution
-  -p, --profile <profile>                 Profile to use for the transaction
-  -l, --ledgerIndex <ledgerIndex>         Ledger index for the transaction
+  -p, --profile <string>                  Profile to use for the transaction
   -h, --help                              display help for command
 ```
 
