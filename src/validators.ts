@@ -1,18 +1,16 @@
 import chalk from 'chalk';
 
-export function validateMultisigAddress(value: string): string {
+// TODO: use aip-80 address
+export function validateAddress(value: string): string {
   if (!/^0x[0-9a-f]{64}$/i.test(value)) {
-    console.error(chalk.red('Multisig address must be 0x followed by 64 hex characters'));
+    console.error(chalk.red('Address must be 0x followed by 64 hex characters'));
     process.exit(1);
   }
   return value;
 }
 
-export function validateMultisigAddresses(value: string): string[] {
-  const addresses = value.split(',').map((addr) => addr.trim());
-  addresses.forEach((address) => validateMultisigAddress(address)); // Call validation on each address
-
-  return addresses;
+export function validateAddresses(value: string): string[] {
+  return value ? value.split(',').map((addr) => validateAddress(addr.trim())) : [];
 }
 
 export function validateSequenceNumber(value: string): number {

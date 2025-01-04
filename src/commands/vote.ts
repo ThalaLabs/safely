@@ -2,7 +2,7 @@ import { Account, AnyRawTransaction, Aptos, AptosConfig, Network } from '@aptos-
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
-  validateMultisigAddress,
+  validateAddress,
   validateSequenceNumber,
   validateApprove,
   validateLedgerIndex,
@@ -16,11 +16,7 @@ export const registerVoteCommand = (program: Command) => {
   program
     .command('vote')
     .description('Vote on a pending transaction')
-    .requiredOption(
-      '-m, --multisig-address <address>',
-      'multisig account address',
-      validateMultisigAddress
-    )
+    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption(
       '-s, --sequence-number <number>',
       'sequence number of transaction to vote on',

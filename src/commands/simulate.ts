@@ -3,17 +3,13 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { MultisigTransaction, summarizeTransactionSimulation } from '../transactions.js';
 import { decode } from '../parser.js';
-import { validateMultisigAddress, validateSequenceNumber } from '../validators.js';
+import { validateAddress, validateSequenceNumber } from '../validators.js';
 
 export const registerSimulateCommand = (program: Command) => {
   program
     .command('simulate')
     .description('Simulate transaction for a multisig (ignoring signer thresholds)')
-    .requiredOption(
-      '-m, --multisig-address <address>',
-      'multisig account address',
-      validateMultisigAddress
-    )
+    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption(
       '-s, --sequence-number <number>',
       'fetch transaction with specific sequence number',

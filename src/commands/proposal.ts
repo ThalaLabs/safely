@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
 import { fetchPendingTxns } from '../transactions.js';
-import { validateMultisigAddress, validateSequenceNumber } from '../validators.js';
+import { validateAddress, validateSequenceNumber } from '../validators.js';
 import { decode } from '../parser.js';
 import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
 import { knownAddresses } from '../labels.js';
@@ -12,11 +12,7 @@ export const registerProposalCommand = (program: Command) => {
   program
     .command('proposal')
     .description('List proposals for a multisig')
-    .requiredOption(
-      '-m, --multisig-address <address>',
-      'multisig account address',
-      validateMultisigAddress
-    )
+    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .option(
       '-f, --filter <status>',
       'filter proposals by status',
