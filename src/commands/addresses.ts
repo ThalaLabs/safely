@@ -9,7 +9,7 @@ import chalk from 'chalk';
 export function registerAddressesCommand(program: Command) {
   const addressesCommand = program
     .command('addresses')
-    .description('Manage the local address book');
+    .description('Manage the local address book (experimental)');
 
   addressesCommand
     .command('add')

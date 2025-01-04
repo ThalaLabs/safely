@@ -7,7 +7,7 @@ import { encode } from '../parser.js';
 export function registerEncodeCommand(program: Command) {
   program
     .command('encode')
-    .description('Encode entry function payload')
+    .description('Encode entry function payload (experimental)')
     .requiredOption(
       '-f, --txn-payload-file <txn-payload-file>',
       'transaction payload file to encode',
