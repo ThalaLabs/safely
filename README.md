@@ -1,6 +1,6 @@
 # safely
 
-Manage your multisig transactions on Aptos **safely**.
+Manage your multisig accounts on Aptos & Movement **safely**.
 
 ## Background
 
