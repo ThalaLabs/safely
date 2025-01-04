@@ -17,14 +17,20 @@ const program = new Command();
 
 program.name('safely').description('CLI tool for multisig management').version('0.0.1');
 
+// important
+registerAccountCommand(program);
+registerProposeCommand(program);
+registerVoteCommand(program);
+registerExecuteCommand(program);
 registerProposalCommand(program);
+registerSimulateCommand(program);
+
+// experimental
 registerDecodeCommand(program);
 registerEncodeCommand(program);
 registerAddressesCommand(program);
-registerSimulateCommand(program);
-registerVoteCommand(program);
+
+// misc
 registerDocgenCommand(program);
-registerProposeCommand(program);
-registerExecuteCommand(program);
-registerAccountCommand(program);
+
 program.parse();
