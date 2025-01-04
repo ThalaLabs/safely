@@ -14,7 +14,7 @@ Options:
 
 ## safely decode [options]
 
-Decode multisig transaction bytes
+Decode multisig transaction bytes (experimental)
 
 ```
 Options:
@@ -25,7 +25,7 @@ Options:
 
 ## safely encode [options]
 
-Encode entry function payload
+Encode entry function payload (experimental)
 
 ```
 Options:
@@ -36,7 +36,7 @@ Options:
 
 ## safely addresses [options] [command]
 
-Manage the local address book
+Manage the local address book (experimental)
 
 ```
 Options:
@@ -80,7 +80,7 @@ Options:
 
 ## safely simulate [options]
 
-Simulate transaction for a multisig (ignoring signer thresholds)
+Simulate multisig transaction
 
 ```
 Options:

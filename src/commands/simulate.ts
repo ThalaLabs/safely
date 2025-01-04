@@ -8,7 +8,7 @@ import { validateAddress, validateSequenceNumber } from '../validators.js';
 export const registerSimulateCommand = (program: Command) => {
   program
     .command('simulate')
-    .description('Simulate transaction for a multisig (ignoring signer thresholds)')
+    .description('Simulate multisig transaction')
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
       new Option('--network <network>', 'network to use')

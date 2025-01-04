@@ -6,7 +6,7 @@ import { decode } from '../parser.js';
 export function registerDecodeCommand(program: Command) {
   program
     .command('decode')
-    .description('Decode multisig transaction bytes')
+    .description('Decode multisig transaction bytes (experimental)')
     .requiredOption(
       '-b, --bytes <bytes>',
       'transaction bytes to decode (hex string starting with 0x)',
