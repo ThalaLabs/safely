@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { decode } from '../parser.js';
@@ -18,9 +18,13 @@ export function registerDecodeCommand(program: Command) {
         return value;
       }
     )
-    .action(async (options: { bytes: string }) => {
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+    .addOption(
+      new Option('--network <network>', 'network to use')
+        .choices(['devnet', 'testnet', 'mainnet'])
+        .default('mainnet')
+    )
+    .action(async (options: { bytes: string; network: string }) => {
+      const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
 
       try {
         console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));

@@ -1,8 +1,8 @@
-import { Account, AnyRawTransaction, Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { validateAddress, validateSequenceNumber, validateApprove } from '../validators.js';
-import { loadAccount, signAndSubmitTransaction } from '../signing.js';
+import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
 export const registerVoteCommand = (program: Command) => {
   program
@@ -23,11 +23,9 @@ export const registerVoteCommand = (program: Command) => {
         approve: boolean;
         profile: string;
       }) => {
-        const network = program.getOptionValue('network') as Network;
-        const aptos = new Aptos(new AptosConfig({ network }));
-
         try {
-          const signer = await loadAccount(options.profile);
+          const { network, signer } = await loadProfile(options.profile);
+          const aptos = new Aptos(new AptosConfig({ network }));
           const txn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: {
@@ -44,7 +42,7 @@ export const registerVoteCommand = (program: Command) => {
 
           if (success) {
             console.log(
-              chalk.blue(
+              chalk.green(
                 `Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
               )
             );

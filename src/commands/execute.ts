@@ -4,13 +4,12 @@ import {
   AptosConfig,
   generateRawTransaction,
   generateTransactionPayload,
-  Network,
   SimpleTransaction,
 } from '@aptos-labs/ts-sdk';
 import { decode } from '../parser.js';
 import chalk from 'chalk';
 import { validateAddress, validateApprove } from '../validators.js';
-import { loadAccount, signAndSubmitTransaction } from '../signing.js';
+import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
@@ -20,10 +19,10 @@ export const registerExecuteCommand = (program: Command) => {
     .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateApprove)
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(async (options: { multisigAddress: string; approve: boolean; profile: string }) => {
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
-
       try {
+        const { network, signer } = await loadProfile(options.profile);
+        const aptos = new Aptos(new AptosConfig({ network }));
+
         // Get next transaction payload bytes
         const [txnPayloadBytes] = await aptos.view<[string]>({
           payload: {
@@ -41,8 +40,6 @@ export const registerExecuteCommand = (program: Command) => {
           ...entryFunction,
           aptosConfig: aptos.config,
         });
-
-        const signer = await loadAccount(options.profile);
 
         // Simulate transaction
         const rawTxn = await generateRawTransaction({

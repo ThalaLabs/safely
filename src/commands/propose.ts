@@ -1,34 +1,27 @@
 import { Command } from 'commander';
 import fs from 'fs';
 import path from 'path';
-import { Aptos, AptosConfig, Network, MoveFunctionId } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, MoveFunctionId } from '@aptos-labs/ts-sdk';
 import { decodeEntryFunction } from '../entryFunction.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress } from '../validators.js';
-import { loadAccount } from '../signing.js';
+import { loadProfile } from '../signing.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
     .command('propose')
     .description('Propose a new transaction for a multisig')
-    .requiredOption(
-      '-m, --multisig-address <address>',
-      'multisig account address',
-      validateAddress
-    );
-
+    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction');
   // Raw transaction from file
   propose
     .command('raw')
     .description('Propose a raw transaction from a payload file')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
-    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(async (options, cmd) => {
-      const { multisigAddress } = cmd.parent.opts();
+      const { multisigAddress, profile } = cmd.parent.opts();
       const { txnPayloadFile } = options;
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
 
       try {
         if (!txnPayloadFile) {
@@ -39,7 +32,8 @@ export const registerProposeCommand = (program: Command) => {
           throw new Error(`Transaction payload file not found: ${fullPath}`);
         }
 
-        const signer = await loadAccount(options.profile);
+        const { network, signer } = await loadProfile(profile);
+        const aptos = new Aptos(new AptosConfig({ network }));
         await proposeEntryFunction(aptos, signer, decodeEntryFunction(fullPath), multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
@@ -58,18 +52,16 @@ export const registerProposeCommand = (program: Command) => {
     .requiredOption('--coin-type <type>', 'Coin type')
     .requiredOption('--recipient <address>', 'Recipient address')
     .requiredOption('--amount <number>', 'Amount to transfer', Number)
-    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(async (options, cmd) => {
-      const { multisigAddress } = cmd.parent.parent.opts();
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { multisigAddress, profile } = cmd.parent.parent.opts();
       const entryFunction = {
         function: '0x1::aptos_account::transfer_coins' as MoveFunctionId,
         typeArguments: [options.coinType],
         functionArguments: [options.recipient, options.amount],
       };
       try {
-        const signer = await loadAccount(options.profile);
+        const { network, signer } = await loadProfile(profile);
+        const aptos = new Aptos(new AptosConfig({ network }));
         await proposeEntryFunction(aptos, signer, entryFunction, multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));

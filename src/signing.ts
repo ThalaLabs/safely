@@ -4,6 +4,7 @@ import {
   AnyRawTransaction,
   Aptos,
   Ed25519PrivateKey,
+  Network,
   PrivateKey,
   PrivateKeyVariants,
 } from '@aptos-labs/ts-sdk';
@@ -11,11 +12,19 @@ import LedgerSigner from './ledger/LedgerSigner';
 import fs from 'fs';
 import { parse } from 'yaml';
 
-export async function loadAccount(profile: string): Promise<Account | LedgerSigner> {
+export interface Profile {
+  network: Network;
+  signer: Account | LedgerSigner;
+}
+
+type ProfileData = {
+  network: string;
+} & ({ private_key: string } | { derivation_path: string });
+
+export async function loadProfile(profile: string): Promise<Profile> {
   // TODO: allow specifying any config file
   const file = fs.readFileSync(`.aptos/config.yaml`, 'utf8');
-  const profiles: Record<string, { private_key: string } | { derivation_path: string }> =
-    parse(file).profiles;
+  const profiles: Record<string, ProfileData> = parse(file).profiles;
 
   const profileData = profiles[profile];
   if (!profileData) {
@@ -23,15 +32,20 @@ export async function loadAccount(profile: string): Promise<Account | LedgerSign
   }
 
   if ('private_key' in profileData) {
-    return Account.fromPrivateKey({
-      privateKey: new Ed25519PrivateKey(
-        PrivateKey.formatPrivateKey(profileData.private_key, PrivateKeyVariants.Ed25519),
-        true
-      ),
-    });
+    return {
+      network: profileData.network.toLowerCase() as Network,
+      signer: Account.fromPrivateKey({
+        privateKey: new Ed25519PrivateKey(
+          PrivateKey.formatPrivateKey(profileData.private_key, PrivateKeyVariants.Ed25519),
+          true
+        ),
+      }),
+    };
   } else {
-    const ledgerIndex = getLedgerIndex(profileData.derivation_path);
-    return await initLedgerSigner(ledgerIndex);
+    return {
+      network: profileData.network.toLowerCase() as Network,
+      signer: await initLedgerSigner(getLedgerIndex(profileData.derivation_path)),
+    };
   }
 }
 
