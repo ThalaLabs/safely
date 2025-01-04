@@ -28,7 +28,7 @@ export async function loadProfile(profile: string): Promise<Profile> {
 
   const profileData = profiles[profile];
   if (!profileData) {
-    throw new Error(`Profile "${profile}" not found".`);
+    throw new Error(`Profile "${profile}" not found.`);
   }
 
   if ('private_key' in profileData) {
