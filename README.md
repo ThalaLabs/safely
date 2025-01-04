@@ -41,6 +41,7 @@ With the above issues, we believe that we need a new solution that is:
 - Human-readable transaction descriptions
 - Open-source and community-driven development
 - Ledger support
+- Movement support (soon)
 
 ## Usage
 
@@ -55,16 +56,16 @@ Options:
   -h, --help          display help for command
 
 Commands:
+  account             Multisig account operations
+  propose [options]   Propose a new transaction for a multisig
+  vote [options]      Vote on a pending transaction
+  execute [options]   Execute a multisig transaction
   proposal [options]  List proposals for a multisig
+  simulate [options]  Simulate multisig transaction
   decode [options]    Decode multisig transaction bytes (experimental)
   encode [options]    Encode entry function payload (experimental)
   addresses           Manage the local address book (experimental)
-  simulate [options]  Simulate multisig transaction
-  vote [options]      Vote on a pending transaction
   docgen [options]    Generate documentation for the CLI
-  propose [options]   Propose a new transaction for a multisig
-  execute [options]   Execute a multisig transaction
-  account             Multisig account operations
   help [command]      display help for command
 ```
 
