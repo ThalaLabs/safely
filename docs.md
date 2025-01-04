@@ -68,15 +68,6 @@ Options:
   --alias <alias>  Alias to remove
   -h, --help       display help for command
 ```
-## safely summary [options]
-
-Get summary of a multisig account
-
-```
-Options:
-  -m, --multisig-address <address>  multisig account address
-  -h, --help                        display help for command
-```
 ## safely simulate [options]
 
 Simulate transaction for a multisig (ignoring signer thresholds)
@@ -160,60 +151,50 @@ Options:
   -l, --ledgerIndex <ledgerIndex>   Ledger index for the transaction
   -h, --help                        display help for command
 ```
-## safely owners [options] [command]
+## safely account [options] [command]
 
-Multisig owner operations
+Multisig account operations
+
+```
+Options:
+  -h, --help        display help for command
+Commands:
+  create [options]  Create a new multisig account
+  update [options]  Update multisig owners and optionally the number of required signatures
+  show [options]    Show multisig summary
+  help [command]    display help for command
+```
+## safely account create [options]
+
+Create a new multisig account
+
+```
+Options:
+  -o, --additional-owners <addresses>     Comma-separated list of additional owner addresses
+  -n, --num-signatures-required <number>  Number of signatures required for execution
+  -p, --profile <profile>                 Profile to use for the transaction
+  -h, --help                              display help for command
+```
+## safely account update [options]
+
+Update multisig owners and optionally the number of required signatures
+
+```
+Options:
+  -m, --multisig-address <address>        multisig account address
+  -a, --owners-add <addresses>            Comma-separated list of owner addresses to add
+  -r, --owners-remove <addresses>         Comma-separated list of owner addresses to remove
+  -n, --num-signatures-required <number>  New number of signatures required for execution
+  -p, --profile <profile>                 Profile to use for the transaction
+  -l, --ledgerIndex <ledgerIndex>         Ledger index for the transaction
+  -h, --help                              display help for command
+```
+## safely account show [options]
+
+Show multisig summary
 
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
   -h, --help                        display help for command
-Commands:
-  list                              List multisig owners
-  add [options]                     Add owners to multisig
-  remove [options]                  Remove owners from multisig
-  swap [options]                    Swap owners of multisig
-  help [command]                    display help for command
-```
-## safely owners list [options]
-
-List multisig owners
-
-```
-Options:
-  -h, --help  display help for command
-```
-## safely owners add [options]
-
-Add owners to multisig
-
-```
-Options:
-  --owners <addresses>             Comma-separated list of owner addresses
-  -p, --profile <profile>          Profile to use for the transaction
-  -l, --ledgerIndex <ledgerIndex>  Ledger index for the transaction
-  -h, --help                       display help for command
-```
-## safely owners remove [options]
-
-Remove owners from multisig
-
-```
-Options:
-  --owners <addresses>             Comma-separated list of owner addresses
-  -p, --profile <profile>          Profile to use for the transaction
-  -l, --ledgerIndex <ledgerIndex>  Ledger index for the transaction
-  -h, --help                       display help for command
-```
-## safely owners swap [options]
-
-Swap owners of multisig
-
-```
-Options:
-  --owners-in <addresses>          Comma-separated list of owner addresses to add
-  --owners-out <addresses>         Comma-separated list of owner addresses to remove
-  -p, --profile <profile>          Profile to use for the transaction
-  -l, --ledgerIndex <ledgerIndex>  Ledger index for the transaction
-  -h, --help                       display help for command
 ```

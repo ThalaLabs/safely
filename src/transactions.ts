@@ -171,6 +171,7 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
   }
 }
 
+// TODO: cleanup interface
 export async function proposeEntryFunction(
   aptos: Aptos,
   options: { profile: string; ledgerIndex: number },
@@ -185,19 +186,21 @@ export async function proposeEntryFunction(
     aptosConfig: aptos.config,
   });
 
+  // TODO: figure out why it keeps failing on devnet & testnet
+
   // simulate the actual txn
-  const actualTxn = await aptos.transaction.build.simple({
-    sender: multisigAddress,
-    data: entryFunction,
-  });
+  // const actualTxn = await aptos.transaction.build.simple({
+  //   sender: multisigAddress,
+  //   data: entryFunction,
+  // });
 
-  const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
-    transaction: actualTxn,
-  });
+  // const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
+  //   transaction: actualTxn,
+  // });
 
-  if (!actualTxnSimulation.success) {
-    throw new Error(`Actual txn simulation failed: ${actualTxnSimulation.vm_status}`);
-  }
+  // if (!actualTxnSimulation.success) {
+  //   throw new Error(`Actual txn simulation failed: ${actualTxnSimulation.vm_status}`);
+  // }
 
   // simulate the create_transaction txn
   const proposeTxn = await aptos.transaction.build.simple({

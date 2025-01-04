@@ -5,11 +5,7 @@ import { Aptos, AptosConfig, Network, MoveFunctionId } from '@aptos-labs/ts-sdk'
 import { decodeEntryFunction } from '../entryFunction.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
-import {
-  validateLedgerIndex,
-  validateMultisigAddress,
-  validateRequiredOptions,
-} from '../validators.js';
+import { validateLedgerIndex, validateAddress, validateRequiredOptions } from '../validators.js';
 import { getSender } from '../signing.js';
 
 export const registerProposeCommand = (program: Command) => {
@@ -19,7 +15,7 @@ export const registerProposeCommand = (program: Command) => {
     .requiredOption(
       '-m, --multisig-address <address>',
       'multisig account address',
-      validateMultisigAddress
+      validateAddress
     );
 
   // Raw transaction from file

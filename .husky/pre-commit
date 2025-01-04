@@ -2,4 +2,5 @@ pnpm build
 git diff --name-only --cached > /tmp/staged-files
 pnpm format
 pnpm docgen
-git add $(cat /tmp/staged-files)
+# Only add files that still exist
+git add $(cat /tmp/staged-files | xargs -I {} sh -c 'test -f "{}" && echo "{}"')

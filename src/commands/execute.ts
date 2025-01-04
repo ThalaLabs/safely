@@ -11,7 +11,7 @@ import {
 import { decode } from '../parser.js';
 import chalk from 'chalk';
 import {
-  validateMultisigAddress,
+  validateAddress,
   validateApprove,
   validateLedgerIndex,
   validateRequiredOptions,
@@ -23,11 +23,7 @@ export const registerExecuteCommand = (program: Command) => {
   program
     .command('execute')
     .description('Execute a multisig transaction')
-    .requiredOption(
-      '-m, --multisig-address <address>',
-      'multisig account address',
-      validateMultisigAddress
-    )
+    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateApprove)
     .option('-p, --profile <profile>', 'Profile to use for the transaction')
     .option(
