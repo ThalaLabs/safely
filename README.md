@@ -39,9 +39,8 @@ With the above issues, we believe that we need a new solution that is:
 
 - Transaction simulation before signature collection
 - Human-readable transaction descriptions
-- Protocol-specific transaction templates
 - Open-source and community-driven development
-- Ledger support (WIP)
+- Ledger support
 
 ## Usage
 
@@ -52,22 +51,21 @@ Usage: safely [options] [command]
 CLI tool for multisig management
 
 Options:
-  -V, --version            output the version number
-  -n, --network <network>  network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
-  -h, --help               display help for command
+  -V, --version       output the version number
+  -h, --help          display help for command
 
 Commands:
-  proposal [options]       List proposals for a multisig
-  decode [options]         Decode multisig transaction bytes
-  encode [options]         Encode entry function payload
-  addresses                Manage the local address book
-  summary [options]        Get summary of a multisig account
-  simulate [options]       Simulate transaction for a multisig (ignoring signer thresholds)
-  vote [options]           Vote on a pending transaction
-  docgen [options]         Generate documentation for the CLI
-  propose [options]        Propose a new transaction for a multisig
-  execute [options]        Execute a multisig transaction
-  help [command]           display help for command
+  proposal [options]  List proposals for a multisig
+  decode [options]    Decode multisig transaction bytes (experimental)
+  encode [options]    Encode entry function payload (experimental)
+  addresses           Manage the local address book (experimental)
+  simulate [options]  Simulate multisig transaction
+  vote [options]      Vote on a pending transaction
+  docgen [options]    Generate documentation for the CLI
+  propose [options]   Propose a new transaction for a multisig
+  execute [options]   Execute a multisig transaction
+  account             Multisig account operations
+  help [command]      display help for command
 ```
 
 See [docs.md](./docs.md) for more details.
