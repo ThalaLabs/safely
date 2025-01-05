@@ -60,8 +60,8 @@ export const registerProposeCommand = (program: Command) => {
         functionArguments: [options.recipient, options.amount],
       };
       try {
-        const { network, signer } = await loadProfile(profile);
-        const aptos = new Aptos(new AptosConfig({ network }));
+        const { network, signer, fullnode } = await loadProfile(profile);
+        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
         await proposeEntryFunction(aptos, signer, entryFunction, multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));

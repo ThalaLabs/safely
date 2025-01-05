@@ -24,8 +24,8 @@ export const registerVoteCommand = (program: Command) => {
         profile: string;
       }) => {
         try {
-          const { network, signer } = await loadProfile(options.profile);
-          const aptos = new Aptos(new AptosConfig({ network }));
+          const { network, signer, fullnode } = await loadProfile(options.profile);
+          const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
           const txn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: {

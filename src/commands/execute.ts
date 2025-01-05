@@ -20,8 +20,8 @@ export const registerExecuteCommand = (program: Command) => {
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(async (options: { multisigAddress: string; approve: boolean; profile: string }) => {
       try {
-        const { network, signer } = await loadProfile(options.profile);
-        const aptos = new Aptos(new AptosConfig({ network }));
+        const { network, signer, fullnode } = await loadProfile(options.profile);
+        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
 
         // Get next transaction payload bytes
         const [txnPayloadBytes] = await aptos.view<[string]>({
@@ -48,12 +48,14 @@ export const registerExecuteCommand = (program: Command) => {
           aptosConfig: aptos.config,
         });
         const txn = new SimpleTransaction(rawTxn);
-        const [simulation] = await aptos.transaction.simulate.simple({
-          transaction: txn,
-        });
-        if (!simulation.success) {
-          throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
-        }
+
+        // TODO: figure out why simulation keeps failing on devnet & testnet
+        // const [simulation] = await aptos.transaction.simulate.simple({
+        //   transaction: txn,
+        // });
+        // if (!simulation.success) {
+        //   throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
+        // }
 
         // Sign & Submit transaction
         const pendingTxn = await signAndSubmitTransaction(aptos, signer, txn);

@@ -15,10 +15,12 @@ import { parse } from 'yaml';
 export interface Profile {
   network: Network;
   signer: Account | LedgerSigner;
+  fullnode: string;
 }
 
 type ProfileData = {
   network: string;
+  rest_url: string;
 } & ({ private_key: string } | { derivation_path: string });
 
 export async function loadProfile(profile: string): Promise<Profile> {
@@ -40,11 +42,13 @@ export async function loadProfile(profile: string): Promise<Profile> {
           true
         ),
       }),
+      fullnode: profileData.rest_url,
     };
   } else {
     return {
       network: profileData.network.toLowerCase() as Network,
       signer: await initLedgerSigner(getLedgerIndex(profileData.derivation_path)),
+      fullnode: profileData.rest_url,
     };
   }
 }
