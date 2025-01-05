@@ -45,7 +45,8 @@ Show multisig summary
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --fullnode <url>                  Fullnode URL for custom network
   -h, --help                        display help for command
 ```
 
@@ -130,7 +131,8 @@ List proposals for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --fullnode <url>                  Fullnode URL for custom network
   -f, --filter <status>             filter proposals by status (default: "pending")
   -s, --sequence-number <number>    fetch transaction with specific sequence number
   -l, --limit <number>              number of transactions to fetch (default: 20)
@@ -144,7 +146,8 @@ Simulate multisig transaction
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --fullnode <url>                  Fullnode URL for custom network
   -s, --sequence-number <number>    fetch transaction with specific sequence number
   -h, --help                        display help for command
 ```
@@ -156,7 +159,8 @@ Decode multisig transaction bytes (experimental)
 ```
 Options:
   -b, --bytes <bytes>  transaction bytes to decode (hex string starting with 0x)
-  --network <network>  network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
+  --network <network>  network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --fullnode <url>     Fullnode URL for custom network
   -h, --help           display help for command
 ```
 
@@ -167,7 +171,8 @@ Encode entry function payload (experimental)
 ```
 Options:
   -f, --txn-payload-file <txn-payload-file>  transaction payload file to encode
-  --network <network>                        network to use (choices: "devnet", "testnet", "mainnet", default: "mainnet")
+  --network <network>                        network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --fullnode <url>                           Fullnode URL for custom network
   -h, --help                                 display help for command
 ```
 
