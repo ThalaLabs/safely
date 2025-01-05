@@ -16,6 +16,9 @@
   "description": "A highly visible CLI tool for managing multisig on Aptos.",
   "author": "ThalaLabs",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist",
     "README.md"
