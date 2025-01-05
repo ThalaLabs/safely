@@ -41,7 +41,7 @@ With the above issues, we believe that we need a new solution that is:
 - Human-readable transaction descriptions
 - Open-source and community-driven development
 - Ledger support
-- Movement support (soon)
+- Movement support
 
 ## Usage
 
