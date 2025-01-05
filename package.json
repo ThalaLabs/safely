@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@thalalabs/safely",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "index.js",
   "bin": {
     "safely": "./dist/index.js"
@@ -19,9 +19,14 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThalaLabs/safely.git"
+  },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "docs.md"
   ],
   "devDependencies": {
     "@types/node": "^22.10.1",
