@@ -183,21 +183,21 @@ export async function proposeEntryFunction(
     aptosConfig: aptos.config,
   });
 
-  // TODO: figure out why it keeps failing on devnet & testnet
+  // TODO: figure out why it keeps failing on devnet & testnet. maybe skip simulation for testnet & devnet?
 
   // simulate the actual txn
-  // const actualTxn = await aptos.transaction.build.simple({
-  //   sender: multisigAddress,
-  //   data: entryFunction,
-  // });
+  const actualTxn = await aptos.transaction.build.simple({
+    sender: multisigAddress,
+    data: entryFunction,
+  });
 
-  // const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
-  //   transaction: actualTxn,
-  // });
+  const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
+    transaction: actualTxn,
+  });
 
-  // if (!actualTxnSimulation.success) {
-  //   throw new Error(`Actual txn simulation failed: ${actualTxnSimulation.vm_status}`);
-  // }
+  if (!actualTxnSimulation.success) {
+    throw new Error(`Actual txn simulation failed: ${actualTxnSimulation.vm_status}`);
+  }
 
   // simulate the create_transaction txn
   const proposeTxn = await aptos.transaction.build.simple({
@@ -208,14 +208,15 @@ export async function proposeEntryFunction(
     },
   });
 
-  // TODO: figure out why simulation keeps failing on devnet & testnet
-  // const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
-  //   transaction: proposeTxn,
-  // });
-  //
-  // if (!proposeTxnSimulation.success) {
-  //   throw new Error(`Propose txn simulation failed: ${proposeTxnSimulation.vm_status}`);
-  // }
+  // TODO: figure out why simulation keeps failing on devnet & testnet. maybe skip simulation for testnet & devnet?
+
+  const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
+    transaction: proposeTxn,
+  });
+
+  if (!proposeTxnSimulation.success) {
+    throw new Error(`Propose txn simulation failed: ${proposeTxnSimulation.vm_status}`);
+  }
 
   // Sign & Submit transaction
   const pendingTxn = await signAndSubmitTransaction(aptos, signer, proposeTxn);

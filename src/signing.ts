@@ -33,22 +33,24 @@ export async function loadProfile(profile: string): Promise<Profile> {
     throw new Error(`Profile "${profile}" not found.`);
   }
 
+  const network = profileData.network.toLowerCase() as Network;
+  const fullnode = profileData.rest_url + '/v1';
   if ('private_key' in profileData) {
     return {
-      network: profileData.network.toLowerCase() as Network,
+      network,
+      fullnode,
       signer: Account.fromPrivateKey({
         privateKey: new Ed25519PrivateKey(
           PrivateKey.formatPrivateKey(profileData.private_key, PrivateKeyVariants.Ed25519),
           true
         ),
       }),
-      fullnode: profileData.rest_url,
     };
   } else {
     return {
-      network: profileData.network.toLowerCase() as Network,
+      network,
+      fullnode,
       signer: await initLedgerSigner(getLedgerIndex(profileData.derivation_path)),
-      fullnode: profileData.rest_url,
     };
   }
 }

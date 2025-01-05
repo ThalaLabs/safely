@@ -14,26 +14,23 @@ export const registerProposeCommand = (program: Command) => {
     .description('Propose a new transaction for a multisig')
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction');
+
   // Raw transaction from file
   propose
     .command('raw')
     .description('Propose a raw transaction from a payload file')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
-    .action(async (options, cmd) => {
+    .action(async (options: { txnPayloadFile: string }, cmd) => {
       const { multisigAddress, profile } = cmd.parent.opts();
-      const { txnPayloadFile } = options;
 
       try {
-        if (!txnPayloadFile) {
-          throw new Error('Must specify --txn-payload-file');
-        }
-        const fullPath = path.resolve(txnPayloadFile);
+        const fullPath = path.resolve(options.txnPayloadFile);
         if (!fs.existsSync(fullPath)) {
           throw new Error(`Transaction payload file not found: ${fullPath}`);
         }
 
-        const { network, signer } = await loadProfile(profile);
-        const aptos = new Aptos(new AptosConfig({ network }));
+        const { network, signer, fullnode } = await loadProfile(profile);
+        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
         await proposeEntryFunction(aptos, signer, decodeEntryFunction(fullPath), multisigAddress);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
@@ -52,7 +49,7 @@ export const registerProposeCommand = (program: Command) => {
     .requiredOption('--coin-type <type>', 'Coin type')
     .requiredOption('--recipient <address>', 'Recipient address')
     .requiredOption('--amount <number>', 'Amount to transfer', Number)
-    .action(async (options, cmd) => {
+    .action(async (options: { coinType: string; recipient: string; amount: number }, cmd) => {
       const { multisigAddress, profile } = cmd.parent.parent.opts();
       const entryFunction = {
         function: '0x1::aptos_account::transfer_coins' as MoveFunctionId,
