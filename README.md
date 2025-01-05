@@ -1,4 +1,4 @@
-# safely
+# safely <a style="margin-left:5px" href="https://www.npmjs.com/package/@thalalabs/safely"><img src="https://img.shields.io/npm/v/@thalalabs/safely?colorA=2c8af7&colorB=2c8af7&style=flat" alt="Version"></a>
 
 Manage your multisig accounts on Aptos & Movement **safely**.
 
