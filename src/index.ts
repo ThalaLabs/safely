@@ -19,9 +19,18 @@ const program = new Command();
 program.name('safely').description('CLI tool for multisig management').version('0.0.1');
 program.addOption(
   new Option('-n, --network <network>', 'network to use')
-    .choices(['devnet', 'testnet', 'mainnet'])
+    .choices(['devnet', 'testnet', 'mainnet', 'custom'])
     .default('mainnet')
 );
+
+program.option('--fullnode <url>', 'Fullnode URL for custom network');
+
+program.hook('preAction', (thisCommand) => {
+  const options = thisCommand.opts();
+  if (options.network === 'custom' && !options.fullnode) {
+    throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
+  }
+});
 
 registerProposalCommand(program);
 registerDecodeCommand(program);

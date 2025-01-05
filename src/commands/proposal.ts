@@ -50,8 +50,8 @@ export const registerProposalCommand = (program: Command) => {
         sequenceNumber?: number;
         limit?: number;
       }) => {
-        const network = program.getOptionValue('network') as Network;
-        const aptos = new Aptos(new AptosConfig({ network }));
+        const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
         const n = options.limit || 20;
 
         try {

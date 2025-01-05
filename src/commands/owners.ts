@@ -30,8 +30,8 @@ export const registerOwnersCommand = (program: Command) => {
       const { multisigAddress } = propose.opts();
       console.log(multisigAddress);
 
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+      const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
 
       try {
         const table = new Table();
@@ -79,11 +79,9 @@ export const registerOwnersCommand = (program: Command) => {
     })
     .action(async (options) => {
       const { multisigAddress } = propose.opts();
-      console.log(multisigAddress);
-      console.log(options.profile);
 
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+      const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
       const entryFunction = {
         function: '0x1::multisig_account::add_owners' as MoveFunctionId,
         typeArguments: [],
@@ -119,8 +117,8 @@ export const registerOwnersCommand = (program: Command) => {
     })
     .action(async (options) => {
       const { multisigAddress } = propose.opts();
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+      const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
       const entryFunction = {
         function: '0x1::multisig_account::remove_owners' as MoveFunctionId,
         typeArguments: [],
@@ -161,8 +159,8 @@ export const registerOwnersCommand = (program: Command) => {
     })
     .action(async (options) => {
       const { multisigAddress } = propose.opts();
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+      const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
       const entryFunction = {
         function: '0x1::multisig_account::swap_owners' as MoveFunctionId,
         typeArguments: [],

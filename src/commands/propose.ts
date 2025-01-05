@@ -40,8 +40,9 @@ export const registerProposeCommand = (program: Command) => {
     .action(async (options, cmd) => {
       const { multisigAddress } = cmd.parent.opts();
       const { txnPayloadFile } = options;
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+      const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+
 
       try {
         if (!txnPayloadFile) {
@@ -91,9 +92,12 @@ export const registerProposeCommand = (program: Command) => {
       validateRequiredOptions(options);
     })
     .action(async (options, cmd) => {
-      const { multisigAddress } = cmd.parent.parent.opts();
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { multisigAddress, network, fullnode } = cmd.parent.parent.opts() as {
+        multisigAddress: string;
+        network: Network;
+        fullnode?: string;
+      };
+      const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
       const entryFunction = {
         function: '0x1::aptos_account::transfer_coins' as MoveFunctionId,
         typeArguments: [options.coinType],

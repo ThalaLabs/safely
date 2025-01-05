@@ -17,8 +17,8 @@ export function registerEncodeCommand(program: Command) {
       }
     )
     .action(async (options: { txnPayloadFile: string }) => {
-      const network = program.getOptionValue('network') as Network;
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+      const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
 
       try {
         console.log(chalk.blue(`Encoding transaction payload: ${options.txnPayloadFile}`));

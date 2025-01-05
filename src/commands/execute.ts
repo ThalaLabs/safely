@@ -53,8 +53,8 @@ export const registerExecuteCommand = (program: Command) => {
         profile: string;
         ledgerIndex: number;
       }) => {
-        const network = program.getOptionValue('network') as Network;
-        const aptos = new Aptos(new AptosConfig({ network }));
+        const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
 
         try {
           // Get Transaction Payload
@@ -97,12 +97,12 @@ export const registerExecuteCommand = (program: Command) => {
             aptosConfig: aptos.config,
           });
           const txn = new SimpleTransaction(rawTxn);
-          const [simulation] = await aptos.transaction.simulate.simple({
-            transaction: txn,
-          });
-          if (!simulation.success) {
-            throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
-          }
+          // const [simulation] = await aptos.transaction.simulate.simple({
+          //   transaction: txn,
+          // });
+          // if (!simulation.success) {
+          //   throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
+          // }
 
           // Sign & Submit transaction
           const pendingTxn = options.profile

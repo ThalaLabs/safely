@@ -47,8 +47,8 @@ export const registerVoteCommand = (program: Command) => {
         profile: string;
         ledgerIndex: number;
       }) => {
-        const network = program.getOptionValue('network') as Network;
-        const aptos = new Aptos(new AptosConfig({ network }));
+        const { network, fullnode } = program.opts() as { network: Network; fullnode?: string };
+        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
 
         try {
           console.log(
