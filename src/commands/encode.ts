@@ -18,9 +18,16 @@ export function registerEncodeCommand(program: Command) {
     )
     .addOption(
       new Option('--network <network>', 'network to use')
-        .choices(['devnet', 'testnet', 'mainnet'])
+        .choices(['devnet', 'testnet', 'mainnet', 'custom'])
         .default('mainnet')
     )
+    .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
+    .hook('preAction', (thisCommand) => {
+      const options = thisCommand.opts();
+      if (options.network === 'custom' && !options.fullnode) {
+        throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
+      }
+    })
     .action(async (options: { txnPayloadFile: string; network: string }) => {
       const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
 

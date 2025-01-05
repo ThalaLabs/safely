@@ -12,17 +12,34 @@ export const registerSimulateCommand = (program: Command) => {
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
       new Option('--network <network>', 'network to use')
-        .choices(['devnet', 'testnet', 'mainnet'])
+        .choices(['devnet', 'testnet', 'mainnet', 'custom'])
         .default('mainnet')
     )
+    .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
+    .hook('preAction', (thisCommand) => {
+      const options = thisCommand.opts();
+      if (options.network === 'custom' && !options.fullnode) {
+        throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
+      }
+    })
     .requiredOption(
       '-s, --sequence-number <number>',
       'fetch transaction with specific sequence number',
       validateUInt
     )
     .action(
-      async (options: { multisigAddress: string; netwrok: string; sequenceNumber: number }) => {
-        const aptos = new Aptos(new AptosConfig({ network: options.netwrok as Network }));
+      async (options: {
+        fullnode: string;
+        multisigAddress: string;
+        network: string;
+        sequenceNumber: number;
+      }) => {
+        const aptos = new Aptos(
+          new AptosConfig({
+            network: options.network as Network,
+            ...(options.fullnode && { fullnode: options.fullnode }),
+          })
+        );
 
         try {
           console.log(

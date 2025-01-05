@@ -15,9 +15,16 @@ export const registerProposalCommand = (program: Command) => {
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
       new Option('--network <network>', 'network to use')
-        .choices(['devnet', 'testnet', 'mainnet'])
+        .choices(['devnet', 'testnet', 'mainnet', 'custom'])
         .default('mainnet')
     )
+    .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
+    .hook('preAction', (thisCommand) => {
+      const options = thisCommand.opts();
+      if (options.network === 'custom' && !options.fullnode) {
+        throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
+      }
+    })
     .option(
       '-f, --filter <status>',
       'filter proposals by status',
@@ -41,11 +48,17 @@ export const registerProposalCommand = (program: Command) => {
       async (options: {
         multisigAddress: string;
         network: string;
+        fullnode: string;
         filter: 'pending' | 'succeeded' | 'failed';
         sequenceNumber?: number;
         limit?: number;
       }) => {
-        const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
+        const aptos = new Aptos(
+          new AptosConfig({
+            network: options.network as Network,
+            ...(options.fullnode && { fullnode: options.fullnode }),
+          })
+        );
         const n = options.limit || 20;
 
         try {

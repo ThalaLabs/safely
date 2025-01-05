@@ -42,8 +42,8 @@ export const registerAccountCommand = (program: Command) => {
           functionArguments: [options.additionalOwners, options.numSignaturesRequired, [], []],
         };
         try {
-          const { network, signer } = await loadProfile(options.profile);
-          const aptos = new Aptos(new AptosConfig({ network }));
+          const { network, signer, fullnode } = await loadProfile(options.profile);
+          const aptos = new Aptos(new AptosConfig({ network, fullnode }));
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: entryFunction,
@@ -91,7 +91,7 @@ export const registerAccountCommand = (program: Command) => {
       'Comma-separated list of owner addresses to remove',
       validateAddresses
     )
-    .option(
+    .requiredOption(
       '-n, --num-signatures-required <number>',
       'New number of signatures required for execution',
       validateUInt
@@ -116,8 +116,8 @@ export const registerAccountCommand = (program: Command) => {
           ],
         };
         try {
-          const { network, signer } = await loadProfile(options.profile);
-          const aptos = new Aptos(new AptosConfig({ network }));
+          const { network, signer, fullnode } = await loadProfile(options.profile);
+          const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
           await proposeEntryFunction(aptos, signer, entryFunction, options.multisigAddress);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
@@ -132,11 +132,23 @@ export const registerAccountCommand = (program: Command) => {
     .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
       new Option('--network <network>', 'network to use')
-        .choices(['devnet', 'testnet', 'mainnet'])
+        .choices(['devnet', 'testnet', 'mainnet', 'custom'])
         .default('mainnet')
     )
-    .action(async (options: { multisigAddress: string; network: string }) => {
-      const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
+    .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
+    .hook('preAction', (thisCommand) => {
+      const options = thisCommand.opts();
+      if (options.network === 'custom' && !options.fullnode) {
+        throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
+      }
+    })
+    .action(async (options: { fullnode: string; multisigAddress: string; network: string }) => {
+      const aptos = new Aptos(
+        new AptosConfig({
+          network: options.network as Network,
+          ...(options.fullnode && { fullnode: options.fullnode }),
+        })
+      );
 
       try {
         // owners
