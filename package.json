@@ -29,6 +29,7 @@
     "docs.md"
   ],
   "devDependencies": {
+    "@changesets/cli": "^2.27.11",
     "@types/node": "^22.10.1",
     "husky": "^9.1.7",
     "prettier": "^3.4.2",

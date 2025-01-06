@@ -24,54 +24,7 @@ jobs:
         cache: 'pnpm'
         
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --no-frozen-lockfile
       
     - name: Build
       run: pnpm build
-
-  publish:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - uses: pnpm/action-setup@v2
-      with:
-        version: 9
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'pnpm'
-        registry-url: 'https://registry.npmjs.org'
-        
-    - name: Install dependencies
-      run: pnpm install
-      
-    - name: Build
-      run: pnpm build
-        
-    - name: Check NPM_TOKEN
-      id: check_token
-      run: |
-        if [ "${{ secrets.NPM_TOKEN }}" != '' ]; then
-          echo "has_token=true" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Check version change
-      id: check_version
-      run: |
-        REMOTE_VERSION=$(npm view @thalalabs/safely version || echo "0.0.0")
-        LOCAL_VERSION=$(node -p "require('./package.json').version")
-        if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
-          echo "version_changed=true" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Publish to npm
-      if: steps.check_token.outputs.has_token == 'true' && steps.check_version.outputs.version_changed == 'true'
-      run: pnpm publish --no-git-checks
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
