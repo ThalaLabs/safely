@@ -5,7 +5,7 @@ import { Aptos, AptosConfig, MoveFunctionId } from '@aptos-labs/ts-sdk';
 import { decodeEntryFunction } from '../entryFunction.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
-import { validateAddress } from '../validators.js';
+import { validateAddress, validateAsset } from '../validators.js';
 import { loadProfile } from '../signing.js';
 
 export const registerProposeCommand = (program: Command) => {
@@ -44,26 +44,42 @@ export const registerProposeCommand = (program: Command) => {
 
   // Transfer coins action
   predefined
-    .command('transfer-coins')
-    .description('Transfer coins to an address')
-    .requiredOption('--coin-type <type>', 'Coin type')
+    .command('transfer-assets')
+    .description('Transfer assets to an address')
+    .requiredOption('--asset <type>', 'Either coin type of fungible asset address', validateAsset)
     .requiredOption('--recipient <address>', 'Recipient address')
     .requiredOption('--amount <number>', 'Amount to transfer', Number)
-    .action(async (options: { coinType: string; recipient: string; amount: number }, cmd) => {
-      const { multisigAddress, profile } = cmd.parent.parent.opts();
-      const entryFunction = {
-        function: '0x1::aptos_account::transfer_coins' as MoveFunctionId,
-        typeArguments: [options.coinType],
-        functionArguments: [options.recipient, options.amount],
-      };
-      try {
-        const { network, signer, fullnode } = await loadProfile(profile);
-        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
-        await proposeEntryFunction(aptos, signer, entryFunction, multisigAddress);
-      } catch (error) {
-        console.error(chalk.red(`Error: ${(error as Error).message}`));
+    .action(
+      async (
+        options: {
+          asset: { type: 'coin' | 'fa'; address: string };
+          recipient: string;
+          amount: number;
+        },
+        cmd
+      ) => {
+        const { multisigAddress, profile } = cmd.parent.parent.opts();
+        const entryFunction =
+          options.asset.type === 'coin'
+            ? {
+                function: '0x1::aptos_account::transfer_coins' as MoveFunctionId,
+                typeArguments: [options.asset.address],
+                functionArguments: [options.recipient, options.amount],
+              }
+            : {
+                function: '0x1::aptos_account::transfer_fungible_assets' as MoveFunctionId,
+                typeArguments: [],
+                functionArguments: [options.asset.address, options.recipient, options.amount],
+              };
+        try {
+          const { network, signer, fullnode } = await loadProfile(profile);
+          const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+          await proposeEntryFunction(aptos, signer, entryFunction, multisigAddress);
+        } catch (error) {
+          console.error(chalk.red(`Error: ${(error as Error).message}`));
+        }
       }
-    });
+    );
 
   // Add other predefined actions here as subcommands
 };
