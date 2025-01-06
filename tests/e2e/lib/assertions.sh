@@ -8,7 +8,7 @@ assert_output() {
     
     echo "Running test: $test_name"
     local output
-    output=$($command)
+    output=$(eval "$command")
     
     if echo "$output" | grep -q "$expected_output"; then
         echo -e "${GREEN}✓ Test passed: $test_name${NC}"

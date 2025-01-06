@@ -37,8 +37,7 @@ export function validateBool(value: string): boolean {
 }
 
 export function validateAsset(value: string): { type: 'coin' | 'fa'; address: string } {
-  const regex = /^([a-f0-9]+)::[a-zA-Z0-9]+::[a-zA-Z0-9]+$/;
-  if (regex.test(value)) {
+  if (value.includes('::')) {
     const [address] = value.split(':');
     validateAddress(address); // Validate the address portion
     return { type: 'coin', address: value };
