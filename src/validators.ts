@@ -35,3 +35,13 @@ export function validateBool(value: string): boolean {
   console.error(chalk.red('Must be true/false or 1/0'));
   process.exit(1);
 }
+
+export function validateAsset(value: string): { type: 'coin' | 'fa'; address: string } {
+  const regex = /^([a-f0-9]+)::[a-zA-Z0-9]+::[a-zA-Z0-9]+$/;
+  if (regex.test(value)) {
+    const [address] = value.split(':');
+    validateAddress(address); // Validate the address portion
+    return { type: 'coin', address: value };
+  }
+  return { type: 'fa', address: validateAddress(value) };
+}

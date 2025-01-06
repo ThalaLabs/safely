@@ -81,19 +81,19 @@ Propose a predefined transaction type
 
 ```
 Options:
-  -h, --help                display help for command
+  -h, --help                 display help for command
 Commands:
-  transfer-coins [options]  Transfer coins to an address
-  help [command]            display help for command
+  transfer-assets [options]  Transfer assets to an address
+  help [command]             display help for command
 ```
 
-## safely propose predefined transfer-coins [options]
+## safely propose predefined transfer-assets [options]
 
-Transfer coins to an address
+Transfer assets to an address
 
 ```
 Options:
-  --coin-type <type>     Coin type
+  --asset <type>         Either coin type of fungible asset address
   --recipient <address>  Recipient address
   --amount <number>      Amount to transfer
   -h, --help             display help for command
