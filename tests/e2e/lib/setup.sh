@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x  # Add this to see all commands being executed
 
 # Colors for output
 export GREEN='\033[0;32m'
