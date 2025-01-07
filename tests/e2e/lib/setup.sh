@@ -26,7 +26,7 @@ create_test_multisig() {
     echo "Creating test multisig..."  >&2
     local output
 
-    raw=$(pnpm safely account create -o 0x1 -n 1 -p e2e_test)
+    raw=$(pnpm safely account create -o "" -n 1 -p e2e_test)
 
     # the raw is in this format: "Create multisig ok: https://explorer.aptoslabs.com/account/0x4977b2fd2b642cdba4bd5e59bb7761452254de2474e3fde865ec61cdb2731a37?network=devnet"
     output=$(echo "$raw" | grep -o 'https://explorer.aptoslabs.com/account/0x[a-fA-F0-9]\{64\}?network=devnet' | tail -n1)
