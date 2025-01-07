@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x  # Add this to see all commands being executed
 
 # Colors for output
 export GREEN='\033[0;32m'
@@ -39,5 +40,5 @@ create_test_multisig() {
 
 # Cleanup function
 cleanup() {
-    rm -rf .aptos
-} 
+    aptos config delete-profile --profile e2e_test
+}
