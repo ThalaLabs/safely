@@ -26,7 +26,7 @@ assert_output "Check proposal in list" \
 # Vote
 assert_output "Vote on proposal" \
     "pnpm safely vote -m ${MULTISIG_ADDRESS} -s 1 -a true -p e2e_test" \
-    "Vaaote ok"
+    "Vote ok"
 
 # Execute
 assert_output "Execute proposal" \
