@@ -23,5 +23,15 @@ assert_output "Check proposal in list" \
     "sleep 10 && echo EXIT | pnpm safely proposal -m ${MULTISIG_ADDRESS} --network devnet" \
     "transfer_coins"
 
+# Vote
+assert_output "Vote on proposal" \
+    "pnpm safely vote -m ${MULTISIG_ADDRESS} -s 1 -a true -p e2e_test" \
+    "Vaaote ok"
+
+# Execute
+assert_output "Execute proposal" \
+    "pnpm safely execute -m ${MULTISIG_ADDRESS} -a true -p e2e_test" \
+    "Execute ok"
+
 # Cleanup
 cleanup 

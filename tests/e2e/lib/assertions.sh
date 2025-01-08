@@ -17,6 +17,6 @@ assert_output() {
         echo -e "${RED}✗ Test failed: $test_name${NC}"
         echo "Expected output to contain: $expected_output"
         echo "Actual output: $output"
-        return 1
+        exit 1
     fi
 } 
