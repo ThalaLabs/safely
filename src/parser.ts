@@ -86,108 +86,80 @@ export async function encode(
 }
 
 function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunctionArgumentTypes {
-  const tt = typeTag.toString();
+  let tt = typeTag.toString();
   const deserializer = new Deserializer(arg.bcsToBytes());
-  if (tt === 'u8') {
-    return U8.deserialize(deserializer).value;
+
+  // Extract inner type if option
+  if (tt.startsWith('0x1::option::Option')) {
+    tt = extractInnerType(tt);
   }
-  if (tt === 'u16') {
-    return U16.deserialize(deserializer).value;
-  }
-  if (tt === 'u32') {
-    return U32.deserialize(deserializer).value;
-  }
-  if (tt === 'u64') {
-    return U64.deserialize(deserializer).value;
-  }
-  if (tt === 'u128') {
-    return U128.deserialize(deserializer).value;
-  }
-  if (tt === 'u256') {
-    return U256.deserialize(deserializer).value;
-  }
-  if (tt === 'bool') {
-    return Bool.deserialize(deserializer).value;
-  }
-  if (tt === 'address') {
-    return AccountAddress.deserialize(deserializer).toString();
-  }
-  if (tt === '0x1::string::String') {
-    return MoveString.deserialize(deserializer).value;
-  }
-  if (tt.startsWith('0x1::object::Object')) {
-    return AccountAddress.deserialize(deserializer).toString();
-  }
-  if (tt === 'vector<u8>') {
-    // TODO: very likely input params is a string
-    return arg.bcsToBytes();
-  }
+
+  // Extract inner type if vector
   if (tt.startsWith('vector')) {
-    if (tt === 'vector<u16>') {
-      return MoveVector.deserialize(deserializer, U16).values;
-    }
-    if (tt === 'vector<u32>') {
-      return MoveVector.deserialize(deserializer, U32).values;
-    }
-    if (tt === 'vector<u64>') {
-      return MoveVector.deserialize(deserializer, U64).values;
-    }
-    if (tt === 'vector<u128>') {
-      return MoveVector.deserialize(deserializer, U128).values;
-    }
-    if (tt === 'vector<u256>') {
-      return MoveVector.deserialize(deserializer, U256).values;
-    }
-    if (tt === 'vector<bool>') {
-      return MoveVector.deserialize(deserializer, Bool).values;
-    }
-    if (tt === 'vector<address>') {
-      return MoveVector.deserialize(deserializer, AccountAddress).values;
-    }
-    if (tt === 'vector<0x1::string::String>') {
-      return MoveVector.deserialize(deserializer, MoveString).values;
-    }
-    if (tt === 'vector<0x1::object::Object>') {
-      return MoveVector.deserialize(deserializer, AccountAddress).values;
-    }
-    if (tt === 'vector<vector<u8>>') {
-      // TODO: handle publish_package payload
-      return arg.bcsToBytes();
-    }
-    if (tt.startsWith('vector<vector')) {
-      // TODO: not sure how to handle this
-      return arg.bcsToBytes();
+    const innerType = extractInnerType(tt); // Get the inner type
+
+    switch (innerType) {
+      case 'hex': return arg.bcsToBytes();
+      case 'u8': return arg.bcsToBytes(); // TODO: very likely input params is a string
+      case 'u16': return MoveVector.deserialize(deserializer, U16).values;
+      case 'u32': return MoveVector.deserialize(deserializer, U32).values;
+      case 'u64': return MoveVector.deserialize(deserializer, U64).values;
+      case 'u128': return MoveVector.deserialize(deserializer, U128).values;
+      case 'u256': return MoveVector.deserialize(deserializer, U256).values;
+      case 'bool': return MoveVector.deserialize(deserializer, Bool).values;
+      case 'address': return MoveVector.deserialize(deserializer, AccountAddress).values;
+      case '0x1::string::String': return MoveVector.deserialize(deserializer, MoveString).values;
+      case '0x1::object::Object': return MoveVector.deserialize(deserializer, AccountAddress).values;
+      case 'vector<u8>': return arg.bcsToBytes(); // TODO: handle publish_package payload
+      case 'vector<vector<u8>>': return arg.bcsToBytes(); // TODO: handle publish_package payload
+      default: arg.bcsToBytes(); // TODO: not sure how to handle this
     }
   }
+
+  // Base cases for primitive types
+  switch (tt) {
+    case 'hex': return arg.bcsToBytes();
+    case 'u8': return U8.deserialize(deserializer).value;
+    case 'u16': return U16.deserialize(deserializer).value;
+    case 'u32': return U32.deserialize(deserializer).value;
+    case 'u64': return U64.deserialize(deserializer).value;
+    case 'u128': return U128.deserialize(deserializer).value;
+    case 'u256': return U256.deserialize(deserializer).value;
+    case 'bool': return Bool.deserialize(deserializer).value;
+    case 'address': return AccountAddress.deserialize(deserializer).toString();
+    case '0x1::string::String': return MoveString.deserialize(deserializer).value;
+    case '0x1::object::Object': return AccountAddress.deserialize(deserializer).toString();
+    default: break;
+  }
+
   throw new Error(`[decodeArg] Unsupported type tag: ${tt}`);
 }
 
 function encodeArg(typeTag: TypeTag, arg: SimpleEntryFunctionArgumentTypes): EntryFunctionArgument {
   const tt = typeTag.toString();
-  if (tt === 'u8') {
-    return new U8(arg as number);
+
+  switch (tt) {
+    case 'hex': return new U8(parseInt(arg as string, 16));
+    case 'u8': return new U8(arg as number);
+    case 'u16': return new U16(arg as number);
+    case 'u32': return new U32(arg as number);
+    case 'u64': return new U64(arg as bigint);
+    case 'u128': return new U128(arg as bigint);
+    case 'u256': return new U256(arg as bigint);
+    case 'bool': return new Bool(arg as boolean);
+    case 'address': return AccountAddress.from(arg as string);
+    // TODO: 0x1::string::String, 0x1::object::Object, vector<u8> and all vector<T> types
+    default: break;
   }
-  if (tt === 'u16') {
-    return new U16(arg as number);
-  }
-  if (tt === 'u32') {
-    return new U32(arg as number);
-  }
-  if (tt === 'u64') {
-    return new U64(arg as bigint);
-  }
-  if (tt === 'u128') {
-    return new U128(arg as bigint);
-  }
-  if (tt === 'u256') {
-    return new U256(arg as bigint);
-  }
-  if (tt === 'bool') {
-    return new Bool(arg as boolean);
-  }
-  if (tt === 'address') {
-    return AccountAddress.from(arg as string);
-  }
-  // TODO: 0x1::string::String, 0x1::object::Object, vector<u8> and all vector<T> types
+
   throw new Error(`[encodeArg] Unsupported type tag: ${tt}`);
+}
+
+// Helper to extract the inner type of complex types like vectors or options
+function extractInnerType(tt: string) {
+  const match = tt.match(/<(.+)>/); // Match content inside <>
+  if (!match) {
+    throw new Error(`[decodeArg] Unable to extract inner type: ${tt}`);
+  }
+  return match[1]; // Return the inner type
 }
