@@ -134,7 +134,17 @@ export const registerProposalCommand = (program: Command) => {
             if (answer === 'quit') {
               break;
             }
-            console.log(txns.find((txn) => txn.sequence_number.toString() === answer));
+            console.log(
+              JSON.stringify(
+                txns.find((txn) => txn.sequence_number.toString() === answer),
+                (key, value) => {
+                  if (typeof value === 'bigint') return value.toString();
+                  if (value instanceof Uint8Array) return Buffer.from(value).toString('hex');
+                  return value;
+                },
+                2
+              )
+            );
           }
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
