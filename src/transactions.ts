@@ -1,5 +1,5 @@
 import { decode } from './parser.js';
-import { fetchAliasIfPresent, getAllAddressesFromBook } from './addressBook.js';
+import { AddressBook, getDb } from './storage.js';
 import {
   Account,
   Aptos,
@@ -94,10 +94,10 @@ export async function fetchPendingTxns(
     pendingMove.map((p) => decode(aptos, p.payload.vec[0]))
   );
 
-  const addressBook = await getAllAddressesFromBook();
+  let safelyStorage = await getDb();
   const votesDecoded = pendingMove.map((p) =>
     p.votes.data.map(({ key, value }) => {
-      const voter = fetchAliasIfPresent(addressBook, key);
+      const voter = AddressBook.findAliasOrReturnAddress(safelyStorage.data, key);
       return `${voter} ${value ? '✅' : '❌'}`;
     })
   );
@@ -152,9 +152,9 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
     {} as Record<string, any[]>
   );
 
-  const addressBook = await getAllAddressesFromBook();
+  const safelyStorage = await getDb();
   for (const [address, changes] of Object.entries(groupedByAddress)) {
-    const aliasedAddress = fetchAliasIfPresent(addressBook, address);
+    const aliasedAddress = AddressBook.findAliasOrReturnAddress(safelyStorage.data, address);
     console.log(chalk.green.bold(`Address: ${aliasedAddress}`));
 
     changes.forEach(({ data, type }) => {

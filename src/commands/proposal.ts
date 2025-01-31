@@ -5,14 +5,14 @@ import { select } from '@inquirer/prompts';
 import { fetchPendingTxns } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { decode } from '../parser.js';
-import { fetchAliasIfPresent, getAllAddressesFromBook } from '../addressBook.js';
+import { AddressBook, ensureMultisigAddressExists, getDb } from '../storage.js';
 import { knownAddresses } from '../labels.js';
 
 export const registerProposalCommand = (program: Command) => {
   program
     .command('proposal')
     .description('List proposals for a multisig')
-    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
       new Option('--network <network>', 'network to use')
         .choices(['devnet', 'testnet', 'mainnet', 'custom'])
@@ -60,15 +60,14 @@ export const registerProposalCommand = (program: Command) => {
           })
         );
         const n = options.limit || 20;
+        const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
         try {
           // TODO: better type this
           let txns;
           if (options.filter === 'pending') {
-            console.log(
-              chalk.blue(`Fetching pending transactions for multisig: ${options.multisigAddress}`)
-            );
-            txns = await fetchPendingTxns(aptos, options.multisigAddress, options.sequenceNumber);
+            console.log(chalk.blue(`Fetching pending transactions for multisig: ${multisig}`));
+            txns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
           } else if (options.filter === 'succeeded' || options.filter === 'failed') {
             const eventType =
               options.filter === 'succeeded'
@@ -77,12 +76,12 @@ export const registerProposalCommand = (program: Command) => {
 
             console.log(
               chalk.blue(
-                `Fetching the most recent ${n} ${options.filter} transactions for multisig: ${options.multisigAddress}`
+                `Fetching the most recent ${n} ${options.filter} transactions for multisig: ${multisig}`
               )
             );
 
             const events = await aptos.getAccountEventsByEventType({
-              accountAddress: options.multisigAddress,
+              accountAddress: multisig,
               eventType,
               options: {
                 limit: n,
@@ -94,11 +93,14 @@ export const registerProposalCommand = (program: Command) => {
               events.map((event) => decode(aptos, event.data.transaction_payload))
             );
 
-            const addressBook = await getAllAddressesFromBook();
+            let safelyStorage = await getDb();
             txns = events.map((event, i) => {
               const version = event.transaction_version as number;
               const sn = Number(event.data.sequence_number);
-              const executor = fetchAliasIfPresent(addressBook, event.data.executor);
+              const executor = AddressBook.findAliasOrReturnAddress(
+                safelyStorage.data,
+                event.data.executor
+              );
               const [packageAddress] = entryFunctions[i].function.split('::');
               const contract = knownAddresses[packageAddress] || 'unknown';
 

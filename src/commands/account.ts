@@ -8,7 +8,7 @@ import {
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
-import { getAllAddressesFromBook, fetchAliasIfPresent } from '../addressBook.js';
+import { AddressBook, ensureMultisigAddressExists, getDb } from '../storage.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
@@ -80,7 +80,7 @@ export const registerAccountCommand = (program: Command) => {
   account
     .command('update')
     .description('Update multisig owners and optionally the number of required signatures')
-    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption(
       '-a, --owners-add <addresses>',
       'Comma-separated list of owner addresses to add',
@@ -118,7 +118,9 @@ export const registerAccountCommand = (program: Command) => {
         try {
           const { network, signer, fullnode } = await loadProfile(options.profile);
           const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
-          await proposeEntryFunction(aptos, signer, entryFunction, options.multisigAddress);
+          const multisig = await ensureMultisigAddressExists(options.multisigAddress);
+
+          await proposeEntryFunction(aptos, signer, entryFunction, multisig);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }
@@ -129,7 +131,7 @@ export const registerAccountCommand = (program: Command) => {
   account
     .command('show')
     .description('Show multisig summary')
-    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
       new Option('--network <network>', 'network to use')
         .choices(['devnet', 'testnet', 'mainnet', 'custom'])
@@ -152,28 +154,30 @@ export const registerAccountCommand = (program: Command) => {
 
       try {
         // owners
+        const multisig = await ensureMultisigAddressExists(options.multisigAddress);
+
         const [signers] = await aptos.view<string[][]>({
           payload: {
             function: '0x1::multisig_account::owners',
-            functionArguments: [options.multisigAddress],
+            functionArguments: [multisig],
           },
         });
-        const addressBook = await getAllAddressesFromBook();
+        const safelyStorage = await getDb();
         const aliasedSigners = signers.map((signer) => {
-          const alias = fetchAliasIfPresent(addressBook, signer);
+          const alias = AddressBook.findAliasOrReturnAddress(safelyStorage.data, signer);
           return `${signer} ${alias !== signer ? alias : ''}`.trim();
         });
 
         const [signaturesRequired] = await aptos.view<string[]>({
           payload: {
             function: '0x1::multisig_account::num_signatures_required',
-            functionArguments: [options.multisigAddress],
+            functionArguments: [multisig],
           },
         });
         const numSignaturesRequired = Number(signaturesRequired);
 
         // # pending txns
-        const txCount = await numPendingTxns(aptos, options.multisigAddress);
+        const txCount = await numPendingTxns(aptos, multisig);
 
         console.log(
           JSON.stringify({

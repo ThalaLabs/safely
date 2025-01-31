@@ -10,24 +10,26 @@ import { decode } from '../parser.js';
 import chalk from 'chalk';
 import { validateAddress, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
+import { ensureMultisigAddressExists } from '../storage.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
     .command('execute')
     .description('Execute a multisig transaction')
-    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateBool)
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
     .action(async (options: { multisigAddress: string; approve: boolean; profile: string }) => {
       try {
         const { network, signer, fullnode } = await loadProfile(options.profile);
         const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+        const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
         // Get next transaction payload bytes
         const [txnPayloadBytes] = await aptos.view<[string]>({
           payload: {
             function: '0x1::multisig_account::get_next_transaction_payload',
-            functionArguments: [options.multisigAddress, '0x0'],
+            functionArguments: [multisig, '0x0'],
           },
         });
 
@@ -36,7 +38,7 @@ export const registerExecuteCommand = (program: Command) => {
 
         // Generate transaction payload
         const txnPayload = await generateTransactionPayload({
-          multisigAddress: options.multisigAddress,
+          multisigAddress: multisig,
           ...entryFunction,
           aptosConfig: aptos.config,
         });
