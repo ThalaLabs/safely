@@ -186,9 +186,24 @@ export async function proposeEntryFunction(
   // TODO: figure out why it keeps failing on devnet & testnet. maybe skip simulation for testnet & devnet?
 
   // simulate the actual txn
+  // A "fee payer" is used for simulations to ensure:
+  // 1. Users are able to simulate the proposed transaction in advance of vote/execution stages
+  // 2. Funds are not required on the multisig account to propose transactions
+  //
+  // On-chain multisig behaviour occurs as follows:
+  // a) User_1 calls create_transaction
+  // b) Users_1..N approve txn by calling "vote"
+  // c) User_1 calls execute_transaction
+  // The simulation step below verifies that the txn from step (a) will succeed, however
+  // this simulation behaviour (where the multisig is the sender of the txn) will never actually occur on-chain.
+  // This is because the proposed tx bytes are included in the "create_transaction" call from step (a).
+  // Adding "withFeePayer" lets safely avoid "invalid balance" errors that comes from this simulation step.
+  // These errors occur because the use of "sender: <multisig>" includes a check that the multisig has sufficient balance.
+  // This is not actually important because no txn is executed with sender: multisig on-chain -- only multisig owners send txns
   const actualTxn = await aptos.transaction.build.simple({
     sender: multisigAddress,
     data: entryFunction,
+    withFeePayer: true
   });
 
   const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
