@@ -7,7 +7,7 @@ import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
 import { loadProfile } from '../signing.js';
-import { MultisigDefault } from '../storage.js';
+import { ensureMultisigAddressExists } from '../storage.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
@@ -23,7 +23,7 @@ export const registerProposeCommand = (program: Command) => {
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(async (options: { txnPayloadFile: string }, cmd) => {
       const { multisigAddress, profile } = cmd.parent.opts();
-      const multisig = (await MultisigDefault.get()) || multisigAddress;
+      const multisig = await ensureMultisigAddressExists(multisigAddress);
 
       try {
         const fullPath = path.resolve(options.txnPayloadFile);
@@ -61,7 +61,7 @@ export const registerProposeCommand = (program: Command) => {
         cmd
       ) => {
         const { multisigAddress, profile } = cmd.parent.parent.opts();
-        const multisig = (await MultisigDefault.get()) || multisigAddress;
+        const multisig = await ensureMultisigAddressExists(multisigAddress);
 
         const entryFunction =
           options.asset.type === 'coin'

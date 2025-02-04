@@ -1,5 +1,5 @@
-import { Command } from 'commander';
-import { MultisigDefault } from '../storage.js';
+import { Command, Option } from 'commander';
+import {MultisigDefault, NetworkDefault} from '../storage.js';
 import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
 
@@ -11,27 +11,37 @@ export const registerDefaultCommand = (program: Command) => {
     .description('List default multisig values')
     .action(async () => {
       let multisig = await MultisigDefault.get();
+      let network = await NetworkDefault.get();
 
-      if (!multisig) {
+      if (!multisig && !network) {
         console.log(chalk.yellow(`No default multisig address or sequence number found`));
         process.exit(1);
       }
 
-      await MultisigDefault.set(multisig);
-      console.log(JSON.stringify({ multisig }));
+      console.log(JSON.stringify({ multisig, network }));
     });
 
   defaults
     .command('set')
     .description('Set default multisig values')
-    .requiredOption('-m, --multisig <address>', 'Multisig address', validateAddress)
+    .option('-m, --multisig <address>', 'Multisig address', validateAddress)
+      .addOption(
+          new Option('-n, --network <network>', 'network to use')
+              .choices(['devnet', 'testnet', 'mainnet', 'custom'])
+      )
     .action(async (opts) => {
-      const { multisig } = opts;
+      const { multisig, network } = opts;
 
       if (multisig) {
         await MultisigDefault.set(multisig);
         console.log(JSON.stringify({ multisig }));
       }
+
+      if (network) {
+          await NetworkDefault.set(network);
+          console.log(JSON.stringify({ network }));
+      }
+
     });
 
   defaults
@@ -39,6 +49,7 @@ export const registerDefaultCommand = (program: Command) => {
     .description('Remove default multisig value')
     .action(async () => {
       await MultisigDefault.remove();
-      console.log(chalk.green(`Removed default multisig address & sequence number`));
+      await NetworkDefault.remove();
+      console.log(chalk.green(`Removed default multisig address & network`));
     });
 };

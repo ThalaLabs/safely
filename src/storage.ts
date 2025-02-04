@@ -1,5 +1,6 @@
 import { Low } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
+import { Network } from '@aptos-labs/ts-sdk';
 
 type Address = {
   alias: string;
@@ -9,7 +10,7 @@ type Address = {
 type SafelyStorage = {
   addresses: Address[];
   multisig?: string;
-  sequenceNumber?: number;
+  network?: Network;
 };
 
 // Initialize DB
@@ -19,7 +20,7 @@ export async function getDb(): Promise<Low<SafelyStorage>> {
   const defaultData: SafelyStorage = {
     addresses: [],
     multisig: undefined,
-    sequenceNumber: undefined,
+    network: undefined,
   };
   const db = await JSONFilePreset<SafelyStorage>(DB_PATH, defaultData);
   await db.read();
@@ -89,6 +90,27 @@ export const MultisigDefault = {
   },
 };
 
+// **Network Default**
+export const NetworkDefault = {
+  async set(network: Network) {
+    await writeDb((db) => {
+      db.network = network;
+    });
+  },
+
+  async remove() {
+    await writeDb((db) => {
+      const prev = db.network;
+      db.network = undefined;
+      console.log(`Removed network default: "${prev}"`);
+    });
+  },
+
+  async get(): Promise<Network | undefined> {
+    return readDb((db) => db.network);
+  },
+};
+
 export async function ensureMultisigAddressExists(multisigAddressOption?: string): Promise<string> {
   if (multisigAddressOption) {
     return multisigAddressOption;
@@ -101,4 +123,13 @@ export async function ensureMultisigAddressExists(multisigAddressOption?: string
   }
 
   return storedAddress;
+}
+
+export async function ensureNetworkExists(networkOption?: Network): Promise<Network> {
+  if (networkOption) {
+    return networkOption;
+  }
+
+  const storedNetwork = await NetworkDefault.get() ;
+  return storedNetwork ? storedNetwork : Network.MAINNET;
 }

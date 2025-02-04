@@ -8,7 +8,7 @@ import {
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
-import { AddressBook, ensureMultisigAddressExists, getDb } from '../storage.js';
+import { AddressBook, ensureMultisigAddressExists, ensureNetworkExists, getDb } from '../storage.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
@@ -135,7 +135,6 @@ export const registerAccountCommand = (program: Command) => {
     .addOption(
       new Option('--network <network>', 'network to use')
         .choices(['devnet', 'testnet', 'mainnet', 'custom'])
-        .default('mainnet')
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -144,10 +143,11 @@ export const registerAccountCommand = (program: Command) => {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { fullnode: string; multisigAddress: string; network: string }) => {
+    .action(async (options: { fullnode: string; multisigAddress: string; network: Network }) => {
+      const network = await ensureNetworkExists(options.network);
       const aptos = new Aptos(
         new AptosConfig({
-          network: options.network as Network,
+          network,
           ...(options.fullnode && { fullnode: options.fullnode }),
         })
       );

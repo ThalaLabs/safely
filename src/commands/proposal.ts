@@ -5,7 +5,7 @@ import { select } from '@inquirer/prompts';
 import { fetchPendingTxns } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { decode } from '../parser.js';
-import { AddressBook, ensureMultisigAddressExists, getDb } from '../storage.js';
+import { AddressBook, ensureMultisigAddressExists, ensureNetworkExists, getDb } from '../storage.js';
 import { knownAddresses } from '../labels.js';
 
 export const registerProposalCommand = (program: Command) => {
@@ -16,7 +16,6 @@ export const registerProposalCommand = (program: Command) => {
     .addOption(
       new Option('--network <network>', 'network to use')
         .choices(['devnet', 'testnet', 'mainnet', 'custom'])
-        .default('mainnet')
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -47,15 +46,17 @@ export const registerProposalCommand = (program: Command) => {
     .action(
       async (options: {
         multisigAddress: string;
-        network: string;
+        network?: Network;
         fullnode: string;
         filter: 'pending' | 'succeeded' | 'failed';
         sequenceNumber?: number;
         limit?: number;
       }) => {
+        const network = await ensureNetworkExists(options.network);
+
         const aptos = new Aptos(
           new AptosConfig({
-            network: options.network as Network,
+            network,
             ...(options.fullnode && { fullnode: options.fullnode }),
           })
         );

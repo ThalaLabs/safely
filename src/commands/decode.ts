@@ -2,6 +2,7 @@ import { Command, Option } from 'commander';
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { decode } from '../parser.js';
+import { ensureNetworkExists } from '../storage.js';
 
 export function registerDecodeCommand(program: Command) {
   program
@@ -21,7 +22,6 @@ export function registerDecodeCommand(program: Command) {
     .addOption(
       new Option('--network <network>', 'network to use')
         .choices(['devnet', 'testnet', 'mainnet', 'custom'])
-        .default('mainnet')
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -30,8 +30,9 @@ export function registerDecodeCommand(program: Command) {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { bytes: string; network: string }) => {
-      const aptos = new Aptos(new AptosConfig({ network: options.network as Network }));
+    .action(async (options: { bytes: string; network: Network }) => {
+      const network = await ensureNetworkExists(options.network);
+      const aptos = new Aptos(new AptosConfig({ network }));
 
       try {
         console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));

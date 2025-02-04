@@ -1,7 +1,7 @@
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
-import { ensureMultisigAddressExists } from '../storage.js';
+import { ensureMultisigAddressExists, ensureNetworkExists } from '../storage.js';
 import { MultisigTransaction, summarizeTransactionSimulation } from '../transactions.js';
 import { decode } from '../parser.js';
 import { validateAddress, validateUInt } from '../validators.js';
@@ -14,7 +14,6 @@ export const registerSimulateCommand = (program: Command) => {
     .addOption(
       new Option('--network <network>', 'network to use')
         .choices(['devnet', 'testnet', 'mainnet', 'custom'])
-        .default('mainnet')
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -32,12 +31,14 @@ export const registerSimulateCommand = (program: Command) => {
       async (options: {
         fullnode: string;
         multisigAddress: string;
-        network: string;
+        network: Network;
         sequenceNumber: number;
       }) => {
+        const network = await ensureNetworkExists(options.network);
+
         const aptos = new Aptos(
           new AptosConfig({
-            network: options.network as Network,
+            network,
             ...(options.fullnode && { fullnode: options.fullnode }),
           })
         );
