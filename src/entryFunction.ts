@@ -17,7 +17,23 @@ export function decodeEntryFunction(filePath: string): InputEntryFunctionData {
   return {
     function: content.function_id as MoveFunctionId,
     typeArguments: content.type_args,
-    functionArguments: content.args.map((arg) => arg.value),
+    functionArguments: content.args.map((arg) => serializeEntryFunctionArgs(arg)),
     // TODO: abi
   };
+}
+
+// "Hex" Type is not natively supported in @aptos-labs/ts-sdk's SimpleEntryFunctionArgumentTypes
+// For this reason, we explicitly provide instructions to serialize the hex arg type if present
+export function serializeEntryFunctionArgs(arg: { type: string, value: SimpleEntryFunctionArgumentTypes }): SimpleEntryFunctionArgumentTypes {
+  if (arg.type == "hex") {
+    // @ts-ignore
+    const hexStrWithoutPrefix = arg.value.slice(2);
+
+    return new Uint8Array(
+        // @ts-ignore
+        hexStrWithoutPrefix.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+    );
+  }
+
+  return arg.value
 }
