@@ -115,36 +115,76 @@ export const registerProposalCommand = (program: Command) => {
           }
 
           while (true) {
-            const choices = txns.map((txn) => ({
+            const txChoices = txns.map((txn) => ({
               name: `#${txn.sequence_number} ${chalk.yellow(txn.payload_decoded.function)}`,
               value: txn.sequence_number.toString(),
             }));
 
-            choices.push({
+            txChoices.push({
               name: 'Exit',
               value: 'quit',
             });
 
-            const answer = await select({
+            const selectedSequenceNumber = await select({
               message: `Select a ${options.filter} transaction:`,
-              choices,
+              choices: txChoices,
               pageSize: 20,
             });
 
-            if (answer === 'quit') {
+            if (selectedSequenceNumber === 'quit') {
               break;
             }
-            console.log(
-              JSON.stringify(
-                txns.find((txn) => txn.sequence_number.toString() === answer),
-                (key, value) => {
-                  if (typeof value === 'bigint') return value.toString();
-                  if (value instanceof Uint8Array) return Buffer.from(value).toString('hex');
-                  return value;
-                },
-                2
-              )
+
+            const selectedTxn = txns.find(
+              (txn) => txn.sequence_number.toString() === selectedSequenceNumber
             );
+
+            // New action selection loop for the chosen transaction
+            while (true) {
+              const action = await select({
+                message: `Transaction #${selectedSequenceNumber} - Choose action:`,
+                choices: [
+                  { name: 'View Details', value: 'details' },
+                  { name: 'Execute Transaction', value: 'execute' },
+                  { name: 'Vote Yes', value: 'vote_yes' },
+                  { name: 'Vote No', value: 'vote_no' },
+                  { name: 'Back', value: 'back' },
+                ],
+              });
+
+              switch (action) {
+                case 'details':
+                  console.log(
+                    JSON.stringify(
+                      selectedTxn,
+                      (key, value) => {
+                        if (typeof value === 'bigint') return value.toString();
+                        if (value instanceof Uint8Array) return Buffer.from(value).toString('hex');
+                        return value;
+                      },
+                      2
+                    )
+                  );
+                  break;
+
+                case 'execute':
+                  console.log(chalk.yellow('Execute functionality not implemented yet'));
+                  break;
+                case 'vote_yes':
+                  console.log(chalk.yellow('Vote yes functionality not implemented yet'));
+                  break;
+                case 'vote_no':
+                  console.log(chalk.yellow('Vote no functionality not implemented yet'));
+                  break;
+
+                case 'back':
+                  break;
+              }
+
+              if (action === 'back') {
+                break; // Exit action loop, return to transaction list
+              }
+            }
           }
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
