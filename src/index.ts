@@ -12,6 +12,7 @@ import { registerProposeCommand } from './commands/propose.js';
 import { registerExecuteCommand } from './commands/execute.js';
 import { registerProposalCommand } from './commands/proposal.js';
 import { registerAccountCommand } from './commands/account.js';
+import { registerDefaultCommand } from './commands/defaults.js';
 
 const program = new Command();
 
@@ -29,6 +30,7 @@ registerSimulateCommand(program);
 registerDecodeCommand(program);
 registerEncodeCommand(program);
 registerAddressesCommand(program);
+registerDefaultCommand(program);
 
 // misc
 registerDocgenCommand(program);

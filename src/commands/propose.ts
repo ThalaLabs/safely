@@ -7,12 +7,13 @@ import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
 import { loadProfile } from '../signing.js';
+import { ensureMultisigAddressExists } from '../storage.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
     .command('propose')
     .description('Propose a new transaction for a multisig')
-    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction');
 
   // Raw transaction from file
@@ -22,6 +23,7 @@ export const registerProposeCommand = (program: Command) => {
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(async (options: { txnPayloadFile: string }, cmd) => {
       const { multisigAddress, profile } = cmd.parent.opts();
+      const multisig = await ensureMultisigAddressExists(multisigAddress);
 
       try {
         const fullPath = path.resolve(options.txnPayloadFile);
@@ -31,7 +33,7 @@ export const registerProposeCommand = (program: Command) => {
 
         const { network, signer, fullnode } = await loadProfile(profile);
         const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
-        await proposeEntryFunction(aptos, signer, decodeEntryFunction(fullPath), multisigAddress);
+        await proposeEntryFunction(aptos, signer, decodeEntryFunction(fullPath), multisig);
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
@@ -59,6 +61,8 @@ export const registerProposeCommand = (program: Command) => {
         cmd
       ) => {
         const { multisigAddress, profile } = cmd.parent.parent.opts();
+        const multisig = await ensureMultisigAddressExists(multisigAddress);
+
         const entryFunction =
           options.asset.type === 'coin'
             ? {
@@ -74,7 +78,7 @@ export const registerProposeCommand = (program: Command) => {
         try {
           const { network, signer, fullnode } = await loadProfile(profile);
           const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
-          await proposeEntryFunction(aptos, signer, entryFunction, multisigAddress);
+          await proposeEntryFunction(aptos, signer, entryFunction, multisig);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }

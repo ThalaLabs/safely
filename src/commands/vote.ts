@@ -3,12 +3,13 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { validateAddress, validateUInt, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
+import { ensureMultisigAddressExists } from '../storage.js';
 
 export const registerVoteCommand = (program: Command) => {
   program
     .command('vote')
     .description('Vote on a pending transaction')
-    .requiredOption('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption(
       '-s, --sequence-number <number>',
       'sequence number of transaction to vote on',
@@ -26,11 +27,13 @@ export const registerVoteCommand = (program: Command) => {
         try {
           const { network, signer, fullnode } = await loadProfile(options.profile);
           const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+          const multisig = await ensureMultisigAddressExists(options.multisigAddress);
+
           const txn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: {
               function: `0x1::multisig_account::vote_transaction`,
-              functionArguments: [options.multisigAddress, options.sequenceNumber, options.approve],
+              functionArguments: [multisig, options.sequenceNumber, options.approve],
             },
           });
 
