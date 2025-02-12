@@ -14,6 +14,7 @@ export const registerProposeCommand = (program: Command) => {
     .command('propose')
     .description('Propose a new transaction for a multisig')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .option('--ignore-simulate <boolean>', 'ignore tx simulation', false)
     .requiredOption('-p, --profile <string>', 'Profile to use for the transaction');
 
   // Raw transaction from file
@@ -22,7 +23,7 @@ export const registerProposeCommand = (program: Command) => {
     .description('Propose a raw transaction from a payload file')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(async (options: { txnPayloadFile: string }, cmd) => {
-      const { multisigAddress, profile } = cmd.parent.opts();
+      const { multisigAddress, profile, ignoreSimulate } = cmd.parent.opts();
       const multisig = await ensureMultisigAddressExists(multisigAddress);
 
       try {
@@ -33,7 +34,13 @@ export const registerProposeCommand = (program: Command) => {
 
         const { network, signer, fullnode } = await loadProfile(profile);
         const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
-        await proposeEntryFunction(aptos, signer, decodeEntryFunction(fullPath), multisig);
+        await proposeEntryFunction(
+          aptos,
+          signer,
+          decodeEntryFunction(fullPath),
+          multisig,
+          !ignoreSimulate
+        );
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
       }
@@ -60,7 +67,7 @@ export const registerProposeCommand = (program: Command) => {
         },
         cmd
       ) => {
-        const { multisigAddress, profile } = cmd.parent.parent.opts();
+        const { multisigAddress, profile, ignoreSimulate } = cmd.parent.parent.opts();
         const multisig = await ensureMultisigAddressExists(multisigAddress);
 
         const entryFunction =
@@ -78,7 +85,7 @@ export const registerProposeCommand = (program: Command) => {
         try {
           const { network, signer, fullnode } = await loadProfile(profile);
           const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
-          await proposeEntryFunction(aptos, signer, entryFunction, multisig);
+          await proposeEntryFunction(aptos, signer, entryFunction, multisig, !ignoreSimulate);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }
