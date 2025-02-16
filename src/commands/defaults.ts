@@ -1,5 +1,5 @@
 import { Command, Option } from 'commander';
-import {MultisigDefault, NetworkDefault} from '../storage.js';
+import { MultisigDefault, NetworkDefault } from '../storage.js';
 import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
 
@@ -25,10 +25,14 @@ export const registerDefaultCommand = (program: Command) => {
     .command('set')
     .description('Set default multisig values')
     .option('-m, --multisig <address>', 'Multisig address', validateAddress)
-      .addOption(
-          new Option('-n, --network <network>', 'network to use')
-              .choices(['devnet', 'testnet', 'mainnet', 'custom'])
-      )
+    .addOption(
+      new Option('-n, --network <network>', 'network to use').choices([
+        'devnet',
+        'testnet',
+        'mainnet',
+        'custom',
+      ])
+    )
     .action(async (opts) => {
       const { multisig, network } = opts;
 
@@ -38,10 +42,9 @@ export const registerDefaultCommand = (program: Command) => {
       }
 
       if (network) {
-          await NetworkDefault.set(network);
-          console.log(JSON.stringify({ network }));
+        await NetworkDefault.set(network);
+        console.log(JSON.stringify({ network }));
       }
-
     });
 
   defaults

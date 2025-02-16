@@ -24,41 +24,66 @@ export const registerVoteCommand = (program: Command) => {
         approve: boolean;
         profile: string;
       }) => {
-        try {
-          const { network, signer, fullnode } = await loadProfile(options.profile);
-          const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
-          const multisig = await ensureMultisigAddressExists(options.multisigAddress);
-
-          const txn = await aptos.transaction.build.simple({
-            sender: signer.accountAddress,
-            data: {
-              function: `0x1::multisig_account::vote_transaction`,
-              functionArguments: [multisig, options.sequenceNumber, options.approve],
-            },
-          });
-
-          // Handle signing and submission
-          const pendingTxn = await signAndSubmitTransaction(aptos, signer, txn);
-          const { success, vm_status } = await aptos.waitForTransaction({
-            transactionHash: pendingTxn.hash,
-          });
-
-          if (success) {
-            console.log(
-              chalk.green(
-                `Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
-              )
-            );
-          } else {
-            console.log(
-              chalk.red(
-                `Vote nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
-              )
-            );
-          }
-        } catch (error) {
-          console.error(chalk.red(`Error: ${(error as Error).message}`));
-        }
+        handleVoteCommand(options);
       }
     );
 };
+
+export async function handleVoteCommand(options: {
+  multisigAddress?: string;
+  sequenceNumber?: number;
+  approve?: boolean;
+  profile?: string;
+}) {
+  try {
+    if (!options.multisigAddress) {
+      console.error(
+        chalk.red(
+          `Error: multisig address is required. Please re-run with --multisig-address <address>`
+        )
+      );
+      return;
+    }
+
+    if (!options.profile) {
+      console.error(
+        chalk.red(`Error: profile is required. Please re-run with --profile <profile>`)
+      );
+      return;
+    }
+
+    const { network, signer, fullnode } = await loadProfile(options.profile);
+    const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+    const multisig = await ensureMultisigAddressExists(options.multisigAddress);
+
+    const txn = await aptos.transaction.build.simple({
+      sender: signer.accountAddress,
+      data: {
+        function: `0x1::multisig_account::vote_transaction`,
+        functionArguments: [multisig, options.sequenceNumber, options.approve],
+      },
+    });
+
+    // Handle signing and submission
+    const pendingTxn = await signAndSubmitTransaction(aptos, signer, txn);
+    const { success, vm_status } = await aptos.waitForTransaction({
+      transactionHash: pendingTxn.hash,
+    });
+
+    if (success) {
+      console.log(
+        chalk.green(
+          `Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+        )
+      );
+    } else {
+      console.log(
+        chalk.red(
+          `Vote nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+        )
+      );
+    }
+  } catch (error) {
+    console.error(chalk.red(`Error: ${(error as Error).message}`));
+  }
+}

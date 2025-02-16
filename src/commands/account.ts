@@ -8,7 +8,12 @@ import {
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
-import { AddressBook, ensureMultisigAddressExists, ensureNetworkExists, getDb } from '../storage.js';
+import {
+  AddressBook,
+  ensureMultisigAddressExists,
+  ensureNetworkExists,
+  getDb,
+} from '../storage.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
@@ -133,8 +138,12 @@ export const registerAccountCommand = (program: Command) => {
     .description('Show multisig summary')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
-      new Option('--network <network>', 'network to use')
-        .choices(['devnet', 'testnet', 'mainnet', 'custom'])
+      new Option('--network <network>', 'network to use').choices([
+        'devnet',
+        'testnet',
+        'mainnet',
+        'custom',
+      ])
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {

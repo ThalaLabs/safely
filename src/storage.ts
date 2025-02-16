@@ -130,6 +130,6 @@ export async function ensureNetworkExists(networkOption?: Network): Promise<Netw
     return networkOption;
   }
 
-  const storedNetwork = await NetworkDefault.get() ;
+  const storedNetwork = await NetworkDefault.get();
   return storedNetwork ? storedNetwork : Network.MAINNET;
 }
