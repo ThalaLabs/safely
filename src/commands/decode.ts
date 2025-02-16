@@ -20,8 +20,12 @@ export function registerDecodeCommand(program: Command) {
       }
     )
     .addOption(
-      new Option('--network <network>', 'network to use')
-        .choices(['devnet', 'testnet', 'mainnet', 'custom'])
+      new Option('--network <network>', 'network to use').choices([
+        'devnet',
+        'testnet',
+        'mainnet',
+        'custom',
+      ])
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
