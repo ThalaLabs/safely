@@ -11,6 +11,7 @@ type SafelyStorage = {
   addresses: Address[];
   multisig?: string;
   network?: Network;
+  profile?: string;
 };
 
 // Initialize DB
@@ -111,6 +112,27 @@ export const NetworkDefault = {
   },
 };
 
+// **Profile Default**
+export const ProfileDefault = {
+  async set(profile: string) {
+    await writeDb((db) => {
+      db.profile = profile;
+    });
+  },
+
+  async remove() {
+    await writeDb((db) => {
+      const prev = db.profile;
+      db.profile = undefined;
+      console.log(`Removed profile default: "${prev}"`);
+    });
+  },
+
+  async get(): Promise<string | undefined> {
+    return readDb((db) => db.profile);
+  },
+};
+
 export async function ensureMultisigAddressExists(multisigAddressOption?: string): Promise<string> {
   if (multisigAddressOption) {
     return multisigAddressOption;
@@ -132,4 +154,18 @@ export async function ensureNetworkExists(networkOption?: Network): Promise<Netw
 
   const storedNetwork = await NetworkDefault.get();
   return storedNetwork ? storedNetwork : Network.MAINNET;
+}
+
+export async function ensureProfileExists(profileOption?: string): Promise<string> {
+  if (profileOption) {
+    return profileOption;
+  }
+
+  const storedProfile = await ProfileDefault.get();
+
+  if (!storedProfile) {
+    throw new Error('No profile provided');
+  }
+
+  return storedProfile;
 }

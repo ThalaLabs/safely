@@ -1,10 +1,10 @@
 import { Command, Option } from 'commander';
-import { MultisigDefault, NetworkDefault } from '../storage.js';
+import { MultisigDefault, NetworkDefault, ProfileDefault } from '../storage.js';
 import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
 
 export const registerDefaultCommand = (program: Command) => {
-  const defaults = program.command('defaults').description('Multisig default values');
+  const defaults = program.command('default').description('Multisig default values');
 
   defaults
     .command('list')
@@ -12,13 +12,14 @@ export const registerDefaultCommand = (program: Command) => {
     .action(async () => {
       let multisig = await MultisigDefault.get();
       let network = await NetworkDefault.get();
+      let profile = await ProfileDefault.get();
 
-      if (!multisig && !network) {
-        console.log(chalk.yellow(`No default multisig address or sequence number found`));
+      if (!multisig && !network && !profile) {
+        console.log(chalk.yellow(`No default multisig address, sequence number, or profile found`));
         process.exit(1);
       }
 
-      console.log(JSON.stringify({ multisig, network }));
+      console.log(JSON.stringify({ multisig, network, profile }));
     });
 
   defaults
@@ -33,18 +34,23 @@ export const registerDefaultCommand = (program: Command) => {
         'custom',
       ])
     )
+    .option('-p, --profile <string>', 'Profile to use for transactions')
     .action(async (opts) => {
-      const { multisig, network } = opts;
+      const { multisig, network, profile } = opts;
 
       if (multisig) {
         await MultisigDefault.set(multisig);
-        console.log(JSON.stringify({ multisig }));
       }
 
       if (network) {
         await NetworkDefault.set(network);
-        console.log(JSON.stringify({ network }));
       }
+
+      if (profile) {
+        await ProfileDefault.set(profile);
+      }
+
+      console.log(JSON.stringify({ multisig, network, profile }));
     });
 
   defaults
@@ -53,6 +59,7 @@ export const registerDefaultCommand = (program: Command) => {
     .action(async () => {
       await MultisigDefault.remove();
       await NetworkDefault.remove();
-      console.log(chalk.green(`Removed default multisig address & network`));
+      await ProfileDefault.remove();
+      console.log(chalk.green(`Removed default multisig address, network, and profile`));
     });
 };

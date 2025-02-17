@@ -10,16 +10,15 @@ import { decode } from '../parser.js';
 import chalk from 'chalk';
 import { validateAddress, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
-import { ensureMultisigAddressExists } from '../storage.js';
+import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
     .command('execute')
     .description('Execute a multisig transaction')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
-    .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateBool)
-    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
-    .action(async (options: { multisigAddress: string; approve: boolean; profile: string }) => {
+    .option('-p, --profile <string>', 'Profile to use for the transaction')
+    .action(async (options: { multisigAddress: string; profile: string }) => {
       await handleExecuteCommand(options);
     });
 };
@@ -29,23 +28,9 @@ export async function handleExecuteCommand(options: {
   profile?: string;
 }) {
   try {
-    if (!options.multisigAddress) {
-      console.error(
-        chalk.red(
-          `Error: multisig address is required. Please re-run with --multisig-address <address>`
-        )
-      );
-      return;
-    }
-
-    if (!options.profile) {
-      console.error(
-        chalk.red(`Error: profile is required. Please re-run with --profile <profile>`)
-      );
-      return;
-    }
-
-    const { network, signer, fullnode } = await loadProfile(options.profile);
+    const profile = await ensureProfileExists(options.profile);
+    console.log('profile', profile);
+    const { network, signer, fullnode } = await loadProfile(profile);
     const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
     const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
