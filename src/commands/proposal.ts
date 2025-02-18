@@ -156,7 +156,7 @@ export const registerProposalCommand = (program: Command) => {
               break;
             }
 
-            const selectedTxn = txns.find(
+            let selectedTxn = txns.find(
               (txn) => txn.sequence_number.toString() === selectedSequenceNumber
             );
 
@@ -168,6 +168,8 @@ export const registerProposalCommand = (program: Command) => {
                 message: `Transaction #${selectedSequenceNumber} - Choose action:`,
                 choices: fetchTransactionChoices(options.filter),
               });
+
+              txns = await fetchTransactions(options.filter);
 
               switch (action) {
                 case 'details':
@@ -223,12 +225,21 @@ export const registerProposalCommand = (program: Command) => {
                   break;
 
                 case 'next':
+                  if (Number(selectedSequenceNumber) === txns[txns.length - 1].sequence_number) {
+                    console.log(
+                        chalk.red(
+                            'No further transactions'
+                        )
+                    );
+                    break;
+                  }
                   selectedSequenceNumber = (Number(selectedSequenceNumber) + 1).toString();
+                  selectedTxn = txns.find(
+                      (txn) => txn.sequence_number.toString() === selectedSequenceNumber
+                  );
                   break;
 
                 case 'back':
-                  // Re-fetch transactions after "Back" is clicked
-                  txns = await fetchTransactions(options.filter);
                   break;
               }
 
