@@ -9,6 +9,7 @@ import {
   AddressBook,
   ensureMultisigAddressExists,
   ensureNetworkExists,
+  ensureProfileExists,
   getDb,
 } from '../storage.js';
 import { knownAddresses } from '../labels.js';
@@ -159,6 +160,8 @@ export const registerProposalCommand = (program: Command) => {
               (txn) => txn.sequence_number.toString() === selectedSequenceNumber
             );
 
+            let profile;
+
             // New action selection loop for the chosen transaction
             while (true) {
               const action = await select({
@@ -190,20 +193,27 @@ export const registerProposalCommand = (program: Command) => {
                     );
                     return;
                   }
+
+                  profile = await ensureProfileExists(options.profile);
+
                   await handleExecuteCommand({
                     multisigAddress: multisig,
-                    profile: options.profile,
+                    profile: profile,
                   });
                   break;
                 case 'vote_yes':
+                  profile = await ensureProfileExists(options.profile);
+
                   await handleVoteCommand({
                     multisigAddress: multisig,
                     sequenceNumber: Number(selectedSequenceNumber),
                     approve: true,
-                    profile: options.profile,
+                    profile,
                   });
                   break;
                 case 'vote_no':
+                  profile = await ensureProfileExists(options.profile);
+
                   await handleVoteCommand({
                     multisigAddress: multisig,
                     sequenceNumber: Number(selectedSequenceNumber),

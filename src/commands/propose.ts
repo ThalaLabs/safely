@@ -7,7 +7,7 @@ import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
 import { loadProfile } from '../signing.js';
-import { ensureMultisigAddressExists } from '../storage.js';
+import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
@@ -15,7 +15,7 @@ export const registerProposeCommand = (program: Command) => {
     .description('Propose a new transaction for a multisig')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .option('--ignore-simulate <boolean>', 'ignore tx simulation', false)
-    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction');
+    .option('-p, --profile <string>', 'Profile to use for the transaction');
 
   // Raw transaction from file
   propose
@@ -23,8 +23,9 @@ export const registerProposeCommand = (program: Command) => {
     .description('Propose a raw transaction from a payload file')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(async (options: { txnPayloadFile: string }, cmd) => {
-      const { multisigAddress, profile, ignoreSimulate } = cmd.parent.opts();
+      let { multisigAddress, profile, ignoreSimulate } = cmd.parent.opts();
       const multisig = await ensureMultisigAddressExists(multisigAddress);
+      profile = await ensureProfileExists(profile);
 
       try {
         const fullPath = path.resolve(options.txnPayloadFile);
@@ -67,8 +68,9 @@ export const registerProposeCommand = (program: Command) => {
         },
         cmd
       ) => {
-        const { multisigAddress, profile, ignoreSimulate } = cmd.parent.parent.opts();
+        let { multisigAddress, profile, ignoreSimulate } = cmd.parent.parent.opts();
         const multisig = await ensureMultisigAddressExists(multisigAddress);
+        profile = await ensureProfileExists(profile);
 
         const entryFunction =
           options.asset.type === 'coin'

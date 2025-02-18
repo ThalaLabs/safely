@@ -12,6 +12,7 @@ import {
   AddressBook,
   ensureMultisigAddressExists,
   ensureNetworkExists,
+  ensureProfileExists,
   getDb,
 } from '../storage.js';
 import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
@@ -34,7 +35,7 @@ export const registerAccountCommand = (program: Command) => {
       'Number of signatures required for execution',
       validateUInt
     )
-    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
+    .option('-p, --profile <string>', 'Profile to use for the transaction')
     .action(
       async (options: {
         additionalOwners: string[];
@@ -47,7 +48,8 @@ export const registerAccountCommand = (program: Command) => {
           functionArguments: [options.additionalOwners, options.numSignaturesRequired, [], []],
         };
         try {
-          const { network, signer, fullnode } = await loadProfile(options.profile);
+          const profile = await ensureProfileExists(options.profile);
+          const { network, signer, fullnode } = await loadProfile(profile);
           const aptos = new Aptos(new AptosConfig({ network, fullnode }));
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
@@ -101,7 +103,7 @@ export const registerAccountCommand = (program: Command) => {
       'New number of signatures required for execution',
       validateUInt
     )
-    .requiredOption('-p, --profile <string>', 'Profile to use for the transaction')
+    .option('-p, --profile <string>', 'Profile to use for the transaction')
     .action(
       async (options: {
         multisigAddress: string;
@@ -121,7 +123,8 @@ export const registerAccountCommand = (program: Command) => {
           ],
         };
         try {
-          const { network, signer, fullnode } = await loadProfile(options.profile);
+          const profile = await ensureProfileExists(options.profile);
+          const { network, signer, fullnode } = await loadProfile(profile);
           const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
           const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 

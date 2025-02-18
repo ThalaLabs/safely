@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { validateAddress, validateUInt, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
-import { ensureMultisigAddressExists } from '../storage.js';
+import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
 
 export const registerVoteCommand = (program: Command) => {
   program
@@ -16,7 +16,7 @@ export const registerVoteCommand = (program: Command) => {
       validateUInt
     )
     .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateBool)
-    .requiredOption('-p, --profile <string>', 'profile name of voter')
+    .option('-p, --profile <string>', 'profile name of voter')
     .action(
       async (options: {
         multisigAddress: string;
@@ -36,23 +36,8 @@ export async function handleVoteCommand(options: {
   profile?: string;
 }) {
   try {
-    if (!options.multisigAddress) {
-      console.error(
-        chalk.red(
-          `Error: multisig address is required. Please re-run with --multisig-address <address>`
-        )
-      );
-      return;
-    }
-
-    if (!options.profile) {
-      console.error(
-        chalk.red(`Error: profile is required. Please re-run with --profile <profile>`)
-      );
-      return;
-    }
-
-    const { network, signer, fullnode } = await loadProfile(options.profile);
+    const profile = await ensureProfileExists(options.profile);
+    const { network, signer, fullnode } = await loadProfile(profile);
     const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
     const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
