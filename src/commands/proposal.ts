@@ -225,17 +225,20 @@ export const registerProposalCommand = (program: Command) => {
                   break;
 
                 case 'next':
-                  if (Number(selectedSequenceNumber) === txns[txns.length - 1].sequence_number) {
+                  if (
+                    !txns ||
+                    Number(selectedSequenceNumber) === txns[txns.length - 1].sequence_number
+                  ) {
                     console.log(
-                        chalk.red(
-                            'No further transactions'
-                        )
+                      chalk.yellow(
+                        `No pending transactions beyond sequence number ${selectedSequenceNumber}.`
+                      )
                     );
                     break;
                   }
                   selectedSequenceNumber = (Number(selectedSequenceNumber) + 1).toString();
                   selectedTxn = txns.find(
-                      (txn) => txn.sequence_number.toString() === selectedSequenceNumber
+                    (txn) => txn.sequence_number.toString() === selectedSequenceNumber
                   );
                   break;
 
