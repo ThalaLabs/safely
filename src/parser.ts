@@ -27,6 +27,85 @@ import {
   U8,
 } from '@aptos-labs/ts-sdk';
 
+type AptosArgType = U8 | U16 | U32 | U64 | U128 | U256 | Bool | MoveString | AccountAddress;
+
+class NestedVector3 {
+  inner: AptosArgType[][][];
+
+  constructor(inner: AptosArgType[][][]) {
+    this.inner = inner;
+  }
+
+  static deserialize(deserializer: Deserializer, argType: string): NestedVector3 {
+    const typeMap: Record<string, { new (value: any): AptosArgType }> = {
+      U8: U8,
+      U16: U16,
+      U32: U32,
+      U64: U64,
+      U128: U128,
+      U256: U256,
+      Bool: Bool,
+      AccountAddress: AccountAddress,
+      MoveString: MoveString,
+    };
+
+    const TypeConstructor = typeMap[argType];
+    if (!TypeConstructor) throw new Error(`Unsupported type: ${argType}`);
+
+    // Deserialize the vector length
+    const outsideLength = deserializer.deserializeUleb128AsU32();
+    const outside: AptosArgType[][][] = [];
+    for (let i = 0; i < outsideLength; i++) {
+      // Deserialize the inner vector length
+      const innerLength = deserializer.deserializeUleb128AsU32();
+      const inner: AptosArgType[][] = [];
+      for (let j = 0; j < innerLength; j++) {
+        // @ts-ignore
+        inner.push(MoveVector.deserialize(deserializer, TypeConstructor).values);
+      }
+      outside.push(inner);
+    }
+
+    return new NestedVector3(outside);
+  }
+}
+
+class NestedVector2 {
+  inner: AptosArgType[][];
+
+  constructor(inner: AptosArgType[][]) {
+    this.inner = inner;
+  }
+
+  static deserialize(deserializer: Deserializer, argType: string): NestedVector2 {
+    const typeMap: Record<string, { new (value: any): AptosArgType }> = {
+      U8: U8,
+      U16: U16,
+      U32: U32,
+      U64: U64,
+      U128: U128,
+      U256: U256,
+      Bool: Bool,
+      AccountAddress: AccountAddress,
+      MoveString: MoveString,
+    };
+
+    const TypeConstructor = typeMap[argType];
+    if (!TypeConstructor) throw new Error(`Unsupported type: ${argType}`);
+
+    // Deserialize the vector length
+    const length = deserializer.deserializeUleb128AsU32();
+    const inner: AptosArgType[][] = [];
+    for (let j = 0; j < length; j++) {
+      // Deserialize the inner-inner vector length
+      // @ts-ignore
+      inner.push(MoveVector.deserialize(deserializer, TypeConstructor).values);
+    }
+
+    return new NestedVector2(inner);
+  }
+}
+
 // TODO: this could throw an error if the payload is not even from a valid
 // entry function, which could happen if we list rejected proposals
 export async function decode(
@@ -86,80 +165,77 @@ export async function encode(
 }
 
 function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunctionArgumentTypes {
+  const typeMap: Record<string, any> = {
+    u8: U8,
+    u16: U16,
+    u32: U32,
+    u64: U64,
+    u128: U128,
+    u256: U256,
+    bool: Bool,
+    '0x1::string::String': MoveString,
+  };
+
+  const nestedVector1Map: Record<string, any> = {
+    'vector<u8>': U8,
+    'vector<u16>': U16,
+    'vector<u32>': U32,
+    'vector<u64>': U64,
+    'vector<u128>': U128,
+    'vector<u256>': U256,
+    'vector<bool>': Bool,
+    'vector<address>': AccountAddress,
+    'vector<0x1::string::String>': MoveString,
+    'vector<0x1::object::Object>': AccountAddress,
+  };
+
+  const nestedVector2Map: Record<string, string> = {
+    'vector<vector<u8>>': 'U8',
+    'vector<vector<u16>>': 'U16',
+    'vector<vector<u32>>': 'U32',
+    'vector<vector<u64>>': 'U64',
+    'vector<vector<u128>>': 'U128',
+    'vector<vector<u256>>': 'U256',
+    'vector<vector<bool>>': 'Bool',
+    'vector<vector<address>>': 'AccountAddress',
+  };
+
+  const nestedVector3Map: Record<string, string> = {
+    'vector<vector<vector<u8>>>>': 'U8',
+    'vector<vector<vector<u16>>>': 'U16',
+    'vector<vector<vector<u32>>>': 'U32',
+    'vector<vector<vector<u64>>>': 'U64',
+    'vector<vector<vector<u128>>>': 'U128',
+    'vector<vector<vector<u256>>>': 'U256',
+    'vector<vector<vector<bool>>>': 'Bool',
+    'vector<vector<vector<address>>>': 'AccountAddress',
+  };
+
   const tt = typeTag.toString();
   const deserializer = new Deserializer(arg.bcsToBytes());
-  if (tt === 'u8') {
-    return U8.deserialize(deserializer).value;
+
+  if (tt in typeMap) {
+    return typeMap[tt].deserialize(deserializer).value;
   }
-  if (tt === 'u16') {
-    return U16.deserialize(deserializer).value;
-  }
-  if (tt === 'u32') {
-    return U32.deserialize(deserializer).value;
-  }
-  if (tt === 'u64') {
-    return U64.deserialize(deserializer).value;
-  }
-  if (tt === 'u128') {
-    return U128.deserialize(deserializer).value;
-  }
-  if (tt === 'u256') {
-    return U256.deserialize(deserializer).value;
-  }
-  if (tt === 'bool') {
-    return Bool.deserialize(deserializer).value;
-  }
-  if (tt === 'address') {
+
+  if (tt == 'address' || tt == '0x1::object::Object') {
     return AccountAddress.deserialize(deserializer).toString();
   }
-  if (tt === '0x1::string::String') {
-    return MoveString.deserialize(deserializer).value;
+
+  if (tt in nestedVector1Map) {
+    // @ts-ignore
+    return MoveVector.deserialize(deserializer, vectorMap[tt]).values;
   }
-  if (tt.startsWith('0x1::object::Object')) {
-    return AccountAddress.deserialize(deserializer).toString();
+
+  if (tt in nestedVector2Map) {
+    return NestedVector2.deserialize(deserializer, nestedVector2Map[tt]).inner;
   }
-  if (tt === 'vector<u8>') {
-    // TODO: very likely input params is a string
-    return arg.bcsToBytes();
+
+  if (tt in nestedVector3Map) {
+    return NestedVector3.deserialize(deserializer, nestedVector3Map[tt]).inner;
   }
-  if (tt.startsWith('vector')) {
-    if (tt === 'vector<u16>') {
-      return MoveVector.deserialize(deserializer, U16).values;
-    }
-    if (tt === 'vector<u32>') {
-      return MoveVector.deserialize(deserializer, U32).values;
-    }
-    if (tt === 'vector<u64>') {
-      return MoveVector.deserialize(deserializer, U64).values;
-    }
-    if (tt === 'vector<u128>') {
-      return MoveVector.deserialize(deserializer, U128).values;
-    }
-    if (tt === 'vector<u256>') {
-      return MoveVector.deserialize(deserializer, U256).values;
-    }
-    if (tt === 'vector<bool>') {
-      return MoveVector.deserialize(deserializer, Bool).values;
-    }
-    if (tt === 'vector<address>') {
-      return MoveVector.deserialize(deserializer, AccountAddress).values;
-    }
-    if (tt === 'vector<0x1::string::String>') {
-      return MoveVector.deserialize(deserializer, MoveString).values;
-    }
-    if (tt === 'vector<0x1::object::Object>') {
-      return MoveVector.deserialize(deserializer, AccountAddress).values;
-    }
-    if (tt === 'vector<vector<u8>>') {
-      // TODO: handle publish_package payload
-      return arg.bcsToBytes();
-    }
-    if (tt.startsWith('vector<vector')) {
-      // TODO: not sure how to handle this
-      return arg.bcsToBytes();
-    }
-  }
-  throw new Error(`[decodeArg] Unsupported type tag: ${tt}`);
+
+  throw new Error(`[decodeArg] Unsupported type tag: ${typeTag}`);
 }
 
 function encodeArg(typeTag: TypeTag, arg: SimpleEntryFunctionArgumentTypes): EntryFunctionArgument {

@@ -30,7 +30,7 @@ assert_output "Vote on proposal" \
 
 # Execute
 assert_output "Execute proposal" \
-    "pnpm safely execute -m ${MULTISIG_ADDRESS} -a true -p e2e_test" \
+    "pnpm safely execute -m ${MULTISIG_ADDRESS} -p e2e_test" \
     "Execute ok"
 
 # Cleanup

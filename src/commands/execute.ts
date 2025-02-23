@@ -29,7 +29,6 @@ export async function handleExecuteCommand(options: {
 }) {
   try {
     const profile = await ensureProfileExists(options.profile);
-    console.log('profile', profile);
     const { network, signer, fullnode } = await loadProfile(profile);
     const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
     const multisig = await ensureMultisigAddressExists(options.multisigAddress);
