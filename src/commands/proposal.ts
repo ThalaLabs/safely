@@ -2,7 +2,7 @@ import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { select } from '@inquirer/prompts';
-import { fetchPendingTxns } from '../transactions.js';
+import { fetchPendingTxns, summarizeTransactionBalanceChanges } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { decode } from '../parser.js';
 import {
@@ -173,10 +173,12 @@ export const registerProposalCommand = (program: Command) => {
 
               switch (action) {
                 case 'details':
+                  // 1. log transaction details
                   console.log(
                     JSON.stringify(
                       selectedTxn,
                       (key, value) => {
+                        if (key === 'simulationChanges') return undefined; // Skip this key
                         if (typeof value === 'bigint') return value.toString();
                         if (value instanceof Uint8Array) return Buffer.from(value).toString('hex');
                         return value;
@@ -184,13 +186,30 @@ export const registerProposalCommand = (program: Command) => {
                       2
                     )
                   );
+
+                  // 2. summarize transaction balance changes
+                  try {
+                    console.log(chalk.blue('Expected Balance Changes:'));
+                    console.log(
+                      (
+                        await summarizeTransactionBalanceChanges(
+                          aptos,
+                          // @ts-ignore
+                          selectedTxn!.simulationChanges
+                        )
+                      ).toString()
+                    );
+                  } catch (e) {
+                    console.log(chalk.yellow('Unable to Fetch Balance Changes: ', e));
+                  }
+
                   break;
 
                 case 'execute':
                   if (selectedSequenceNumber !== txns[0].sequence_number.toString()) {
                     console.log(
                       chalk.red(
-                        'Execute functionality only avaliable for next proposed transaction'
+                        'Execute functionality only available for next proposed transaction'
                       )
                     );
                     return;

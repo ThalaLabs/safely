@@ -8,6 +8,7 @@ import {
   WriteSetChange,
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
+import Table from 'cli-table3';
 import LedgerSigner from './ledger/LedgerSigner.js';
 import { signAndSubmitTransaction } from './signing.js';
 
@@ -25,6 +26,7 @@ export interface MultisigTransactionDecoded {
   creator: string;
   payload_decoded: InputEntryFunctionData;
   votes: string[];
+  simulationChanges: WriteSetChange[];
 }
 
 // Pending Txns
@@ -80,6 +82,7 @@ export async function fetchPendingTxns(
       nextSnPromise,
       pendingPromise,
     ]);
+
     const lastResolvedSn = Number(lastResolvedSnMove as string);
     const nextSn = Number(nextSnMove as string);
     sequenceNumbers = Array.from(
@@ -102,12 +105,35 @@ export async function fetchPendingTxns(
     })
   );
 
+  const simulationChanges = await Promise.all(
+    payloadsDecoded.map(async (p) => {
+      try {
+        const transactionToSimulate = await aptos.transaction.build.simple({
+          sender: multisig,
+          data: p,
+          withFeePayer: true,
+        });
+
+        // Simulate the transaction, skipping the public/auth key check for both the sender and the fee payer.
+        const [simulateMultisigTx] = await aptos.transaction.simulate.simple({
+          transaction: transactionToSimulate,
+        });
+
+        return simulateMultisigTx.changes;
+      } catch (e) {
+        // Return no changes if simulation fails
+        return [];
+      }
+    })
+  );
+
   // return all transactions
   return sequenceNumbers.map((sn, i) => ({
     sequence_number: sn,
     ...kept[i],
     payload_decoded: payloadsDecoded[i],
     votes: votesDecoded[i],
+    simulationChanges: simulationChanges[i],
   }));
 }
 
@@ -169,6 +195,64 @@ export async function summarizeTransactionSimulation(changes: WriteSetChange[]) 
 
     console.log(); // Add spacing between addresses
   }
+}
+
+export async function summarizeTransactionBalanceChanges(
+  aptos: Aptos,
+  changes: WriteSetChange[]
+): Promise<Table> {
+  if (!changes) {
+    throw new Error('Simulation failed: No transaction changes found');
+  }
+
+  const table = new Table({
+    head: [
+      chalk.green('Address'),
+      chalk.green('Address Type'),
+      chalk.green('Asset'),
+      chalk.green('Balance Before'),
+      chalk.green('Balance After'),
+    ], // Define headers
+  });
+
+  const groupedByAddress = changes.reduce(
+    (acc, change) => {
+      // @ts-ignore
+      const { address } = change;
+      if (!acc[address]) acc[address] = [];
+      acc[address].push(change);
+      return acc;
+    },
+    {} as Record<string, any[]>
+  );
+
+  const safelyStorage = await getDb();
+
+  for (const [address, changes] of Object.entries(groupedByAddress)) {
+    const aliasedAddress = AddressBook.findAliasOrReturnAddress(safelyStorage.data, address);
+
+    for (const { data, type } of changes) {
+      if (data.type.startsWith('0x1::coin::CoinStore<')) {
+        const coinType = data.type.match(/<(.+)>/)?.[1] || 'UnknownCoin'; // Extract coin type
+        const balanceAfter = Number(data.data?.coin?.value) ?? 'Unknown';
+
+        // Properly `await` the balance retrieval
+        const balanceBefore = await getBalance(aptos, coinType, address);
+
+        table.push([aliasedAddress, 'Account', coinType, balanceBefore, balanceAfter]);
+      } else if (data.type.startsWith('0x1::fungible_asset::FungibleStore')) {
+        const faType = data.data?.metadata?.inner ?? 'Unknown'; // Extract fa type
+        const balanceAfter = Number(data.data?.balance) ?? 'Unknown';
+
+        const balanceBefore = await getFABalance(aptos, faType, address);
+
+        table.push([aliasedAddress, 'FA Store', faType, balanceBefore, balanceAfter]);
+      }
+    }
+  }
+
+  // @ts-ignore
+  return table;
 }
 
 export async function proposeEntryFunction(
@@ -270,4 +354,36 @@ function summarizeData(data: any): string {
     return data.toString();
   }
   return data.toString();
+}
+
+async function getBalance(
+  aptos: Aptos,
+  assetType: string,
+  accountAddress: string
+): Promise<number> {
+  const [balance] = await aptos.view<[string]>({
+    payload: {
+      function: '0x1::coin::balance',
+      typeArguments: [assetType],
+      functionArguments: [accountAddress],
+    },
+  });
+
+  return Number(balance);
+}
+
+async function getFABalance(
+  aptos: Aptos,
+  faMetadata: string,
+  accountAddress: string
+): Promise<number> {
+  const [balance] = await aptos.view<[string]>({
+    payload: {
+      function: '0x1::primary_fungible_store::balance',
+      typeArguments: ['0x1::fungible_asset::Metadata'],
+      functionArguments: [accountAddress, faMetadata],
+    },
+  });
+
+  return Number(balance);
 }
