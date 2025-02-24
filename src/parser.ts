@@ -218,7 +218,7 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
     return typeMap[tt].deserialize(deserializer).value;
   }
 
-  if (tt == 'address' || tt == '0x1::object::Object') {
+  if (tt == 'address' || tt.startsWith('0x1::object::Object')) {
     return AccountAddress.deserialize(deserializer).toString();
   }
 
