@@ -224,7 +224,7 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
 
   if (tt in nestedVector1Map) {
     // @ts-ignore
-    return MoveVector.deserialize(deserializer, vectorMap[tt]).values;
+    return MoveVector.deserialize(deserializer, nestedVector1Map[tt]).values;
   }
 
   if (tt in nestedVector2Map) {
