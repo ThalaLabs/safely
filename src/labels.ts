@@ -1,5 +1,6 @@
 // Copied from https://github.com/aptos-labs/explorer/blob/main/src/constants.tsx
 export const knownAddresses: Record<string, string> = {
+  '0x1': 'Framework (0x1)',
   '0x0000000000000000000000000000000000000000000000000000000000000001': 'Framework (0x1)',
   '0x0000000000000000000000000000000000000000000000000000000000000003': 'Legacy Token (0x3)',
   '0x0000000000000000000000000000000000000000000000000000000000000004': 'Digital Assets (0x4)',
