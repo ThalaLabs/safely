@@ -11,6 +11,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import LedgerSigner from './ledger/LedgerSigner.js';
 import { signAndSubmitTransaction } from './signing.js';
+import { knownAddresses } from './labels.js';
 
 export interface MultisigTransaction {
   payload: { vec: [string] };
@@ -127,11 +128,17 @@ export async function fetchPendingTxns(
     })
   );
 
+  const contracts = payloadsDecoded.map((p) => {
+    const [packageAddress] = p.function.split('::');
+    return knownAddresses[packageAddress] || 'unknown';
+  });
+
   // return all transactions
   return sequenceNumbers.map((sn, i) => ({
     sequence_number: sn,
     ...kept[i],
     payload_decoded: payloadsDecoded[i],
+    contract: contracts[i],
     votes: votesDecoded[i],
     simulationChanges: simulationChanges[i],
   }));
