@@ -169,42 +169,13 @@ export const registerProposalCommand = (program: Command) => {
                 choices: fetchTransactionChoices(options.filter),
               });
 
-              txns = await fetchTransactions(options.filter);
-
               switch (action) {
                 case 'details':
-                  // 1. log transaction details
-                  console.log(
-                    JSON.stringify(
-                      selectedTxn,
-                      (key, value) => {
-                        if (key === 'simulationChanges') return undefined; // Skip this key
-                        if (typeof value === 'bigint') return value.toString();
-                        if (value instanceof Uint8Array) return Buffer.from(value).toString('hex');
-                        return value;
-                      },
-                      2
-                    )
-                  );
-
-                  // 2. summarize transaction balance changes
-                  try {
-                    console.log(chalk.blue('Expected Balance Changes:'));
-                    console.log(
-                      (
-                        await summarizeTransactionBalanceChanges(
-                          aptos,
-                          // @ts-ignore
-                          selectedTxn!.simulationChanges
-                        )
-                      ).toString()
-                    );
-                  } catch (e) {
-                    console.log(chalk.yellow('Unable to Fetch Balance Changes: ', e));
+                  logTransactionDetails(selectedTxn);
+                  if (options.filter === 'pending') {
+                    await logExpectedBalanceChanges(aptos, selectedTxn);
                   }
-
                   break;
-
                 case 'execute':
                   if (selectedSequenceNumber !== txns[0].sequence_number.toString()) {
                     console.log(
@@ -212,9 +183,8 @@ export const registerProposalCommand = (program: Command) => {
                         'Execute functionality only available for next proposed transaction'
                       )
                     );
-                    return;
+                    break;
                   }
-
                   profile = await ensureProfileExists(options.profile);
 
                   await handleExecuteCommand({
@@ -239,7 +209,7 @@ export const registerProposalCommand = (program: Command) => {
                     multisigAddress: multisig,
                     sequenceNumber: Number(selectedSequenceNumber),
                     approve: false,
-                    profile: options.profile,
+                    profile,
                   });
                   break;
 
@@ -264,6 +234,11 @@ export const registerProposalCommand = (program: Command) => {
                 case 'back':
                   break;
               }
+
+              txns = await fetchTransactions(options.filter);
+              selectedTxn = txns.find(
+                (txn) => txn.sequence_number.toString() === selectedSequenceNumber
+              );
 
               if (action === 'back') {
                 break; // Exit action loop, return to transaction list
@@ -302,5 +277,33 @@ function fetchTransactionChoices(filter: string) {
       ];
     default:
       throw new Error(`Invalid txListType: ${filter}`);
+  }
+}
+
+function logTransactionDetails(txn: any) {
+  console.log(
+    JSON.stringify(
+      txn,
+      (key, value) =>
+        key === 'simulationChanges'
+          ? undefined
+          : typeof value === 'bigint'
+            ? value.toString()
+            : value instanceof Uint8Array
+              ? Buffer.from(value).toString('hex')
+              : value,
+      2
+    )
+  );
+}
+
+async function logExpectedBalanceChanges(aptos: Aptos, txn: any) {
+  try {
+    console.log(chalk.blue('Expected Balance Changes:'));
+    console.log(
+      (await summarizeTransactionBalanceChanges(aptos, txn.simulationChanges)).toString()
+    );
+  } catch (e) {
+    console.log(chalk.yellow('Unable to Fetch Balance Changes: ', e));
   }
 }
