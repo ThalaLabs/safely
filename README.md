@@ -80,6 +80,33 @@ See [docs.md](./docs.md) for more details.
 5. Format code: `pnpm format`
 6. Run in dev mode: `pnpm start`
 
+## Movement Compatibility
+
+Safely is compatible with both Aptos and Movement. 
+
+To use Safely with Movement, please do the following: 
+
+1. (optional) Install the Movement CLI: https://docs.movementnetwork.xyz/devs/movementcli#options-2---install-through-brew
+
+2. Utilize the Aptos or Movement CLI's to initialize with your Ledger profile:
+```bash
+movement aptos init --ledger --profile <profile_name>
+```
+
+OR 
+```bash
+aptos init --ledger --profile <profile_name>
+```
+
+3. Follow the prompts. When prompted to select a network, select the following:
+```bash
+Choose network from [devnet, testnet, mainnet, local, custom | defaults to devnet]
+custom 
+
+Enter your rest endpoint [Current: None | No input: Exit (or keep the existing if present)]
+https://mainnet.movementnetwork.xyz   
+```
+
 ## Community & Contributing
 
 We welcome contributions from the whole Move ecosystem! Whether you're a protocol developer adding transaction templates, a developer improving core functionality, or a user reporting issues, your input helps make multisig management better for everyone.
