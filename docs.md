@@ -45,7 +45,7 @@ Show multisig summary
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom")
   --fullnode <url>                  Fullnode URL for custom network
   -h, --help                        display help for command
 ```
@@ -57,6 +57,7 @@ Propose a new transaction for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
+  --ignore-simulate <boolean>       ignore tx simulation (default: false)
   -p, --profile <string>            Profile to use for the transaction
   -h, --help                        display help for command
 Commands:
@@ -119,7 +120,6 @@ Execute a multisig transaction
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  -a, --approve <boolean>           true to approve, false to reject
   -p, --profile <string>            Profile to use for the transaction
   -h, --help                        display help for command
 ```
@@ -131,10 +131,11 @@ List proposals for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom")
   --fullnode <url>                  Fullnode URL for custom network
   -f, --filter <status>             filter proposals by status (default: "pending")
   -s, --sequence-number <number>    fetch transaction with specific sequence number
+  -p, --profile <string>            Profile to use for the transaction
   -l, --limit <number>              number of transactions to fetch (default: 20)
   -h, --help                        display help for command
 ```
@@ -146,7 +147,7 @@ Simulate multisig transaction
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --network <network>               network to use (choices: "devnet", "testnet", "mainnet", "custom")
   --fullnode <url>                  Fullnode URL for custom network
   -s, --sequence-number <number>    fetch transaction with specific sequence number
   -h, --help                        display help for command
@@ -159,7 +160,7 @@ Decode multisig transaction bytes (experimental)
 ```
 Options:
   -b, --bytes <bytes>  transaction bytes to decode (hex string starting with 0x)
-  --network <network>  network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --network <network>  network to use (choices: "devnet", "testnet", "mainnet", "custom")
   --fullnode <url>     Fullnode URL for custom network
   -h, --help           display help for command
 ```
@@ -171,7 +172,7 @@ Encode entry function payload (experimental)
 ```
 Options:
   -f, --txn-payload-file <txn-payload-file>  transaction payload file to encode
-  --network <network>                        network to use (choices: "devnet", "testnet", "mainnet", "custom", default: "mainnet")
+  --network <network>                        network to use (choices: "devnet", "testnet", "mainnet", "custom")
   --fullnode <url>                           Fullnode URL for custom network
   -h, --help                                 display help for command
 ```
@@ -218,4 +219,48 @@ Remove an alias from the local address book
 Options:
   --alias <alias>  Alias to remove
   -h, --help       display help for command
+```
+
+## safely default [options] [command]
+
+Multisig default values
+
+```
+Options:
+  -h, --help      display help for command
+Commands:
+  list            List default multisig values
+  set [options]   Set default multisig values
+  remove          Remove default multisig value
+  help [command]  display help for command
+```
+
+## safely default list [options]
+
+List default multisig values
+
+```
+Options:
+  -h, --help  display help for command
+```
+
+## safely default set [options]
+
+Set default multisig values
+
+```
+Options:
+  -m, --multisig <address>  Multisig address
+  -n, --network <network>   network to use (choices: "devnet", "testnet", "mainnet", "custom")
+  -p, --profile <string>    Profile to use for transactions
+  -h, --help                display help for command
+```
+
+## safely default remove [options]
+
+Remove default multisig value
+
+```
+Options:
+  -h, --help  display help for command
 ```

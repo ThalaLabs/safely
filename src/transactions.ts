@@ -5,7 +5,9 @@ import {
   Aptos,
   generateTransactionPayload,
   InputEntryFunctionData,
+  MoveResource,
   WriteSetChange,
+  WriteSetChangeWriteResource,
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import Table from 'cli-table3';
@@ -28,6 +30,15 @@ export interface MultisigTransactionDecoded {
   payload_decoded: InputEntryFunctionData;
   votes: string[];
   simulationChanges: WriteSetChange[];
+}
+
+interface CoinStore {
+  coin: { value: string };
+}
+
+interface FungibleStore {
+  balance: string;
+  metadata: { inner: string };
 }
 
 // Pending Txns
@@ -212,25 +223,25 @@ export async function summarizeTransactionBalanceChanges(
     throw new Error('Simulation failed: No transaction changes found');
   }
 
+  const resourceChanges = changes.filter(isWriteSetChangeWriteResource);
+
   const table = new Table({
     head: [
       chalk.green('Address'),
-      chalk.green('Address Type'),
       chalk.green('Asset'),
       chalk.green('Balance Before'),
       chalk.green('Balance After'),
     ], // Define headers
   });
 
-  const groupedByAddress = changes.reduce(
+  const groupedByAddress = resourceChanges.reduce(
     (acc, change) => {
-      // @ts-ignore
       const { address } = change;
       if (!acc[address]) acc[address] = [];
       acc[address].push(change);
       return acc;
     },
-    {} as Record<string, any[]>
+    {} as Record<string, WriteSetChangeWriteResource[]>
   );
 
   const safelyStorage = await getDb();
@@ -238,22 +249,31 @@ export async function summarizeTransactionBalanceChanges(
   for (const [address, changes] of Object.entries(groupedByAddress)) {
     const aliasedAddress = AddressBook.findAliasOrReturnAddress(safelyStorage.data, address);
 
-    for (const { data, type } of changes) {
+    for (const { data } of changes) {
       if (data.type.startsWith('0x1::coin::CoinStore<')) {
-        const coinType = data.type.match(/<(.+)>/)?.[1] || 'UnknownCoin'; // Extract coin type
-        const balanceAfter = Number(data.data?.coin?.value) ?? 'Unknown';
-
-        // Properly `await` the balance retrieval
-        const balanceBefore = await getBalance(aptos, coinType, address);
-
-        table.push([aliasedAddress, 'Account', coinType, balanceBefore, balanceAfter]);
+        const coinType = data.type.match(/<(.+)>/)?.[1] || 'unknown';
+        const coinStore = data.data as CoinStore;
+        const balanceAfterRaw = Number(coinStore.coin.value);
+        const [decimals, symbol, balanceBeforeRaw] = await Promise.all([
+          getCoinDecimals(aptos, coinType),
+          getCoinSymbol(aptos, coinType),
+          getCoinBalance(aptos, coinType, address),
+        ]);
+        const balanceAfter = balanceAfterRaw / 10 ** decimals;
+        const balanceBefore = balanceBeforeRaw / 10 ** decimals;
+        table.push([aliasedAddress, `${coinType} (${symbol})`, balanceBefore, balanceAfter]);
       } else if (data.type.startsWith('0x1::fungible_asset::FungibleStore')) {
-        const faType = data.data?.metadata?.inner ?? 'Unknown'; // Extract fa type
-        const balanceAfter = Number(data.data?.balance) ?? 'Unknown';
-
-        const balanceBefore = await getFABalance(aptos, faType, address);
-
-        table.push([aliasedAddress, 'FA Store', faType, balanceBefore, balanceAfter]);
+        const faStore = data.data as FungibleStore;
+        const faType = faStore.metadata.inner;
+        const balanceAfterRaw = Number(faStore.balance);
+        const [decimals, symbol, balanceBeforeRaw] = await Promise.all([
+          getFaDecimals(aptos, faType),
+          getFaSymbol(aptos, faType),
+          getFABalance(aptos, faType, address),
+        ]);
+        const balanceAfter = balanceAfterRaw / 10 ** decimals;
+        const balanceBefore = balanceBeforeRaw / 10 ** decimals;
+        table.push([aliasedAddress, `${faType} (${symbol})`, balanceBefore, balanceAfter]);
       }
     }
   }
@@ -363,7 +383,7 @@ function summarizeData(data: any): string {
   return data.toString();
 }
 
-async function getBalance(
+async function getCoinBalance(
   aptos: Aptos,
   assetType: string,
   accountAddress: string
@@ -377,6 +397,30 @@ async function getBalance(
   });
 
   return Number(balance);
+}
+
+async function getCoinDecimals(aptos: Aptos, assetType: string): Promise<number> {
+  const [decimals] = await aptos.view<[number]>({
+    payload: {
+      function: '0x1::coin::decimals',
+      typeArguments: [assetType],
+      functionArguments: [],
+    },
+  });
+
+  return decimals;
+}
+
+async function getCoinSymbol(aptos: Aptos, assetType: string): Promise<string> {
+  const [symbol] = await aptos.view<[string]>({
+    payload: {
+      function: '0x1::coin::symbol',
+      typeArguments: [assetType],
+      functionArguments: [],
+    },
+  });
+
+  return symbol;
 }
 
 async function getFABalance(
@@ -393,4 +437,34 @@ async function getFABalance(
   });
 
   return Number(balance);
+}
+
+async function getFaDecimals(aptos: Aptos, assetType: string): Promise<number> {
+  const [decimals] = await aptos.view<[number]>({
+    payload: {
+      function: '0x1::fungible_asset::decimals',
+      typeArguments: [],
+      functionArguments: [assetType],
+    },
+  });
+
+  return decimals;
+}
+
+async function getFaSymbol(aptos: Aptos, assetType: string): Promise<string> {
+  const [symbol] = await aptos.view<[string]>({
+    payload: {
+      function: '0x1::fungible_asset::symbol',
+      typeArguments: [],
+      functionArguments: [assetType],
+    },
+  });
+
+  return symbol;
+}
+
+function isWriteSetChangeWriteResource(
+  change: WriteSetChange
+): change is WriteSetChangeWriteResource {
+  return 'address' in change && 'data' in change && 'type' in (change.data as any);
 }
