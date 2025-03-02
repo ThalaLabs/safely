@@ -1,5 +1,15 @@
 # @thalalabs/safely
 
+## 0.1.0
+
+### Minor Changes
+
+- b10479e: 1. Add interactive UI 2. Fix a lot of encoding/decoding bugs 3. Support default parameters 4. Get ready for beta users
+
+### Patch Changes
+
+- 3ae95ca: fix transfer_assets command and add e2e test for it
+
 ## 0.0.3
 
 ### Patch Changes
