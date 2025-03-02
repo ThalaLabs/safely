@@ -1,51 +1,48 @@
 # safely <a style="margin-left:5px" href="https://www.npmjs.com/package/@thalalabs/safely"><img src="https://img.shields.io/npm/v/@thalalabs/safely?colorA=2c8af7&colorB=2c8af7&style=flat" alt="Version"></a>
 
-Manage your multisig accounts on Aptos & Movement **safely**.
+Manage your multisig accounts on Aptos & Movement **safely** through a secure CLI interface.
 
-## Background
+## Why safely?
 
-Multisig smart contracts are natively built into Aptos framework which gives Aptos users an edge over other chains.
+In the wake of recent security incidents like the [SafeWallet frontend compromise](https://x.com/safe/status/1894768522720350673), it's become clear that web-based multisig interfaces pose significant risks. Web frontends can be modified by attackers, making transaction verification difficult or impossible for users. **safely** takes a different approach:
 
-However, managing multisig on Aptos is hard. We find some issues with the existing solutions:
+- **CLI-first**: No web frontend means no risk of compromised interfaces
+- **Verifiable**: All transactions are transparent and can be inspected directly
+- **Local execution**: Your keys stay on your machine
 
-1. Product development has been kept internally within teams building multisig products, and we see slow feature iteration and
-   bug fixes that doesn't manage to catch up with the fast-paced Aptos ecosystem.
+## Quickstart
 
-2. There's no way to understand a transaction in a user-friendly way.
-   Signers always have to ask devs to understand the meaning of parameters and how they work together.
-   Even devs themselves have to refer to source code to make sure a transaction is put together correctly.
+1. Install the CLI:
 
-3. There's no way to simulate a transaction before collecting enough signatures.
-   Imagine you spend 3 days to collect approveals from 5 signatures living in 3 different continents for your 5-out-of-9 multisig, and then you find out that the transaction is invalid. You have to start over.
+```bash
+npm install -g @thalalabs/safely
+```
 
-With the above issues, we believe that we need a new solution that is:
+2. Under a directory where you have your aptos profiles configured, view pending transactions of a multisig account:
 
-1. Open source and welcome collaboration, which unblocks (2) and (3)
+```bash
+safely proposal -m <multisig_address> -p <profile_name>
+```
 
-2. Each protocol team can chime in and annotate transactions from their own protocols that makes aptos transactions understandable
-   and transparent. Imagine Panora swap is annotated/templated by Panora team properly so that you are more confident of signing
-   `swap 1000 USDC to USDT, in which 500 USDC goes through ThalaSwap pool abc and another 500 USDC goes through Liquidswap pool xyz`
-   vs `panora::swap_entry payload=(0x10bce0456ce...)`
+Aptos profile can be configured by running `aptos init --profile <profile_name>` or `aptos init --ledger --profile <profile_name>` ([docs](https://aptos.dev/en/build/cli/trying-things-on-chain/ledger)).
 
-3. Make use of collective intelligence from the great Aptos dev community to making this public good keep getting better.
-   Someone may push a feature that simulates a transaction right after users send a multisig proposal. Someone else may
-   push ledger support since they use ledger extensively. Very meaningful contributions is welcomed and will be quickly
-   reviewed and merged in.
+3. Follow the terminal UI to view transaction details, vote yes, vote no, or execute the transaction once vote threshold is met.
 
-4. We as the initial group of safely devs, will cover the initial development of the product until it is feature complete
-   and we see it is ready for production use.
+See [docs.md](./docs.md) for detailed documentation.
 
 ## Key Features
 
-- Transaction simulation before signature collection
-- Human-readable transaction descriptions
-- Open-source and community-driven development
-- Ledger support
-- Movement support
+- **Security First**: CLI-based interface eliminates frontend security risks
+- **Transaction Simulation**: Display simulation results wherever possible
+- **Human-Readable**: Clear transaction descriptions and parameter explanations
+- **Open Source**: Community-driven development and quick iterations
+- **Multi-Chain**: Support for both Aptos and Movement
+- **Hardware Security**: Native Ledger support
+- **Local Control**: All operations run locally on your machine
 
 ## Usage
 
-```
+```bash
 > safely --help
 Usage: safely [options] [command]
 
@@ -65,48 +62,85 @@ Commands:
   decode [options]    Decode multisig transaction bytes (experimental)
   encode [options]    Encode entry function payload (experimental)
   addresses           Manage the local address book (experimental)
+  default             Multisig default values
   docgen [options]    Generate documentation for the CLI
   help [command]      display help for command
 ```
 
-See [docs.md](./docs.md) for more details.
+For detailed usage instructions and examples, see [docs.md](./docs.md).
 
 ## Development
 
-1. Clone the repository
-2. Install dependencies: `pnpm install`
-3. Build: `pnpm build`
-4. Link locally: `pnpm link -g`
-5. Format code: `pnpm format`
-6. Run in dev mode: `pnpm start`
+Want to contribute? Here's how to set up the development environment:
+
+1. Fork the repository.
+
+2. Install dependencies:
+
+```bash
+pnpm install
+```
+
+3. Build the project:
+
+```bash
+pnpm build
+```
+
+4. Link for local testing:
+
+```bash
+pnpm link -g
+```
+
+5. Format code:
+
+```bash
+pnpm format
+```
+
+6. Run in development mode:
+
+```bash
+pnpm start
+```
 
 ## Movement Compatibility
 
-Safely is compatible with both Aptos and Movement. 
+Safely works seamlessly with both Aptos and Movement networks. To use with Movement:
 
-To use Safely with Movement, please do the following: 
+1. (Optional) Install the Movement CLI: https://docs.movementnetwork.xyz/devs/movementcli#options-2---install-through-brew
 
-1. (optional) Install the Movement CLI: https://docs.movementnetwork.xyz/devs/movementcli#options-2---install-through-brew
+2. Initialize with your Ledger profile:
 
-2. Utilize the Aptos or Movement CLI's to initialize with your Ledger profile:
 ```bash
+# Using Movement CLI
 movement aptos init --ledger --profile <profile_name>
-```
 
-OR 
-```bash
+# OR using Aptos CLI
 aptos init --ledger --profile <profile_name>
 ```
 
-3. Follow the prompts. When prompted to select a network, select the following:
+3. When prompted for network selection, choose:
+
 ```bash
 Choose network from [devnet, testnet, mainnet, local, custom | defaults to devnet]
-custom 
+custom
 
 Enter your rest endpoint [Current: None | No input: Exit (or keep the existing if present)]
-https://mainnet.movementnetwork.xyz   
+https://mainnet.movementnetwork.xyz
 ```
 
 ## Community & Contributing
 
-We welcome contributions from the whole Move ecosystem! Whether you're a protocol developer adding transaction templates, a developer improving core functionality, or a user reporting issues, your input helps make multisig management better for everyone.
+We welcome contributions from the entire Move ecosystem! Whether you're:
+
+- A protocol developer adding transaction templates
+- A developer improving core functionality
+- A user reporting issues or suggesting features
+
+Your input helps make multisig management safer and more efficient for everyone.
+
+## License
+
+MIT.
