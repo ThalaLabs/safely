@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.1.1
+
+### Patch Changes
+
+- c2542e3: update docs for public release
+
 ## 0.1.0
 
 ### Minor Changes
