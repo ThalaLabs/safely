@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.1.2
+
+### Patch Changes
+
+- 4d9e15f: fix `safely -v`
+
 ## 0.1.1
 
 ### Patch Changes
