@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.1.3
+
+### Patch Changes
+
+- 4930525: patch: support -p extracting network/fullnode url on proposal cmd
+
 ## 0.1.2
 
 ### Patch Changes
