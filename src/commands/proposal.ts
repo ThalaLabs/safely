@@ -15,6 +15,7 @@ import {
 import { knownAddresses } from '../labels.js';
 import { handleExecuteCommand } from './execute.js';
 import { handleVoteCommand } from './vote.js';
+import { loadProfile } from '../signing.js';
 
 export const registerProposalCommand = (program: Command) => {
   program
@@ -66,12 +67,20 @@ export const registerProposalCommand = (program: Command) => {
         sequenceNumber?: number;
         limit?: number;
       }) => {
-        const network = await ensureNetworkExists(options.network);
+        let network = await ensureNetworkExists(options.network);
+        let fullnode = options.fullnode;
+
+        let profile;
+        if (options.profile) {
+          profile = await ensureProfileExists(options.profile);
+
+          ({ network, fullnode } = await loadProfile(profile, false));
+        }
 
         const aptos = new Aptos(
           new AptosConfig({
             network,
-            ...(options.fullnode && { fullnode: options.fullnode }),
+            ...(fullnode && { fullnode: fullnode }),
           })
         );
         const n = options.limit || 20;
@@ -160,8 +169,6 @@ export const registerProposalCommand = (program: Command) => {
               (txn) => txn.sequence_number.toString() === selectedSequenceNumber
             );
 
-            let profile;
-
             // New action selection loop for the chosen transaction
             while (true) {
               const action = await select({
@@ -185,7 +192,6 @@ export const registerProposalCommand = (program: Command) => {
                     );
                     break;
                   }
-                  profile = await ensureProfileExists(options.profile);
 
                   await handleExecuteCommand({
                     multisigAddress: multisig,
@@ -193,8 +199,6 @@ export const registerProposalCommand = (program: Command) => {
                   });
                   break;
                 case 'vote_yes':
-                  profile = await ensureProfileExists(options.profile);
-
                   await handleVoteCommand({
                     multisigAddress: multisig,
                     sequenceNumber: Number(selectedSequenceNumber),
@@ -203,8 +207,6 @@ export const registerProposalCommand = (program: Command) => {
                   });
                   break;
                 case 'vote_no':
-                  profile = await ensureProfileExists(options.profile);
-
                   await handleVoteCommand({
                     multisigAddress: multisig,
                     sequenceNumber: Number(selectedSequenceNumber),
