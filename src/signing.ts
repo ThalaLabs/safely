@@ -23,7 +23,7 @@ type ProfileData = {
   rest_url: string;
 } & ({ private_key: string } | { derivation_path: string });
 
-export async function loadProfile(profile: string): Promise<Profile> {
+export async function loadProfile(profile: string, includeSigner = true): Promise<Profile> {
   // TODO: allow specifying any config file
   const file = fs.readFileSync(`.aptos/config.yaml`, 'utf8');
   const profiles: Record<string, ProfileData> = parse(file).profiles;
@@ -35,6 +35,15 @@ export async function loadProfile(profile: string): Promise<Profile> {
 
   const network = profileData.network.toLowerCase() as Network;
   const fullnode = profileData.rest_url + '/v1';
+
+  if (!includeSigner) {
+    // @ts-ignore
+    return {
+      network,
+      fullnode,
+    };
+  }
+
   if ('private_key' in profileData) {
     return {
       network,
