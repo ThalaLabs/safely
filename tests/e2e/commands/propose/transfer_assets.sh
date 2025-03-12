@@ -29,9 +29,9 @@ assert_output "Vote on proposal" \
     "Vote ok"
 
 # Execute
-assert_output "Execute proposal" \
+assert_output "Execute reject proposal" \
     "pnpm safely execute -m ${MULTISIG_ADDRESS} -p e2e_test" \
-    "Execute ok"
+    "Reject ok"
 
 # Cleanup
 cleanup 
