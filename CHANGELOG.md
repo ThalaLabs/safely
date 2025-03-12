@@ -1,5 +1,12 @@
 # @thalalabs/safely
 
+## 0.1.4
+
+### Patch Changes
+
+- 6e63528: bump aptos sdk
+- 121b013: support execute_rejected_transaction in `execute` command
+
 ## 0.1.3
 
 ### Patch Changes
