@@ -301,6 +301,11 @@ function logTransactionDetails(txn: any) {
 
 async function logExpectedBalanceChanges(aptos: Aptos, txn: any) {
   try {
+    if (!txn.simulationChanges) {
+      console.log(chalk.yellow(`No Simulation Changes Detected for Transaction ${txn.sequence_number}. Transaction may fail to simulate.`));
+      return
+    }
+
     console.log(chalk.blue('Expected Balance Changes:'));
     console.log(
       (await summarizeTransactionBalanceChanges(aptos, txn.simulationChanges)).toString()
