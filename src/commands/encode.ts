@@ -32,10 +32,14 @@ export function registerEncodeCommand(program: Command) {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { txnPayloadFile: string; network: Network }) => {
+    .action(async (options: { txnPayloadFile: string; network: Network; fullnode: string }) => {
       const network = await ensureNetworkExists(options.network);
-      const aptos = new Aptos(new AptosConfig({ network }));
-
+      const aptos = new Aptos(
+        new AptosConfig({
+          network,
+          ...(options.fullnode && { fullnode: options.fullnode }),
+        })
+      );
       try {
         console.log(chalk.blue(`Encoding transaction payload: ${options.txnPayloadFile}`));
         // TODO: verify the file is a valid json with function_id, type_args, and args

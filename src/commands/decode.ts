@@ -34,9 +34,14 @@ export function registerDecodeCommand(program: Command) {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { bytes: string; network: Network }) => {
+    .action(async (options: { bytes: string; network: Network; fullnode: string }) => {
       const network = await ensureNetworkExists(options.network);
-      const aptos = new Aptos(new AptosConfig({ network }));
+      const aptos = new Aptos(
+        new AptosConfig({
+          network,
+          ...(options.fullnode && { fullnode: options.fullnode }),
+        })
+      );
 
       try {
         console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));
