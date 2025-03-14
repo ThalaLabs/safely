@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.1.5
+
+### Patch Changes
+
+- 430ade5: explicit messaging on empty simulation output
+
 ## 0.1.4
 
 ### Patch Changes
