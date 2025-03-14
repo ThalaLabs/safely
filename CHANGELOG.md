@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.1.6
+
+### Patch Changes
+
+- 1f6b611: support custom network in encode/decode
+
 ## 0.1.5
 
 ### Patch Changes
