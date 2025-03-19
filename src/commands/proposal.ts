@@ -146,6 +146,7 @@ export const registerProposalCommand = (program: Command) => {
 
           while (true) {
             const txChoices = txns.map((txn) => ({
+              // @ts-ignore
               name: `#${txn.sequence_number} ${chalk.yellow(txn.payload_decoded.function)}`,
               value: txn.sequence_number.toString(),
             }));
