@@ -201,7 +201,7 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
   };
 
   const nestedVector3Map: Record<string, string> = {
-    'vector<vector<vector<u8>>>>': 'U8',
+    'vector<vector<vector<u8>>>': 'U8',
     'vector<vector<vector<u16>>>': 'U16',
     'vector<vector<vector<u32>>>': 'U32',
     'vector<vector<vector<u64>>>': 'U64',
