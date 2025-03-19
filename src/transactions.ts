@@ -443,7 +443,7 @@ async function getFaDecimals(aptos: Aptos, assetType: string): Promise<number> {
   const [decimals] = await aptos.view<[number]>({
     payload: {
       function: '0x1::fungible_asset::decimals',
-      typeArguments: [],
+      typeArguments: ['0x1::fungible_asset::Metadata'],
       functionArguments: [assetType],
     },
   });
@@ -455,7 +455,7 @@ async function getFaSymbol(aptos: Aptos, assetType: string): Promise<string> {
   const [symbol] = await aptos.view<[string]>({
     payload: {
       function: '0x1::fungible_asset::symbol',
-      typeArguments: [],
+      typeArguments: ['0x1::fungible_asset::Metadata'],
       functionArguments: [assetType],
     },
   });
