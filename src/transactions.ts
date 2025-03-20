@@ -339,12 +339,14 @@ export async function proposeEntryFunction(
 
   // TODO: figure out why simulation keeps failing on devnet & testnet. maybe skip simulation for testnet & devnet?
 
-  const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
-    transaction: proposeTxn,
-  });
+  if (simulate) {
+    const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
+      transaction: proposeTxn,
+    });
 
-  if (!proposeTxnSimulation.success) {
-    throw new Error(`Propose txn simulation failed: ${proposeTxnSimulation.vm_status}`);
+    if (!proposeTxnSimulation.success) {
+      throw new Error(`Propose txn simulation failed: ${proposeTxnSimulation.vm_status}`);
+    }
   }
 
   // Sign & Submit transaction
