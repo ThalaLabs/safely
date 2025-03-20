@@ -5,7 +5,6 @@ import {
   Aptos,
   generateTransactionPayload,
   InputEntryFunctionData,
-  MoveResource,
   WriteSetChange,
   WriteSetChangeWriteResource,
 } from '@aptos-labs/ts-sdk';
@@ -103,10 +102,17 @@ export async function fetchPendingTxns(
     );
     pendingMove = pending;
   }
+
   // TODO: handle payload_hash
   const kept = pendingMove.map(({ votes, payload, payload_hash, ...rest }) => rest);
   const payloadsDecoded = await Promise.all(
-    pendingMove.map((p) => decode(aptos, p.payload.vec[0]))
+    pendingMove.map(async (p, index) => {
+      try {
+        return await decode(aptos, p.payload.vec[0]);
+      } catch (error) {
+        return { sequence_number: sequenceNumbers[index], error: (error as Error).message };
+      }
+    })
   );
 
   let safelyStorage = await getDb();
@@ -119,6 +125,11 @@ export async function fetchPendingTxns(
 
   const simulationChanges = await Promise.all(
     payloadsDecoded.map(async (p) => {
+      if ('error' in p) {
+        // If the payload decoding failed, return a placeholder entry
+        return
+      }
+
       try {
         const transactionToSimulate = await aptos.transaction.build.simple({
           sender: multisig,
@@ -140,11 +151,15 @@ export async function fetchPendingTxns(
   );
 
   const contracts = payloadsDecoded.map((p) => {
+    if ('error' in p) {
+      return 'unknown'; // Return a default value for failed decodes
+    }
     const [packageAddress] = p.function.split('::');
     return knownAddresses[packageAddress] || 'unknown';
   });
 
   // return all transactions
+  // @ts-ignore
   return sequenceNumbers.map((sn, i) => ({
     sequence_number: sn,
     ...kept[i],
@@ -443,7 +458,7 @@ async function getFaDecimals(aptos: Aptos, assetType: string): Promise<number> {
   const [decimals] = await aptos.view<[number]>({
     payload: {
       function: '0x1::fungible_asset::decimals',
-      typeArguments: [],
+      typeArguments: ['0x1::fungible_asset::Metadata'],
       functionArguments: [assetType],
     },
   });
@@ -455,7 +470,7 @@ async function getFaSymbol(aptos: Aptos, assetType: string): Promise<string> {
   const [symbol] = await aptos.view<[string]>({
     payload: {
       function: '0x1::fungible_asset::symbol',
-      typeArguments: [],
+      typeArguments: ['0x1::fungible_asset::Metadata'],
       functionArguments: [assetType],
     },
   });
