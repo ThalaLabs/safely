@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.1.7
+
+### Patch Changes
+
+- 7f8f9a4: error handling for tx deserialization failures
+
 ## 0.1.6
 
 ### Patch Changes
