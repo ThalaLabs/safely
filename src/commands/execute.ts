@@ -5,6 +5,7 @@ import {
   AptosConfig,
   generateRawTransaction,
   generateTransactionPayload,
+  Network,
   SimpleTransaction,
 } from '@aptos-labs/ts-sdk';
 import { decode } from '../parser.js';
@@ -141,13 +142,23 @@ async function buildApproveTxn(
   });
   const txn = new SimpleTransaction(rawTxn);
 
-  // TODO: figure out why simulation keeps failing on devnet & testnet
-  const [simulation] = await aptos.transaction.simulate.simple({
-    transaction: txn,
-  });
-  if (!simulation.success) {
-    throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
+  try {
+    const [simulation] = await aptos.transaction.simulate.simple({
+      transaction: txn,
+    });
+    if (!simulation.success) {
+      throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
+    }
+  } catch (error) {
+    if (aptos.config.network === Network.CUSTOM && aptos.config.fullnode?.includes('movement')) {
+      console.error(
+        chalk.yellow(
+          `Transaction simulation failed, but this is expected on movement mainnet: ${(error as Error).message}`
+        )
+      );
+    } else {
+      throw new Error(`Transaction simulation unknown error: ${(error as Error).message}`);
+    }
   }
-
   return txn;
 }
