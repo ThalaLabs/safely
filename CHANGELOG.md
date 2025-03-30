@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.1.8
+
+### Patch Changes
+
+- 22547a7: skip simulation when submitting to movement
+
 ## 0.1.7
 
 ### Patch Changes
