@@ -127,7 +127,7 @@ export async function fetchPendingTxns(
     payloadsDecoded.map(async (p) => {
       if ('error' in p) {
         // If the payload decoding failed, return a placeholder entry
-        return
+        return;
       }
 
       try {
