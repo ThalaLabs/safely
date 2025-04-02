@@ -14,10 +14,36 @@ export function decodeEntryFunction(filePath: string): InputEntryFunctionData {
     type_args: string[];
     args: Array<{ type: string; value: SimpleEntryFunctionArgumentTypes }>;
   };
+
+  // Explicitly handle hex args (which must be cast to vector<u8> or vector<vector<u8>> types)
+  const hexDecodedArgs = content.args.map((arg) => {
+    // Hex args need to be decoded into vector<u8> equivalents
+    if (arg.type === 'hex') {
+      return typeof arg.value === 'string'
+        ? hexToBytes(arg.value)
+        : // @ts-ignore
+          arg.value.map((hexStr) => hexToBytes(hexStr));
+    }
+
+    return arg.value;
+  });
+
   return {
     function: content.function_id as MoveFunctionId,
     typeArguments: content.type_args,
-    functionArguments: content.args.map((arg) => arg.value),
-    // TODO: abi
+    functionArguments: hexDecodedArgs,
   };
+}
+
+function hexToBytes(hexString: string) {
+  // Remove "0x" prefix if present
+  if (hexString.startsWith('0x')) {
+    hexString = hexString.slice(2);
+  }
+
+  const matched = hexString.match(/.{1,2}/g);
+  if (!matched) return new Uint8Array(); // Return an empty Uint8Array if no match
+
+  // Convert hex to byte array
+  return new Uint8Array(matched.map((byte) => parseInt(byte, 16)));
 }
