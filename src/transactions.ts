@@ -3,6 +3,7 @@ import { AddressBook, getDb } from './storage.js';
 import {
   Account,
   Aptos,
+  fetchEntryFunctionAbi,
   generateTransactionPayload,
   InputEntryFunctionData,
   WriteSetChange,
@@ -304,6 +305,19 @@ export async function proposeEntryFunction(
   multisigAddress: string,
   simulate = true
 ) {
+  // Fetch ABI
+  let entryFunctionABI = await fetchEntryFunctionAbi(
+    entryFunction.function.split('::')[0],
+    entryFunction.function.split('::')[1],
+    entryFunction.function.split('::')[2],
+    aptos.config
+  );
+
+  entryFunction = {
+    ...entryFunction,
+    abi: entryFunctionABI,
+  };
+
   const txnPayload = await generateTransactionPayload({
     multisigAddress,
     ...entryFunction,
@@ -348,7 +362,10 @@ export async function proposeEntryFunction(
     sender: signer.accountAddress,
     data: {
       function: '0x1::multisig_account::create_transaction',
-      functionArguments: [multisigAddress, txnPayload.multiSig.transaction_payload!.bcsToBytes()],
+      functionArguments: [
+        multisigAddress,
+        txnPayload.multiSig.transaction_payload!.bcsToHex().toString(),
+      ],
     },
   });
 
