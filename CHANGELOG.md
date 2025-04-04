@@ -1,5 +1,12 @@
 # @thalalabs/safely
 
+## 0.1.9
+
+### Patch Changes
+
+- 8dadf39: support contract upgrade txns
+- cf4e7f6: fix tx serialization
+
 ## 0.1.8
 
 ### Patch Changes
