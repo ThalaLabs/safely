@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@thalalabs/safely",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "main": "index.js",
   "bin": {
     "safely": "./dist/index.js"
