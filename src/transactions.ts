@@ -364,7 +364,7 @@ export async function proposeEntryFunction(
       function: '0x1::multisig_account::create_transaction',
       functionArguments: [
         multisigAddress,
-        txnPayload.multiSig.transaction_payload!.bcsToHex().toString(),
+        txnPayload.multiSig.transaction_payload!.bcsToBytes(),
       ],
     },
   });
