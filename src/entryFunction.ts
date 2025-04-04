@@ -19,10 +19,15 @@ export function decodeEntryFunction(filePath: string): InputEntryFunctionData {
   const hexDecodedArgs = content.args.map((arg) => {
     // Hex args need to be decoded into vector<u8> equivalents
     if (arg.type === 'hex') {
-      return typeof arg.value === 'string'
-        ? hexToBytes(arg.value)
-        : // @ts-ignore
-          arg.value.map((hexStr) => hexToBytes(hexStr));
+      // vector<u8>
+      if (typeof arg.value === 'string') {
+        return hexToBytes(arg.value);
+      }
+
+      // vector<vector<u8>>
+      if (Array.isArray(arg.value) && arg.value.every((v) => typeof v === 'string')) {
+        return arg.value.map((hexStr) => hexToBytes(hexStr));
+      }
     }
 
     return arg.value;
