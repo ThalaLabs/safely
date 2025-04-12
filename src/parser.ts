@@ -187,6 +187,7 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
     'vector<address>': AccountAddress,
     'vector<0x1::string::String>': MoveString,
     'vector<0x1::object::Object>': AccountAddress,
+    'vector<0x1::object::Object<0x1::fungible_asset::Metadata>>': AccountAddress,
   };
 
   const nestedVector2Map: Record<string, string> = {
