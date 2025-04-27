@@ -25,6 +25,7 @@ import {
   U32,
   U64,
   U8,
+  MoveOption
 } from '@aptos-labs/ts-sdk';
 
 type AptosArgType = U8 | U16 | U32 | U64 | U128 | U256 | Bool | MoveString | AccountAddress;
@@ -222,6 +223,45 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
 
   if (tt == 'address' || tt.startsWith('0x1::object::Object')) {
     return AccountAddress.deserialize(deserializer).toString();
+  }
+
+  // Note for reader:
+  // > MoveOption.deserialize(deserializer, AccountAddress)
+  // Errors with:
+  // > Error: Hex string is too long, must be 1 to 64 chars long, excluding the leading 0x.
+  //
+  // This is because MoveOption adds an extra "0/1" byte to the argument representing isSome() - so the deserializer data was too long as a result
+  // To accommodate this, we first manually extract the first byte
+  // - if byte == 1 (isSome()), then deserialize bytes [1, 65]
+  // - if byte == 0 (!isSome()), then return empty
+  if (tt == '0x1::option::Option<address>') {
+    const isSome = arg.bcsToBytes()[0] == 1;
+    if (isSome) {
+      // Construct account address
+      const addressInternal = new AccountAddress(arg.bcsToBytes().slice(1));
+      const addressOption = new MoveOption<AccountAddress>(addressInternal);
+      const optionDeserializer = new Deserializer(addressOption.bcsToBytes());
+
+      return AccountAddress.deserialize(optionDeserializer).toString();
+    }
+
+    // return empty string if option is empty
+    return ""
+  }
+
+  // Support generic type parsing for Option type
+  if (tt.startsWith('0x1::option::Option')) {
+    const option = MoveOption.deserialize(deserializer, typeMap[tt]);
+
+    if (option.isSome()) {
+      // option.value returns class object
+      // option.value.value unpacks class object, returning deserialized struct
+      // @ts-ignore
+      return option.value.value
+    }
+
+    // return empty string if option is empty
+    return ""
   }
 
   if (tt in nestedVector1Map) {
