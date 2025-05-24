@@ -25,7 +25,7 @@ import {
   U32,
   U64,
   U8,
-  MoveOption
+  MoveOption,
 } from '@aptos-labs/ts-sdk';
 
 type AptosArgType = U8 | U16 | U32 | U64 | U128 | U256 | Bool | MoveString | AccountAddress;
@@ -189,7 +189,8 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
     'vector<0x1::string::String>': MoveString,
     'vector<0x1::object::Object>': AccountAddress,
     'vector<0x1::object::Object<0x1::fungible_asset::Metadata>>': AccountAddress,
-    'vector<0x1::object::Object<0x6a01d5761d43a5b5a0ccbfc42edf2d02c0611464aae99a2ea0e0d4819f0550b5::lending::Market>>': AccountAddress,
+    'vector<0x1::object::Object<0x6a01d5761d43a5b5a0ccbfc42edf2d02c0611464aae99a2ea0e0d4819f0550b5::lending::Market>>':
+      AccountAddress,
   };
 
   const nestedVector2Map: Record<string, string> = {
@@ -246,7 +247,7 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
     }
 
     // return empty string if option is empty
-    return ""
+    return '';
   }
 
   // Support generic type parsing for Option type
@@ -257,11 +258,11 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
       // option.value returns class object
       // option.value.value unpacks class object, returning deserialized struct
       // @ts-ignore
-      return option.value.value
+      return option.value.value;
     }
 
     // return empty string if option is empty
-    return ""
+    return '';
   }
 
   if (tt in nestedVector1Map) {
