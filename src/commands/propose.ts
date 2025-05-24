@@ -80,8 +80,8 @@ export const registerProposeCommand = (program: Command) => {
                 functionArguments: [options.recipient, options.amount],
               }
             : {
-                function: '0x1::aptos_account::transfer_fungible_assets' as MoveFunctionId,
-                typeArguments: [],
+                function: '0x1::primary_fungible_store::transfer' as MoveFunctionId,
+                typeArguments: ['0x1::fungible_asset::Metadata'],
                 functionArguments: [options.asset.address, options.recipient, options.amount],
               };
         try {
