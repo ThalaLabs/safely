@@ -8,7 +8,7 @@ import {
   Network,
   SimpleTransaction,
 } from '@aptos-labs/ts-sdk';
-import { decode } from '../parser.js';
+import { decode } from '@thalalabs/multisig-utils';
 import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';

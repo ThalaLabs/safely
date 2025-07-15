@@ -42,6 +42,7 @@
     "@ledgerhq/errors": "^6.19.1",
     "@ledgerhq/hw-transport": "^6.31.4",
     "@ledgerhq/hw-transport-node-hid": "^6.29.5",
+    "@thalalabs/multisig-utils": "^0.1.0",
     "chalk": "^5.3.0",
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",

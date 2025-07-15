@@ -1,7 +1,7 @@
 import { Command, Option } from 'commander';
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
-import { decode } from '../parser.js';
+import { decode } from '@thalalabs/multisig-utils';
 import { ensureNetworkExists } from '../storage.js';
 
 export function registerDecodeCommand(program: Command) {
