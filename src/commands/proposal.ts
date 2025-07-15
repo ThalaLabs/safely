@@ -2,9 +2,9 @@ import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { select } from '@inquirer/prompts';
-import { fetchPendingTxns, summarizeTransactionBalanceChanges } from '../transactions.js';
+import { fetchPendingTxnsSafely } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
-import { decode } from '../parser.js';
+import { decode, summarizeTransactionBalanceChanges } from '@thalalabs/multisig-utils';
 import {
   AddressBook,
   ensureMultisigAddressExists,
@@ -90,7 +90,7 @@ export const registerProposalCommand = (program: Command) => {
           let txns;
           if (filter === 'pending') {
             console.log(chalk.blue(`Fetching pending transactions for multisig: ${multisig}`));
-            txns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
+            txns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
           } else if (filter === 'succeeded' || filter === 'failed') {
             const eventType =
               filter === 'succeeded'

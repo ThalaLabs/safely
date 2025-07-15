@@ -2,8 +2,8 @@ import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { ensureMultisigAddressExists, ensureNetworkExists } from '../storage.js';
-import { MultisigTransaction, summarizeTransactionBalanceChanges } from '../transactions.js';
-import { decode } from '../parser.js';
+import { MultisigTransaction, summarizeTransactionBalanceChanges } from '@thalalabs/multisig-utils';
+import { decode } from '@thalalabs/multisig-utils';
 import { validateAddress, validateUInt } from '../validators.js';
 
 export const registerSimulateCommand = (program: Command) => {

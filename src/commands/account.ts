@@ -8,6 +8,7 @@ import {
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
+import { numPendingTxns } from '@thalalabs/multisig-utils';
 import {
   AddressBook,
   ensureMultisigAddressExists,
@@ -15,7 +16,7 @@ import {
   ensureProfileExists,
   getDb,
 } from '../storage.js';
-import { numPendingTxns, proposeEntryFunction } from '../transactions.js';
+import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 
