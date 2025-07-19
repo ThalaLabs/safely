@@ -8,6 +8,7 @@ import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
 import { loadProfile } from '../signing.js';
 import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
+import { getFullnodeUrl } from '../utils.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
@@ -34,7 +35,7 @@ export const registerProposeCommand = (program: Command) => {
         }
 
         const { network, signer, fullnode } = await loadProfile(profile);
-        const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+        const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
         await proposeEntryFunction(
           aptos,
           signer,
@@ -86,7 +87,7 @@ export const registerProposeCommand = (program: Command) => {
               };
         try {
           const { network, signer, fullnode } = await loadProfile(profile);
-          const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+          const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
           await proposeEntryFunction(aptos, signer, entryFunction, multisig, !ignoreSimulate);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
