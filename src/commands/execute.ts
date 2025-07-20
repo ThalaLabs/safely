@@ -13,6 +13,7 @@ import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
+import { getFullnodeUrl } from '../utils.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
@@ -32,7 +33,7 @@ export async function handleExecuteCommand(options: {
   try {
     const profile = await ensureProfileExists(options.profile);
     const { network, signer, fullnode } = await loadProfile(profile);
-    const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+    const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
     const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
     const [lastResolvedSn] = await aptos.view<[string]>({

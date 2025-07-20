@@ -19,6 +19,7 @@ import {
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
+import { getFullnodeUrl } from '../utils.js';
 
 export const registerAccountCommand = (program: Command) => {
   const account = program.command('account').description('Multisig account operations');
@@ -51,7 +52,7 @@ export const registerAccountCommand = (program: Command) => {
         try {
           const profile = await ensureProfileExists(options.profile);
           const { network, signer, fullnode } = await loadProfile(profile);
-          const aptos = new Aptos(new AptosConfig({ network, fullnode }));
+          const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: entryFunction,
@@ -126,7 +127,7 @@ export const registerAccountCommand = (program: Command) => {
         try {
           const profile = await ensureProfileExists(options.profile);
           const { network, signer, fullnode } = await loadProfile(profile);
-          const aptos = new Aptos(new AptosConfig({ network, ...(fullnode && { fullnode }) }));
+          const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
           const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
           await proposeEntryFunction(aptos, signer, entryFunction, multisig);
