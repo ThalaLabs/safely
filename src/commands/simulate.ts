@@ -13,9 +13,7 @@ export const registerSimulateCommand = (program: Command) => {
     .command('simulate')
     .description('Simulate multisig transaction')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
       const options = thisCommand.opts();
@@ -30,43 +28,33 @@ export const registerSimulateCommand = (program: Command) => {
     )
     .action(
       async (options: {
-        fullnode: string;
-        multisigAddress: string;
-        network: NetworkChoice;
         sequenceNumber: number;
+        fullnode?: string;
+        multisigAddress?: string;
+        network?: NetworkChoice;
       }) => {
+        const multisig = await ensureMultisigAddressExists(options.multisigAddress);
         const network = await ensureNetworkExists(options.network);
-
         const aptos = new Aptos(
           new AptosConfig({
             fullnode: options.fullnode || getFullnodeUrl(network),
           })
         );
 
-        await handleSimulateCommand({
-          aptos,
-          multisigAddress: options.multisigAddress,
-          network,
-          sequenceNumber: options.sequenceNumber,
-        });
+        await handleSimulateCommand(aptos, multisig, options.sequenceNumber);
       }
     );
 };
 
-export async function handleSimulateCommand(options: {
-  aptos: Aptos;
-  network: string;
-  multisigAddress?: string;
-  sequenceNumber: number;
-}) {
-  const { aptos, network, multisigAddress, sequenceNumber } = options;
-
-  const multisig = await ensureMultisigAddressExists(multisigAddress);
-
+export async function handleSimulateCommand(
+  aptos: Aptos,
+  multisig: string,
+  sequenceNumber: number
+) {
   try {
     console.log(
       chalk.blue(
-        `Simulating pending transaction with sn ${options.sequenceNumber} for multisig: ${multisig}...`
+        `Simulating pending transaction with sn ${sequenceNumber} for multisig: ${multisig}...`
       )
     );
 
@@ -108,7 +96,7 @@ export async function handleSimulateCommand(options: {
 
     // 4. Display balance changes in human-readable form
     console.log(chalk.blue('Expected Balance Changes:'));
-    let table = await summarizeTransactionBalanceChanges(aptos, simulateMultisigTx.changes);
+    const table = await summarizeTransactionBalanceChanges(aptos, simulateMultisigTx.changes);
     console.log(table.toString());
   } catch (error) {
     console.error(chalk.red(`Error: ${(error as Error).message}`));

@@ -12,7 +12,11 @@ import { decode } from '@thalalabs/multisig-utils';
 import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
-import { ensureMultisigAddressExists, ensureProfileExists, ensureNetworkExists } from '../storage.js';
+import {
+  ensureMultisigAddressExists,
+  ensureProfileExists,
+  ensureNetworkExists,
+} from '../storage.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { getExplorerUrl } from '../utils.js';
 
@@ -22,25 +26,26 @@ export const registerExecuteCommand = (program: Command) => {
     .description('Execute a multisig transaction')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .option('-p, --profile <string>', 'Profile to use for the transaction')
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
-    .action(async (options: { multisigAddress: string; profile: string; network?: NetworkChoice }) => {
-      await handleExecuteCommand(options);
-    });
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
+    .action(
+      async (options: { multisigAddress?: string; network?: NetworkChoice; profile?: string }) => {
+        await handleExecuteCommand(
+          await ensureMultisigAddressExists(options.multisigAddress),
+          await ensureProfileExists(options.profile),
+          await ensureNetworkExists(options.network)
+        );
+      }
+    );
 };
 
-export async function handleExecuteCommand(options: {
-  multisigAddress?: string;
-  profile?: string;
-  network?: NetworkChoice;
-}) {
+export async function handleExecuteCommand(
+  multisig: string,
+  profile: string,
+  network: NetworkChoice
+) {
   try {
-    const profile = await ensureProfileExists(options.profile);
-    const network = await ensureNetworkExists(options.network);
     const { signer, fullnode } = await loadProfile(profile, network);
     const aptos = new Aptos(new AptosConfig({ fullnode }));
-    const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
     const [lastResolvedSn] = await aptos.view<[string]>({
       payload: {

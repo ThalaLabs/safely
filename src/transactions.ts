@@ -127,16 +127,10 @@ export async function proposeEntryFunction(
     transactionHash: pendingTxn.hash,
   });
   if (success) {
-    console.log(
-      chalk.green(
-        `Propose ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
-      )
-    );
+    console.log(chalk.green(`Propose ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`));
   } else {
     console.log(
-      chalk.red(
-        `Propose nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
-      )
+      chalk.red(`Propose nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`)
     );
   }
 }

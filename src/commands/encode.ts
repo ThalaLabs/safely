@@ -19,9 +19,7 @@ export function registerEncodeCommand(program: Command) {
         return value;
       }
     )
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
       const options = thisCommand.opts();
@@ -29,24 +27,26 @@ export function registerEncodeCommand(program: Command) {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { txnPayloadFile: string; network: NetworkChoice; fullnode: string }) => {
-      const network = await ensureNetworkExists(options.network);
-      const aptos = new Aptos(
-        new AptosConfig({
-          fullnode: options.fullnode || getFullnodeUrl(network),
-        })
-      );
-      try {
-        console.log(chalk.blue(`Encoding transaction payload: ${options.txnPayloadFile}`));
-        // TODO: verify the file is a valid json with function_id, type_args, and args
-        const txnPayload = JSON.parse(fs.readFileSync(options.txnPayloadFile, 'utf8'));
-        console.log(
-          (
-            await encode(aptos, txnPayload.function_id, txnPayload.type_args, txnPayload.args)
-          ).toString()
+    .action(
+      async (options: { txnPayloadFile: string; network: NetworkChoice; fullnode: string }) => {
+        const network = await ensureNetworkExists(options.network);
+        const aptos = new Aptos(
+          new AptosConfig({
+            fullnode: options.fullnode || getFullnodeUrl(network),
+          })
         );
-      } catch (error) {
-        console.error(chalk.red(`Error: ${(error as Error).message}`));
+        try {
+          console.log(chalk.blue(`Encoding transaction payload: ${options.txnPayloadFile}`));
+          // TODO: verify the file is a valid json with function_id, type_args, and args
+          const txnPayload = JSON.parse(fs.readFileSync(options.txnPayloadFile, 'utf8'));
+          console.log(
+            (
+              await encode(aptos, txnPayload.function_id, txnPayload.type_args, txnPayload.args)
+            ).toString()
+          );
+        } catch (error) {
+          console.error(chalk.red(`Error: ${(error as Error).message}`));
+        }
       }
-    });
+    );
 }

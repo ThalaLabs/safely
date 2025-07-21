@@ -24,9 +24,7 @@ export const registerProposalCommand = (program: Command) => {
     .command('proposal')
     .description('List proposals for a multisig')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
       const options = thisCommand.opts();
@@ -59,18 +57,15 @@ export const registerProposalCommand = (program: Command) => {
         multisigAddress: string;
         network?: NetworkChoice;
         profile?: string;
-        fullnode: string;
+        fullnode?: string;
         filter: 'pending' | 'succeeded' | 'failed';
         sequenceNumber?: number;
         limit?: number;
       }) => {
-        let network = await ensureNetworkExists(options.network);
+        const network = await ensureNetworkExists(options.network);
+        const profile = await ensureProfileExists(options.profile);
         let fullnode = options.fullnode;
-
-        let profile;
-        if (options.profile) {
-          profile = await ensureProfileExists(options.profile);
-
+        if (!fullnode) {
           ({ fullnode } = await loadProfile(profile, network, false));
         }
 
@@ -190,26 +185,25 @@ export const registerProposalCommand = (program: Command) => {
                     break;
                   }
 
-                  await handleExecuteCommand({
-                    multisigAddress: multisig,
-                    profile: profile,
-                  });
+                  await handleExecuteCommand(multisig, profile, network);
                   break;
                 case 'vote_yes':
-                  await handleVoteCommand({
-                    multisigAddress: multisig,
-                    sequenceNumber: Number(selectedSequenceNumber),
-                    approve: true,
-                    profile,
-                  });
+                  await handleVoteCommand(
+                    Number(selectedSequenceNumber),
+                    true,
+                    multisig,
+                    network,
+                    profile
+                  );
                   break;
                 case 'vote_no':
-                  await handleVoteCommand({
-                    multisigAddress: multisig,
-                    sequenceNumber: Number(selectedSequenceNumber),
-                    approve: false,
-                    profile,
-                  });
+                  await handleVoteCommand(
+                    Number(selectedSequenceNumber),
+                    false,
+                    multisig,
+                    network,
+                    profile
+                  );
                   break;
 
                 case 'next':
