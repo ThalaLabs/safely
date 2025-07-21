@@ -1,4 +1,6 @@
 import { AddressBook, getDb } from './storage.js';
+import { NetworkChoice } from './constants.js';
+import { getExplorerUrl } from './utils.js';
 import {
   Account,
   Aptos,
@@ -43,6 +45,7 @@ export async function proposeEntryFunction(
   signer: Account | LedgerSigner,
   entryFunction: InputEntryFunctionData,
   multisigAddress: string,
+  network: NetworkChoice,
   simulate = true
 ) {
   // Fetch ABI
@@ -126,13 +129,13 @@ export async function proposeEntryFunction(
   if (success) {
     console.log(
       chalk.green(
-        `Propose ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+        `Propose ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
       )
     );
   } else {
     console.log(
       chalk.red(
-        `Propose nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+        `Propose nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
       )
     );
   }

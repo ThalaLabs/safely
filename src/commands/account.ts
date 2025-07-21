@@ -1,7 +1,6 @@
 import {
   Aptos,
   AptosConfig,
-  Network,
   MoveFunctionId,
   WriteSetChange,
   WriteSetChangeWriteResource,
@@ -9,6 +8,7 @@ import {
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { numPendingTxns } from '@thalalabs/multisig-utils';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import {
   AddressBook,
   ensureMultisigAddressExists,
@@ -38,11 +38,15 @@ export const registerAccountCommand = (program: Command) => {
       validateUInt
     )
     .option('-p, --profile <string>', 'Profile to use for the transaction')
+    .addOption(
+      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
+    )
     .action(
       async (options: {
         additionalOwners: string[];
         numSignaturesRequired: number;
         profile: string;
+        network?: NetworkChoice;
       }) => {
         const entryFunction = {
           function: '0x1::multisig_account::create_with_owners' as MoveFunctionId,
@@ -51,8 +55,9 @@ export const registerAccountCommand = (program: Command) => {
         };
         try {
           const profile = await ensureProfileExists(options.profile);
-          const { network, signer, fullnode } = await loadProfile(profile);
-          const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
+          const network = await ensureNetworkExists(options.network);
+          const { signer, fullnode } = await loadProfile(profile, network);
+          const aptos = new Aptos(new AptosConfig({ fullnode }));
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: entryFunction,
@@ -70,13 +75,13 @@ export const registerAccountCommand = (program: Command) => {
               .find((change) => change.data.type === '0x1::multisig_account::MultisigAccount')!;
             console.log(
               chalk.green(
-                `Create multisig ok: https://explorer.aptoslabs.com/account/${multisigAccountChange.address}?network=${aptos.config.network}`
+                `Create multisig ok: ${multisigAccountChange.address}`
               )
             );
           } else {
             console.log(
               chalk.red(
-                `Create multisig nok ${vm_status}: https://explorer.aptoslabs.com/txn/${committedTxn.hash}?network=${aptos.config.network}`
+                `Create multisig nok ${vm_status}: txn ${committedTxn.hash}`
               )
             );
           }
@@ -106,6 +111,9 @@ export const registerAccountCommand = (program: Command) => {
       validateUInt
     )
     .option('-p, --profile <string>', 'Profile to use for the transaction')
+    .addOption(
+      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
+    )
     .action(
       async (options: {
         multisigAddress: string;
@@ -113,6 +121,7 @@ export const registerAccountCommand = (program: Command) => {
         ownersRemove: string[];
         numSignaturesRequired: number;
         profile: string;
+        network?: NetworkChoice;
       }) => {
         const entryFunction = {
           function:
@@ -126,11 +135,12 @@ export const registerAccountCommand = (program: Command) => {
         };
         try {
           const profile = await ensureProfileExists(options.profile);
-          const { network, signer, fullnode } = await loadProfile(profile);
-          const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
+          const network = await ensureNetworkExists(options.network);
+          const { signer, fullnode } = await loadProfile(profile, network);
+          const aptos = new Aptos(new AptosConfig({ fullnode }));
           const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
-          await proposeEntryFunction(aptos, signer, entryFunction, multisig);
+          await proposeEntryFunction(aptos, signer, entryFunction, multisig, network);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }
@@ -143,12 +153,7 @@ export const registerAccountCommand = (program: Command) => {
     .description('Show multisig summary')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
-      new Option('--network <network>', 'network to use').choices([
-        'devnet',
-        'testnet',
-        'mainnet',
-        'custom',
-      ])
+      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -157,12 +162,11 @@ export const registerAccountCommand = (program: Command) => {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { fullnode: string; multisigAddress: string; network: Network }) => {
+    .action(async (options: { fullnode: string; multisigAddress: string; network: NetworkChoice }) => {
       const network = await ensureNetworkExists(options.network);
       const aptos = new Aptos(
         new AptosConfig({
-          network,
-          ...(options.fullnode && { fullnode: options.fullnode }),
+          fullnode: options.fullnode || getFullnodeUrl(network),
         })
       );
 

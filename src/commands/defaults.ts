@@ -2,6 +2,7 @@ import { Command, Option } from 'commander';
 import { MultisigDefault, NetworkDefault, ProfileDefault } from '../storage.js';
 import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
+import { NETWORK_CHOICES } from '../constants.js';
 
 export const registerDefaultCommand = (program: Command) => {
   const defaults = program.command('default').description('Multisig default values');
@@ -27,12 +28,7 @@ export const registerDefaultCommand = (program: Command) => {
     .description('Set default multisig values')
     .option('-m, --multisig <address>', 'Multisig address', validateAddress)
     .addOption(
-      new Option('-n, --network <network>', 'network to use').choices([
-        'devnet',
-        'testnet',
-        'mainnet',
-        'custom',
-      ])
+      new Option('-n, --network <network>', 'network to use').choices(NETWORK_CHOICES)
     )
     .option('-p, --profile <string>', 'Profile to use for transactions')
     .action(async (opts) => {

@@ -1,10 +1,11 @@
 import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { validateAddress, validateUInt, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
-import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
-import { getFullnodeUrl } from '../utils.js';
+import { ensureMultisigAddressExists, ensureProfileExists, ensureNetworkExists } from '../storage.js';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
+import { getExplorerUrl } from '../utils.js';
 
 export const registerVoteCommand = (program: Command) => {
   program
@@ -25,7 +26,7 @@ export const registerVoteCommand = (program: Command) => {
         approve: boolean;
         profile: string;
       }) => {
-        handleVoteCommand(options);
+        await handleVoteCommand(options);
       }
     );
 };
@@ -35,11 +36,13 @@ export async function handleVoteCommand(options: {
   sequenceNumber?: number;
   approve?: boolean;
   profile?: string;
+  network?: NetworkChoice;
 }) {
   try {
     const profile = await ensureProfileExists(options.profile);
-    const { network, signer, fullnode } = await loadProfile(profile);
-    const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
+    const network = await ensureNetworkExists(options.network);
+    const { signer, fullnode } = await loadProfile(profile, network);
+    const aptos = new Aptos(new AptosConfig({ fullnode }));
     const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
     const txn = await aptos.transaction.build.simple({
@@ -59,13 +62,13 @@ export async function handleVoteCommand(options: {
     if (success) {
       console.log(
         chalk.green(
-          `Vote ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+          `Vote ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
         )
       );
     } else {
       console.log(
         chalk.red(
-          `Vote nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+          `Vote nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
         )
       );
     }

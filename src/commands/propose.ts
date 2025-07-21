@@ -7,8 +7,8 @@ import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
 import { loadProfile } from '../signing.js';
-import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
-import { getFullnodeUrl } from '../utils.js';
+import { ensureMultisigAddressExists, ensureProfileExists, ensureNetworkExists } from '../storage.js';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
@@ -24,7 +24,7 @@ export const registerProposeCommand = (program: Command) => {
     .description('Propose a raw transaction from a payload file')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(async (options: { txnPayloadFile: string }, cmd) => {
-      let { multisigAddress, profile, ignoreSimulate } = cmd.parent.opts();
+      let { multisigAddress, profile, ignoreSimulate, network } = cmd.parent.opts();
       const multisig = await ensureMultisigAddressExists(multisigAddress);
       profile = await ensureProfileExists(profile);
 
@@ -34,13 +34,15 @@ export const registerProposeCommand = (program: Command) => {
           throw new Error(`Transaction payload file not found: ${fullPath}`);
         }
 
-        const { network, signer, fullnode } = await loadProfile(profile);
-        const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
+        const userNetwork = await ensureNetworkExists(network);
+        const { signer, fullnode } = await loadProfile(profile, userNetwork);
+        const aptos = new Aptos(new AptosConfig({ fullnode }));
         await proposeEntryFunction(
           aptos,
           signer,
           decodeEntryFunction(fullPath),
           multisig,
+          userNetwork,
           !ignoreSimulate
         );
       } catch (error) {
@@ -69,7 +71,7 @@ export const registerProposeCommand = (program: Command) => {
         },
         cmd
       ) => {
-        let { multisigAddress, profile, ignoreSimulate } = cmd.parent.parent.opts();
+        let { multisigAddress, profile, ignoreSimulate, network } = cmd.parent.parent.opts();
         const multisig = await ensureMultisigAddressExists(multisigAddress);
         profile = await ensureProfileExists(profile);
 
@@ -86,9 +88,10 @@ export const registerProposeCommand = (program: Command) => {
                 functionArguments: [options.asset.address, options.recipient, options.amount],
               };
         try {
-          const { network, signer, fullnode } = await loadProfile(profile);
-          const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
-          await proposeEntryFunction(aptos, signer, entryFunction, multisig, !ignoreSimulate);
+          const userNetwork = await ensureNetworkExists(network);
+          const { signer, fullnode } = await loadProfile(profile, userNetwork);
+          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          await proposeEntryFunction(aptos, signer, entryFunction, multisig, userNetwork, !ignoreSimulate);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }

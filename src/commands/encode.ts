@@ -1,9 +1,11 @@
 import * as fs from 'node:fs';
 import { Command, Option } from 'commander';
-import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { encode } from '@thalalabs/multisig-utils';
 import { ensureNetworkExists } from '../storage.js';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
+import { getFullnodeUrl } from '../utils.js';
 
 export function registerEncodeCommand(program: Command) {
   program
@@ -18,12 +20,7 @@ export function registerEncodeCommand(program: Command) {
       }
     )
     .addOption(
-      new Option('--network <network>', 'network to use').choices([
-        'devnet',
-        'testnet',
-        'mainnet',
-        'custom',
-      ])
+      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -32,12 +29,11 @@ export function registerEncodeCommand(program: Command) {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { txnPayloadFile: string; network: Network; fullnode: string }) => {
+    .action(async (options: { txnPayloadFile: string; network: NetworkChoice; fullnode: string }) => {
       const network = await ensureNetworkExists(options.network);
       const aptos = new Aptos(
         new AptosConfig({
-          network,
-          ...(options.fullnode && { fullnode: options.fullnode }),
+          fullnode: options.fullnode || getFullnodeUrl(network),
         })
       );
       try {
