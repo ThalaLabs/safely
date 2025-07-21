@@ -23,21 +23,25 @@ type ProfileData = {
   rest_url: string;
 } & ({ private_key: string } | { derivation_path: string });
 
-export async function loadProfile(profile: string, network: NetworkChoice, includeSigner = true): Promise<Profile> {
+export async function loadProfile(
+  profile: string,
+  network: NetworkChoice,
+  includeSigner = true
+): Promise<Profile> {
   // Load from the network-specific config path
   const configPath = getConfigPath(network);
-  
+
   if (!fs.existsSync(configPath)) {
     throw new Error(`Config file not found at ${configPath}`);
   }
-  
+
   let profileData: ProfileData | undefined;
-  
+
   try {
     const file = fs.readFileSync(configPath, 'utf8');
     const profiles: Record<string, ProfileData> = parse(file).profiles;
     profileData = profiles[profile];
-    
+
     if (!profileData) {
       throw new Error(`Profile "${profile}" not found in ${configPath}`);
     }
@@ -49,7 +53,9 @@ export async function loadProfile(profile: string, network: NetworkChoice, inclu
   }
 
   // Movement networks don't need the /v1 suffix
-  const fullnode = network.startsWith('movement-') ? profileData.rest_url : profileData.rest_url + '/v1';
+  const fullnode = network.startsWith('movement-')
+    ? profileData.rest_url
+    : profileData.rest_url + '/v1';
 
   if (!includeSigner) {
     // @ts-ignore

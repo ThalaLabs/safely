@@ -47,7 +47,6 @@ export function getExplorerUrl(network: NetworkChoice, path: string): string {
   if (network === 'movement-mainnet' || network === 'movement-testnet') {
     return `https://explorer.movementlabs.xyz/${path}?network=${networkParam}`;
   }
-  
+
   return `https://explorer.aptoslabs.com/${path}?network=${networkParam}`;
 }
-

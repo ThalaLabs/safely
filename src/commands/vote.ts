@@ -3,7 +3,11 @@ import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { validateAddress, validateUInt, validateBool } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
-import { ensureMultisigAddressExists, ensureProfileExists, ensureNetworkExists } from '../storage.js';
+import {
+  ensureMultisigAddressExists,
+  ensureProfileExists,
+  ensureNetworkExists,
+} from '../storage.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { getExplorerUrl } from '../utils.js';
 
@@ -11,45 +15,50 @@ export const registerVoteCommand = (program: Command) => {
   program
     .command('vote')
     .description('Vote on a pending transaction')
-    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption(
       '-s, --sequence-number <number>',
       'sequence number of transaction to vote on',
       validateUInt
     )
     .requiredOption('-a, --approve <boolean>', 'true to approve, false to reject', validateBool)
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .option('-p, --profile <string>', 'profile name of voter')
     .action(
       async (options: {
-        multisigAddress: string;
         sequenceNumber: number;
         approve: boolean;
-        profile: string;
+        multisigAddress?: string;
+        network?: NetworkChoice;
+        profile?: string;
       }) => {
-        await handleVoteCommand(options);
+        await handleVoteCommand(
+          options.sequenceNumber,
+          options.approve,
+          await ensureMultisigAddressExists(options.multisigAddress),
+          await ensureNetworkExists(options.network),
+          await ensureProfileExists(options.profile)
+        );
       }
     );
 };
 
-export async function handleVoteCommand(options: {
-  multisigAddress?: string;
-  sequenceNumber?: number;
-  approve?: boolean;
-  profile?: string;
-  network?: NetworkChoice;
-}) {
+export async function handleVoteCommand(
+  sequenceNumber: number,
+  approve: boolean,
+  multisig: string,
+  network: NetworkChoice,
+  profile: string
+) {
   try {
-    const profile = await ensureProfileExists(options.profile);
-    const network = await ensureNetworkExists(options.network);
     const { signer, fullnode } = await loadProfile(profile, network);
     const aptos = new Aptos(new AptosConfig({ fullnode }));
-    const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
     const txn = await aptos.transaction.build.simple({
       sender: signer.accountAddress,
       data: {
         function: `0x1::multisig_account::vote_transaction`,
-        functionArguments: [multisig, options.sequenceNumber, options.approve],
+        functionArguments: [multisig, sequenceNumber, approve],
       },
     });
 
@@ -60,16 +69,10 @@ export async function handleVoteCommand(options: {
     });
 
     if (success) {
-      console.log(
-        chalk.green(
-          `Vote ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
-        )
-      );
+      console.log(chalk.green(`Vote ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`));
     } else {
       console.log(
-        chalk.red(
-          `Vote nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
-        )
+        chalk.red(`Vote nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`)
       );
     }
   } catch (error) {

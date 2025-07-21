@@ -21,9 +21,7 @@ export function registerDecodeCommand(program: Command) {
         return value;
       }
     )
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
       const options = thisCommand.opts();

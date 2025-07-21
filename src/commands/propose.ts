@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import fs from 'fs';
 import path from 'path';
 import { Aptos, AptosConfig, MoveFunctionId } from '@aptos-labs/ts-sdk';
@@ -7,16 +7,21 @@ import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
 import { loadProfile } from '../signing.js';
-import { ensureMultisigAddressExists, ensureProfileExists, ensureNetworkExists } from '../storage.js';
-import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
+import {
+  ensureMultisigAddressExists,
+  ensureProfileExists,
+  ensureNetworkExists,
+} from '../storage.js';
+import { NETWORK_CHOICES } from '../constants.js';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
     .command('propose')
     .description('Propose a new transaction for a multisig')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
-    .option('--ignore-simulate <boolean>', 'ignore tx simulation', false)
-    .option('-p, --profile <string>', 'Profile to use for the transaction');
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
+    .option('-p, --profile <string>', 'Profile to use for the transaction')
+    .option('--ignore-simulate <boolean>', 'ignore tx simulation', false);
 
   // Raw transaction from file
   propose
@@ -24,9 +29,10 @@ export const registerProposeCommand = (program: Command) => {
     .description('Propose a raw transaction from a payload file')
     .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
     .action(async (options: { txnPayloadFile: string }, cmd) => {
-      let { multisigAddress, profile, ignoreSimulate, network } = cmd.parent.opts();
-      const multisig = await ensureMultisigAddressExists(multisigAddress);
-      profile = await ensureProfileExists(profile);
+      const parentOptions = cmd.parent.opts();
+      const multisig = await ensureMultisigAddressExists(parentOptions.multisigAddress);
+      const profile = await ensureProfileExists(parentOptions.profile);
+      const network = await ensureNetworkExists(parentOptions.network);
 
       try {
         const fullPath = path.resolve(options.txnPayloadFile);
@@ -34,16 +40,15 @@ export const registerProposeCommand = (program: Command) => {
           throw new Error(`Transaction payload file not found: ${fullPath}`);
         }
 
-        const userNetwork = await ensureNetworkExists(network);
-        const { signer, fullnode } = await loadProfile(profile, userNetwork);
+        const { signer, fullnode } = await loadProfile(profile, network);
         const aptos = new Aptos(new AptosConfig({ fullnode }));
         await proposeEntryFunction(
           aptos,
           signer,
           decodeEntryFunction(fullPath),
           multisig,
-          userNetwork,
-          !ignoreSimulate
+          network,
+          !parentOptions.ignoreSimulate
         );
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
@@ -71,9 +76,9 @@ export const registerProposeCommand = (program: Command) => {
         },
         cmd
       ) => {
-        let { multisigAddress, profile, ignoreSimulate, network } = cmd.parent.parent.opts();
-        const multisig = await ensureMultisigAddressExists(multisigAddress);
-        profile = await ensureProfileExists(profile);
+        const parentOptions = cmd.parent.parent.opts();
+        const multisig = await ensureMultisigAddressExists(parentOptions.multisigAddress);
+        const profile = await ensureProfileExists(parentOptions.profile);
 
         const entryFunction =
           options.asset.type === 'coin'
@@ -88,10 +93,17 @@ export const registerProposeCommand = (program: Command) => {
                 functionArguments: [options.asset.address, options.recipient, options.amount],
               };
         try {
-          const userNetwork = await ensureNetworkExists(network);
-          const { signer, fullnode } = await loadProfile(profile, userNetwork);
+          const network = await ensureNetworkExists(parentOptions.network);
+          const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = new Aptos(new AptosConfig({ fullnode }));
-          await proposeEntryFunction(aptos, signer, entryFunction, multisig, userNetwork, !ignoreSimulate);
+          await proposeEntryFunction(
+            aptos,
+            signer,
+            entryFunction,
+            multisig,
+            network,
+            !parentOptions.ignoreSimulate
+          );
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }

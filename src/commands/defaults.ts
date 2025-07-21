@@ -27,9 +27,7 @@ export const registerDefaultCommand = (program: Command) => {
     .command('set')
     .description('Set default multisig values')
     .option('-m, --multisig <address>', 'Multisig address', validateAddress)
-    .addOption(
-      new Option('-n, --network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('-n, --network <network>', 'network to use').choices(NETWORK_CHOICES))
     .option('-p, --profile <string>', 'Profile to use for transactions')
     .action(async (opts) => {
       const { multisig, network, profile } = opts;

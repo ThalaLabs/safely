@@ -38,15 +38,13 @@ export const registerAccountCommand = (program: Command) => {
       validateUInt
     )
     .option('-p, --profile <string>', 'Profile to use for the transaction')
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .action(
       async (options: {
         additionalOwners: string[];
         numSignaturesRequired: number;
-        profile: string;
         network?: NetworkChoice;
+        profile?: string;
       }) => {
         const entryFunction = {
           function: '0x1::multisig_account::create_with_owners' as MoveFunctionId,
@@ -73,17 +71,9 @@ export const registerAccountCommand = (program: Command) => {
             const multisigAccountChange = changes
               .filter(isWriteSetChangeWriteResource)
               .find((change) => change.data.type === '0x1::multisig_account::MultisigAccount')!;
-            console.log(
-              chalk.green(
-                `Create multisig ok: ${multisigAccountChange.address}`
-              )
-            );
+            console.log(chalk.green(`Create multisig ok: ${multisigAccountChange.address}`));
           } else {
-            console.log(
-              chalk.red(
-                `Create multisig nok ${vm_status}: txn ${committedTxn.hash}`
-              )
-            );
+            console.log(chalk.red(`Create multisig nok ${vm_status}: txn ${committedTxn.hash}`));
           }
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
@@ -94,7 +84,6 @@ export const registerAccountCommand = (program: Command) => {
   account
     .command('update')
     .description('Update multisig owners and optionally the number of required signatures')
-    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .requiredOption(
       '-a, --owners-add <addresses>',
       'Comma-separated list of owner addresses to add',
@@ -110,18 +99,17 @@ export const registerAccountCommand = (program: Command) => {
       'New number of signatures required for execution',
       validateUInt
     )
+    .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .option('-p, --profile <string>', 'Profile to use for the transaction')
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .action(
       async (options: {
-        multisigAddress: string;
         ownersAdd: string[];
         ownersRemove: string[];
         numSignaturesRequired: number;
-        profile: string;
+        multisigAddress?: string;
         network?: NetworkChoice;
+        profile?: string;
       }) => {
         const entryFunction = {
           function:
@@ -134,11 +122,11 @@ export const registerAccountCommand = (program: Command) => {
           ],
         };
         try {
+          const multisig = await ensureMultisigAddressExists(options.multisigAddress);
           const profile = await ensureProfileExists(options.profile);
           const network = await ensureNetworkExists(options.network);
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = new Aptos(new AptosConfig({ fullnode }));
-          const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
           await proposeEntryFunction(aptos, signer, entryFunction, multisig, network);
         } catch (error) {
@@ -152,9 +140,7 @@ export const registerAccountCommand = (program: Command) => {
     .command('show')
     .description('Show multisig summary')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
-    .addOption(
-      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
-    )
+    .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
       const options = thisCommand.opts();
@@ -162,50 +148,52 @@ export const registerAccountCommand = (program: Command) => {
         throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
       }
     })
-    .action(async (options: { fullnode: string; multisigAddress: string; network: NetworkChoice }) => {
-      const network = await ensureNetworkExists(options.network);
-      const aptos = new Aptos(
-        new AptosConfig({
-          fullnode: options.fullnode || getFullnodeUrl(network),
-        })
-      );
-
-      try {
-        // owners
-        const multisig = await ensureMultisigAddressExists(options.multisigAddress);
-
-        const [signers] = await aptos.view<string[][]>({
-          payload: {
-            function: '0x1::multisig_account::owners',
-            functionArguments: [multisig],
-          },
-        });
-        const safelyStorage = await getDb();
-        const aliasedSigners = signers.map((signer) => {
-          const alias = AddressBook.findAliasOrReturnAddress(safelyStorage.data, signer);
-          return `${signer} ${alias !== signer ? alias : ''}`.trim();
-        });
-
-        const [signaturesRequired] = await aptos.view<string[]>({
-          payload: {
-            function: '0x1::multisig_account::num_signatures_required',
-            functionArguments: [multisig],
-          },
-        });
-        const numSignaturesRequired = Number(signaturesRequired);
-
-        // # pending txns
-        const txCount = await numPendingTxns(aptos, multisig);
-
-        console.log(
-          JSON.stringify({
-            owners: aliasedSigners,
-            signaturesRequired: numSignaturesRequired,
-            pendingTxns: txCount,
+    .action(
+      async (options: { fullnode?: string; multisigAddress?: string; network?: NetworkChoice }) => {
+        const network = await ensureNetworkExists(options.network);
+        const aptos = new Aptos(
+          new AptosConfig({
+            fullnode: options.fullnode || getFullnodeUrl(network),
           })
         );
-      } catch (e) {
-        console.error(chalk.red(`Error: ${(e as Error).message}`));
+
+        try {
+          // owners
+          const multisig = await ensureMultisigAddressExists(options.multisigAddress);
+
+          const [signers] = await aptos.view<string[][]>({
+            payload: {
+              function: '0x1::multisig_account::owners',
+              functionArguments: [multisig],
+            },
+          });
+          const safelyStorage = await getDb();
+          const aliasedSigners = signers.map((signer) => {
+            const alias = AddressBook.findAliasOrReturnAddress(safelyStorage.data, signer);
+            return `${signer} ${alias !== signer ? alias : ''}`.trim();
+          });
+
+          const [signaturesRequired] = await aptos.view<string[]>({
+            payload: {
+              function: '0x1::multisig_account::num_signatures_required',
+              functionArguments: [multisig],
+            },
+          });
+          const numSignaturesRequired = Number(signaturesRequired);
+
+          // # pending txns
+          const txCount = await numPendingTxns(aptos, multisig);
+
+          console.log(
+            JSON.stringify({
+              owners: aliasedSigners,
+              signaturesRequired: numSignaturesRequired,
+              pendingTxns: txCount,
+            })
+          );
+        } catch (e) {
+          console.error(chalk.red(`Error: ${(e as Error).message}`));
+        }
       }
-    });
+    );
 };
