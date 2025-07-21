@@ -1,10 +1,12 @@
-import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { ensureMultisigAddressExists, ensureNetworkExists } from '../storage.js';
 import { MultisigTransaction, summarizeTransactionBalanceChanges } from '@thalalabs/multisig-utils';
 import { decode } from '@thalalabs/multisig-utils';
 import { validateAddress, validateUInt } from '../validators.js';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
+import { getFullnodeUrl } from '../utils.js';
 
 export const registerSimulateCommand = (program: Command) => {
   program
@@ -12,12 +14,7 @@ export const registerSimulateCommand = (program: Command) => {
     .description('Simulate multisig transaction')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
-      new Option('--network <network>', 'network to use').choices([
-        'devnet',
-        'testnet',
-        'mainnet',
-        'custom',
-      ])
+      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -35,15 +32,14 @@ export const registerSimulateCommand = (program: Command) => {
       async (options: {
         fullnode: string;
         multisigAddress: string;
-        network: Network;
+        network: NetworkChoice;
         sequenceNumber: number;
       }) => {
         const network = await ensureNetworkExists(options.network);
 
         const aptos = new Aptos(
           new AptosConfig({
-            network,
-            ...(options.fullnode && { fullnode: options.fullnode }),
+            fullnode: options.fullnode || getFullnodeUrl(network),
           })
         );
 

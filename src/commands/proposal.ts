@@ -1,10 +1,12 @@
-import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { select } from '@inquirer/prompts';
 import { fetchPendingTxnsSafely } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { decode, summarizeTransactionBalanceChanges } from '@thalalabs/multisig-utils';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
+import { getFullnodeUrl } from '../utils.js';
 import {
   AddressBook,
   ensureMultisigAddressExists,
@@ -23,12 +25,7 @@ export const registerProposalCommand = (program: Command) => {
     .description('List proposals for a multisig')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(
-      new Option('--network <network>', 'network to use').choices([
-        'devnet',
-        'testnet',
-        'mainnet',
-        'custom',
-      ])
+      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
     )
     .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
     .hook('preAction', (thisCommand) => {
@@ -60,7 +57,7 @@ export const registerProposalCommand = (program: Command) => {
     .action(
       async (options: {
         multisigAddress: string;
-        network?: Network;
+        network?: NetworkChoice;
         profile?: string;
         fullnode: string;
         filter: 'pending' | 'succeeded' | 'failed';
@@ -74,13 +71,12 @@ export const registerProposalCommand = (program: Command) => {
         if (options.profile) {
           profile = await ensureProfileExists(options.profile);
 
-          ({ network, fullnode } = await loadProfile(profile, false));
+          ({ fullnode } = await loadProfile(profile, network, false));
         }
 
         const aptos = new Aptos(
           new AptosConfig({
-            network,
-            ...(fullnode && { fullnode: fullnode }),
+            fullnode: fullnode || getFullnodeUrl(network),
           })
         );
         const n = options.limit || 20;

@@ -1,6 +1,6 @@
 import { Low } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
-import { Network } from '@aptos-labs/ts-sdk';
+import { NetworkChoice } from './constants.js';
 
 type Address = {
   alias: string;
@@ -10,7 +10,7 @@ type Address = {
 type SafelyStorage = {
   addresses: Address[];
   multisig?: string;
-  network?: Network;
+  network?: NetworkChoice;
   profile?: string;
 };
 
@@ -93,7 +93,7 @@ export const MultisigDefault = {
 
 // **Network Default**
 export const NetworkDefault = {
-  async set(network: Network) {
+  async set(network: NetworkChoice) {
     await writeDb((db) => {
       db.network = network;
     });
@@ -107,7 +107,7 @@ export const NetworkDefault = {
     });
   },
 
-  async get(): Promise<Network | undefined> {
+  async get(): Promise<NetworkChoice | undefined> {
     return readDb((db) => db.network);
   },
 };
@@ -147,13 +147,13 @@ export async function ensureMultisigAddressExists(multisigAddressOption?: string
   return storedAddress;
 }
 
-export async function ensureNetworkExists(networkOption?: Network): Promise<Network> {
+export async function ensureNetworkExists(networkOption?: NetworkChoice): Promise<NetworkChoice> {
   if (networkOption) {
     return networkOption;
   }
 
   const storedNetwork = await NetworkDefault.get();
-  return storedNetwork ? storedNetwork : Network.MAINNET;
+  return storedNetwork ? storedNetwork : 'aptos-mainnet';
 }
 
 export async function ensureProfileExists(profileOption?: string): Promise<string> {

@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import {
   AccountAddress,
   Aptos,
@@ -12,8 +12,9 @@ import { decode } from '@thalalabs/multisig-utils';
 import chalk from 'chalk';
 import { validateAddress } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
-import { ensureMultisigAddressExists, ensureProfileExists } from '../storage.js';
-import { getFullnodeUrl } from '../utils.js';
+import { ensureMultisigAddressExists, ensureProfileExists, ensureNetworkExists } from '../storage.js';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
+import { getExplorerUrl } from '../utils.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
@@ -21,7 +22,10 @@ export const registerExecuteCommand = (program: Command) => {
     .description('Execute a multisig transaction')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .option('-p, --profile <string>', 'Profile to use for the transaction')
-    .action(async (options: { multisigAddress: string; profile: string }) => {
+    .addOption(
+      new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES)
+    )
+    .action(async (options: { multisigAddress: string; profile: string; network?: NetworkChoice }) => {
       await handleExecuteCommand(options);
     });
 };
@@ -29,11 +33,13 @@ export const registerExecuteCommand = (program: Command) => {
 export async function handleExecuteCommand(options: {
   multisigAddress?: string;
   profile?: string;
+  network?: NetworkChoice;
 }) {
   try {
     const profile = await ensureProfileExists(options.profile);
-    const { network, signer, fullnode } = await loadProfile(profile);
-    const aptos = new Aptos(new AptosConfig({ fullnode: fullnode || getFullnodeUrl(network) }));
+    const network = await ensureNetworkExists(options.network);
+    const { signer, fullnode } = await loadProfile(profile, network);
+    const aptos = new Aptos(new AptosConfig({ fullnode }));
     const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
     const [lastResolvedSn] = await aptos.view<[string]>({
@@ -83,13 +89,13 @@ export async function handleExecuteCommand(options: {
     if (success) {
       console.log(
         chalk.green(
-          `${canReject ? 'Reject' : 'Execute'} ok: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+          `${canReject ? 'Reject' : 'Execute'} ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
         )
       );
     } else {
       console.log(
         chalk.red(
-          `${canReject ? 'Reject' : 'Execute'} nok ${vm_status}: https://explorer.aptoslabs.com/txn/${pendingTxn.hash}?network=${aptos.config.network}`
+          `${canReject ? 'Reject' : 'Execute'} nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
         )
       );
     }
