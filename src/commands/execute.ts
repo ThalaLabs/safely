@@ -162,10 +162,10 @@ async function buildApproveTxn(
       throw new Error(`Transaction simulation failed: ${simulation.vm_status}`);
     }
   } catch (error) {
-    if (aptos.config.network === Network.CUSTOM && aptos.config.fullnode?.includes('movement')) {
+    if (aptos.config.fullnode?.includes('movement')) {
       console.error(
         chalk.yellow(
-          `Transaction simulation failed, but this is expected on movement mainnet: ${(error as Error).message}`
+          `Transaction simulation failed, but this is expected on movement: ${(error as Error).message}`
         )
       );
     } else {
