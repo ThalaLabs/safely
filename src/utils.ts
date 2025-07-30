@@ -1,6 +1,7 @@
 import { NetworkChoice } from './constants.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'yaml';
 
 export function getFullnodeUrl(network: NetworkChoice): string {
   switch (network) {
@@ -63,7 +64,18 @@ export async function resolvePayloadInput(payload: string): Promise<string> {
   try {
     const fullPath = path.resolve(payload);
     if (fs.existsSync(fullPath)) {
-      return fs.readFileSync(fullPath, 'utf8');
+      const fileContent = fs.readFileSync(fullPath, 'utf8');
+
+      // Check if it's a YAML file by extension
+      const ext = path.extname(fullPath).toLowerCase();
+      if (ext === '.yaml' || ext === '.yml') {
+        // Parse YAML and convert to JSON
+        const parsedYaml = yaml.parse(fileContent);
+        return JSON.stringify(parsedYaml);
+      }
+
+      // For JSON files or files without extension, return as-is
+      return fileContent;
     }
   } catch {
     // If any error occurs checking file, treat as JSON string
