@@ -1,4 +1,6 @@
 import { NetworkChoice } from './constants.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export function getFullnodeUrl(network: NetworkChoice): string {
   switch (network) {
@@ -49,4 +51,35 @@ export function getExplorerUrl(network: NetworkChoice, path: string): string {
   }
 
   return `https://explorer.aptoslabs.com/${path}?network=${networkParam}`;
+}
+
+export async function resolvePayloadInput(payload: string): Promise<string> {
+  // Handle stdin
+  if (payload === '-') {
+    return readFromStdin();
+  }
+
+  // Check if it's a file
+  try {
+    const fullPath = path.resolve(payload);
+    if (fs.existsSync(fullPath)) {
+      return fs.readFileSync(fullPath, 'utf8');
+    }
+  } catch {
+    // If any error occurs checking file, treat as JSON string
+  }
+
+  // Return as-is (assume it's JSON string)
+  return payload;
+}
+
+async function readFromStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+
+    process.stdin.on('data', (chunk) => (data += chunk));
+    process.stdin.on('end', () => resolve(data));
+    process.stdin.on('error', reject);
+  });
 }

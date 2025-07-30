@@ -3,13 +3,11 @@ import {
   MoveFunctionId,
   SimpleEntryFunctionArgumentTypes,
 } from '@aptos-labs/ts-sdk';
-import * as fs from 'fs';
 
 export async function serializeEntryFunction(functionId: string) {}
 
-export function decodeEntryFunction(filePath: string): InputEntryFunctionData {
-  const file = fs.readFileSync(filePath, 'utf8');
-  const content = JSON.parse(file) as {
+export function parseEntryFunctionPayload(jsonContent: string): InputEntryFunctionData {
+  const content = JSON.parse(jsonContent) as {
     function_id: string;
     type_args: string[];
     args: Array<{ type: string; value: SimpleEntryFunctionArgumentTypes }>;

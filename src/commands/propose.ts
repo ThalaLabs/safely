@@ -1,8 +1,7 @@
 import { Command, Option } from 'commander';
-import fs from 'fs';
-import path from 'path';
 import { Aptos, AptosConfig, MoveFunctionId } from '@aptos-labs/ts-sdk';
-import { decodeEntryFunction } from '../entryFunction.js';
+import { parseEntryFunctionPayload } from '../entryFunction.js';
+import { resolvePayloadInput } from '../utils.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
@@ -27,25 +26,26 @@ export const registerProposeCommand = (program: Command) => {
   propose
     .command('raw')
     .description('Propose a raw transaction from a payload file')
-    .requiredOption('-f, --txn-payload-file <file>', 'Path to the transaction payload file')
-    .action(async (options: { txnPayloadFile: string }, cmd) => {
+    .requiredOption(
+      '--payload <payload>',
+      'Transaction payload (file path, JSON string, or - for stdin)'
+    )
+    .action(async (options: { payload: string }, cmd) => {
       const parentOptions = cmd.parent.opts();
       const multisig = await ensureMultisigAddressExists(parentOptions.multisigAddress);
       const profile = await ensureProfileExists(parentOptions.profile);
       const network = await ensureNetworkExists(parentOptions.network);
 
       try {
-        const fullPath = path.resolve(options.txnPayloadFile);
-        if (!fs.existsSync(fullPath)) {
-          throw new Error(`Transaction payload file not found: ${fullPath}`);
-        }
+        const jsonContent = await resolvePayloadInput(options.payload);
+        const entryFunction = parseEntryFunctionPayload(jsonContent);
 
         const { signer, fullnode } = await loadProfile(profile, network);
         const aptos = new Aptos(new AptosConfig({ fullnode }));
         await proposeEntryFunction(
           aptos,
           signer,
-          decodeEntryFunction(fullPath),
+          entryFunction,
           multisig,
           network,
           !parentOptions.ignoreSimulate
