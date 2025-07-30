@@ -32,10 +32,10 @@ Update multisig owners and optionally the number of required signatures
 
 ```
 Options:
-  -m, --multisig-address <address>        multisig account address
   -a, --owners-add <addresses>            Comma-separated list of owner addresses to add
   -r, --owners-remove <addresses>         Comma-separated list of owner addresses to remove
   -n, --num-signatures-required <number>  New number of signatures required for execution
+  -m, --multisig-address <address>        multisig account address
   -p, --profile <string>                  Profile to use for the transaction
   --network <network>                     network to use (choices: "aptos-devnet", "aptos-testnet", "aptos-mainnet", "movement-mainnet", "movement-testnet", "custom")
   -h, --help                              display help for command
@@ -63,8 +63,12 @@ Propose a new transaction for a multisig
 ```
 Options:
   -m, --multisig-address <address>  multisig account address
-  --ignore-simulate <boolean>       ignore tx simulation (default: false)
+  --network <network>               network to use (choices: "aptos-devnet",
+                                    "aptos-testnet", "aptos-mainnet",
+                                    "movement-mainnet", "movement-testnet",
+                                    "custom")
   -p, --profile <string>            Profile to use for the transaction
+  --ignore-simulate <boolean>       ignore tx simulation (default: false)
   -h, --help                        display help for command
 Commands:
   raw [options]                     Propose a raw transaction from a payload
@@ -79,8 +83,9 @@ Propose a raw transaction from a payload file
 
 ```
 Options:
-  -f, --txn-payload-file <file>  Path to the transaction payload file
-  -h, --help                     display help for command
+  --payload <payload>  Transaction payload (file path, JSON string, or - for
+                       stdin)
+  -h, --help           display help for command
 ```
 
 ## safely propose predefined [options] [command]
@@ -113,9 +118,13 @@ Vote on a pending transaction
 
 ```
 Options:
-  -m, --multisig-address <address>  multisig account address
   -s, --sequence-number <number>    sequence number of transaction to vote on
   -a, --approve <boolean>           true to approve, false to reject
+  -m, --multisig-address <address>  multisig account address
+  --network <network>               network to use (choices: "aptos-devnet",
+                                    "aptos-testnet", "aptos-mainnet",
+                                    "movement-mainnet", "movement-testnet",
+                                    "custom")
   -p, --profile <string>            profile name of voter
   -h, --help                        display help for command
 ```
@@ -195,10 +204,13 @@ Encode entry function payload (experimental)
 
 ```
 Options:
-  -f, --txn-payload-file <txn-payload-file>  transaction payload file to encode
-  --network <network>                        network to use (choices: "aptos-devnet", "aptos-testnet", "aptos-mainnet", "movement-mainnet", "movement-testnet", "custom")
-  --fullnode <url>                           Fullnode URL for custom network
-  -h, --help                                 display help for command
+  --payload <payload>  Transaction payload (file path, JSON string, or - for
+                       stdin)
+  --network <network>  network to use (choices: "aptos-devnet",
+                       "aptos-testnet", "aptos-mainnet", "movement-mainnet",
+                       "movement-testnet", "custom")
+  --fullnode <url>     Fullnode URL for custom network
+  -h, --help           display help for command
 ```
 
 ## safely addresses [options] [command]
