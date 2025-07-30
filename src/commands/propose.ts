@@ -28,14 +28,17 @@ export const registerProposeCommand = (program: Command) => {
     .description('Propose a raw transaction from a payload file')
     .requiredOption(
       '--payload <payload>',
-      'Transaction payload (file path, JSON string, or - for stdin)'
+      'Transaction payload (JSON/YAML file path, JSON string, or - for stdin)'
     )
     .addHelpText(
       'after',
       `
 Examples:
-  # From file
+  # From JSON file
   $ safely propose raw --payload payload.json
+  
+  # From YAML file
+  $ safely propose raw --payload payload.yaml
   
   # Direct JSON string
   $ safely propose raw --payload '{"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":["0x123",1000]}'
