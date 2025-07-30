@@ -88,20 +88,6 @@ Options:
   -h, --help           display help for command
 ```
 
-### Examples:
-
-```bash
-# From file
-safely propose raw --payload payload.json
-
-# Direct JSON string
-safely propose raw --payload '{"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":[{"type":"address","value":"0x123"},{"type":"u64","value":1000}]}'
-
-# From stdin
-echo '{"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":[{"type":"address","value":"0x123"},{"type":"u64","value":1000}]}' | safely propose raw --payload -
-cat payload.json | safely propose raw --payload -
-```
-
 ## safely propose predefined [options] [command]
 
 Propose a predefined transaction type
