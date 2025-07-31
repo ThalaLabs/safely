@@ -6,13 +6,13 @@ import * as yaml from 'yaml';
 export function getFullnodeUrl(network: NetworkChoice): string {
   switch (network) {
     case 'aptos-mainnet':
-      return 'https://api.mainnet.aptoslabs.com/v1';
+      return 'https://rpc.sentio.xyz/aptos/v1';
     case 'aptos-testnet':
       return 'https://api.testnet.aptoslabs.com/v1';
     case 'aptos-devnet':
       return 'https://api.devnet.aptoslabs.com/v1';
     case 'movement-mainnet':
-      return 'https://full.mainnet.movementinfra.xyz/v1';
+      return 'https://rpc.sentio.xyz/movement/v1';
     case 'movement-testnet':
       return 'https://full.testnet.movementinfra.xyz/v1';
     case 'custom':
