@@ -1,22 +1,29 @@
 #!/bin/bash
 set -e # Exit on error
 
-FAILED_TESTS=0
-TOTAL_TESTS=0
+# Colors for output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
-# Run all test files
-for test_file in $(find "$(dirname "$0")/commands" -name "*.sh"); do
-    echo "Running $test_file..."
-    chmod +x "$test_file"
-    if ! "$test_file"; then
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-    fi
-    TOTAL_TESTS=$((TOTAL_TESTS + 1))
-done
-
-if [ $FAILED_TESTS -gt 0 ]; then
-    echo -e "${RED}${FAILED_TESTS} out of ${TOTAL_TESTS} test files failed!${NC}"
+# Check if we're in the correct directory
+if [ ! -f "package.json" ]; then
+    echo -e "${RED}Error: Must run from project root directory${NC}"
     exit 1
+fi
+
+# Build the project first
+echo "Building project..."
+pnpm build
+
+# Run the multisig flow test
+echo "Running multisig flow test..."
+chmod +x "tests/e2e/multisig_flow_test.sh"
+
+if "tests/e2e/multisig_flow_test.sh"; then
+    echo -e "${GREEN}All tests completed successfully!${NC}"
+    exit 0
 else
-    echo -e "${GREEN}All ${TOTAL_TESTS} test files completed successfully!${NC}"
+    echo -e "${RED}Test failed!${NC}"
+    exit 1
 fi
