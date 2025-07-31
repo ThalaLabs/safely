@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander';
 import { Aptos, AptosConfig, MoveFunctionId } from '@aptos-labs/ts-sdk';
-import { parseEntryFunctionPayload } from '../entryFunction.js';
+import { parseEntryFunctionPayload, isBatchPayload, parseBatchPayload } from '../entryFunction.js';
 import { resolvePayloadInput } from '../utils.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
@@ -12,6 +12,7 @@ import {
   ensureNetworkExists,
 } from '../storage.js';
 import { NETWORK_CHOICES } from '../constants.js';
+import { confirm } from '@inquirer/prompts';
 
 export const registerProposeCommand = (program: Command) => {
   const propose = program
@@ -25,19 +26,20 @@ export const registerProposeCommand = (program: Command) => {
   // Raw transaction from file
   propose
     .command('raw')
-    .description('Propose a raw transaction from a payload file')
+    .description('Propose a raw transaction from a payload file (supports batch payloads)')
     .requiredOption(
       '--payload <payload>',
       'Transaction payload (JSON/YAML file path, JSON string, or - for stdin)'
     )
+    .option('--yes', 'Skip confirmation prompt for batch payloads')
     .addHelpText(
       'after',
       `
 Examples:
-  # From JSON file
+  # Single payload from JSON file
   $ safely propose raw --payload payload.json
   
-  # From YAML file
+  # Single payload from YAML file
   $ safely propose raw --payload payload.yaml
   
   # Direct JSON string
@@ -45,9 +47,20 @@ Examples:
   
   # From stdin
   $ echo '{"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":["0x123",1000]}' | safely propose raw --payload -
-  $ cat payload.json | safely propose raw --payload -`
+  
+  # Batch payload from file
+  $ safely propose raw --payload batch.json
+  
+  # Batch payload with auto-confirm
+  $ safely propose raw --payload batch.json --yes
+  
+  # Example batch.json:
+  [
+    {"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":["0x123",1000]},
+    {"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":["0x456",2000]}
+  ]`
     )
-    .action(async (options: { payload: string }, cmd) => {
+    .action(async (options: { payload: string; yes?: boolean }, cmd) => {
       const parentOptions = cmd.parent.opts();
       const multisig = await ensureMultisigAddressExists(parentOptions.multisigAddress);
       const profile = await ensureProfileExists(parentOptions.profile);
@@ -55,20 +68,66 @@ Examples:
 
       try {
         const jsonContent = await resolvePayloadInput(options.payload);
-        const entryFunction = parseEntryFunctionPayload(jsonContent);
+        
+        // Check if it's a batch payload
+        if (isBatchPayload(jsonContent)) {
+          const payloads = parseBatchPayload(jsonContent);
+          
+          // Show confirmation unless --yes is provided
+          if (!options.yes) {
+            const shouldContinue = await confirm({
+              message: `Found ${payloads.length} transactions to propose. Continue?`,
+              default: true,
+            });
+            
+            if (!shouldContinue) {
+              console.log('Batch proposal cancelled.');
+              return;
+            }
+          }
+          
+          const { signer, fullnode } = await loadProfile(profile, network);
+          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          
+          // Process each transaction sequentially
+          for (let i = 0; i < payloads.length; i++) {
+            console.log(chalk.blue(`\nProposing transaction ${i + 1}/${payloads.length}...`));
+            
+            try {
+              await proposeEntryFunction(
+                aptos,
+                signer,
+                payloads[i],
+                multisig,
+                network,
+                !parentOptions.ignoreSimulate
+              );
+            } catch (error) {
+              console.error(chalk.red(`\nTransaction ${i + 1}/${payloads.length} failed: ${(error as Error).message}`));
+              console.error(chalk.red('Stopping batch processing due to failure.'));
+              process.exit(1);
+            }
+          }
+          
+          console.log(chalk.green(`\nSuccessfully proposed all ${payloads.length} transactions.`));
+        } else {
+          // Single payload - use existing logic
+          const entryFunction = parseEntryFunctionPayload(jsonContent);
 
-        const { signer, fullnode } = await loadProfile(profile, network);
-        const aptos = new Aptos(new AptosConfig({ fullnode }));
-        await proposeEntryFunction(
-          aptos,
-          signer,
-          entryFunction,
-          multisig,
-          network,
-          !parentOptions.ignoreSimulate
-        );
+          const { signer, fullnode } = await loadProfile(profile, network);
+          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          await proposeEntryFunction(
+            aptos,
+            signer,
+            entryFunction,
+            multisig,
+            network,
+            !parentOptions.ignoreSimulate
+          );
+        }
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`));
+        process.exit(1);
       }
     });
 
