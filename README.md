@@ -105,32 +105,6 @@ pnpm format
 pnpm start
 ```
 
-## Movement Compatibility
-
-Safely works seamlessly with both Aptos and Movement networks. To use with Movement:
-
-1. (Optional) Install the Movement CLI: https://docs.movementnetwork.xyz/devs/movementcli#options-2---install-through-brew
-
-2. Initialize with your Ledger profile:
-
-```bash
-# Using Movement CLI
-movement aptos init --ledger --profile <profile_name>
-
-# OR using Aptos CLI
-aptos init --ledger --profile <profile_name>
-```
-
-3. When prompted for network selection, choose:
-
-```bash
-Choose network from [devnet, testnet, mainnet, local, custom | defaults to devnet]
-custom
-
-Enter your rest endpoint [Current: None | No input: Exit (or keep the existing if present)]
-https://mainnet.movementnetwork.xyz
-```
-
 ## Community & Contributing
 
 We welcome contributions from the entire Move ecosystem! Whether you're:
