@@ -1,5 +1,12 @@
 # @thalalabs/safely
 
+## 0.2.1
+
+### Patch Changes
+
+- b295bc8: update readme
+- Republish with correct version
+
 ## 0.2.0
 
 ### Minor Changes
