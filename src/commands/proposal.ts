@@ -1,4 +1,4 @@
-import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
+import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { select } from '@inquirer/prompts';
@@ -6,7 +6,7 @@ import { fetchPendingTxnsSafely } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { decode, summarizeTransactionBalanceChanges } from '@thalalabs/multisig-utils';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import { getFullnodeUrl } from '../utils.js';
+import { initAptos } from '../utils.js';
 import {
   AddressBook,
   ensureMultisigAddressExists,
@@ -69,11 +69,7 @@ export const registerProposalCommand = (program: Command) => {
           ({ fullnode } = await loadProfile(profile, network, false));
         }
 
-        const aptos = new Aptos(
-          new AptosConfig({
-            fullnode: fullnode || getFullnodeUrl(network),
-          })
-        );
+        const aptos = initAptos(network, fullnode);
         const n = options.limit || 20;
         const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 

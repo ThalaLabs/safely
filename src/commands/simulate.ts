@@ -1,4 +1,4 @@
-import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
+import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { ensureMultisigAddressExists, ensureNetworkExists } from '../storage.js';
@@ -6,7 +6,7 @@ import { MultisigTransaction, summarizeTransactionBalanceChanges } from '@thalal
 import { decode } from '@thalalabs/multisig-utils';
 import { validateAddress, validateUInt } from '../validators.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import { getFullnodeUrl } from '../utils.js';
+import { initAptos } from '../utils.js';
 
 export const registerSimulateCommand = (program: Command) => {
   program
@@ -35,11 +35,7 @@ export const registerSimulateCommand = (program: Command) => {
       }) => {
         const multisig = await ensureMultisigAddressExists(options.multisigAddress);
         const network = await ensureNetworkExists(options.network);
-        const aptos = new Aptos(
-          new AptosConfig({
-            fullnode: options.fullnode || getFullnodeUrl(network),
-          })
-        );
+        const aptos = initAptos(network, options.fullnode);
 
         await handleSimulateCommand(aptos, multisig, options.sequenceNumber);
       }

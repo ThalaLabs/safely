@@ -1,6 +1,4 @@
 import {
-  Aptos,
-  AptosConfig,
   MoveFunctionId,
   WriteSetChange,
   WriteSetChangeWriteResource,
@@ -19,7 +17,7 @@ import {
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
-import { getFullnodeUrl } from '../utils.js';
+import { initAptos } from '../utils.js';
 
 export const registerAccountCommand = (program: Command) => {
   const account = program.command('account').description('Multisig account operations');
@@ -55,7 +53,7 @@ export const registerAccountCommand = (program: Command) => {
           const profile = await ensureProfileExists(options.profile);
           const network = await ensureNetworkExists(options.network);
           const { signer, fullnode } = await loadProfile(profile, network);
-          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          const aptos = initAptos(network, fullnode);
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
             data: entryFunction,
@@ -126,7 +124,7 @@ export const registerAccountCommand = (program: Command) => {
           const profile = await ensureProfileExists(options.profile);
           const network = await ensureNetworkExists(options.network);
           const { signer, fullnode } = await loadProfile(profile, network);
-          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          const aptos = initAptos(network, fullnode);
 
           await proposeEntryFunction(aptos, signer, entryFunction, multisig, network);
         } catch (error) {
@@ -151,11 +149,7 @@ export const registerAccountCommand = (program: Command) => {
     .action(
       async (options: { fullnode?: string; multisigAddress?: string; network?: NetworkChoice }) => {
         const network = await ensureNetworkExists(options.network);
-        const aptos = new Aptos(
-          new AptosConfig({
-            fullnode: options.fullnode || getFullnodeUrl(network),
-          })
-        );
+        const aptos = initAptos(network, options.fullnode);
 
         try {
           // owners
