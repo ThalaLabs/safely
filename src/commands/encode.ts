@@ -1,10 +1,9 @@
 import { Command, Option } from 'commander';
-import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { encode } from '@thalalabs/multisig-utils';
 import { ensureNetworkExists } from '../storage.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import { getFullnodeUrl, resolvePayloadInput } from '../utils.js';
+import { initAptos, resolvePayloadInput } from '../utils.js';
 
 export function registerEncodeCommand(program: Command) {
   program
@@ -37,11 +36,7 @@ Examples:
     })
     .action(async (options: { payload: string; network: NetworkChoice; fullnode: string }) => {
       const network = await ensureNetworkExists(options.network);
-      const aptos = new Aptos(
-        new AptosConfig({
-          fullnode: options.fullnode || getFullnodeUrl(network),
-        })
-      );
+      const aptos = initAptos(network, options.fullnode);
       try {
         console.log(chalk.blue(`Encoding transaction payload...`));
         const jsonContent = await resolvePayloadInput(options.payload);

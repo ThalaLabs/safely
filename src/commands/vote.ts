@@ -1,4 +1,3 @@
-import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { validateAddress, validateUInt, validateBool } from '../validators.js';
@@ -9,7 +8,7 @@ import {
   ensureNetworkExists,
 } from '../storage.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import { getExplorerUrl } from '../utils.js';
+import { getExplorerUrl, initAptos } from '../utils.js';
 
 export const registerVoteCommand = (program: Command) => {
   program
@@ -52,7 +51,7 @@ export async function handleVoteCommand(
 ) {
   try {
     const { signer, fullnode } = await loadProfile(profile, network);
-    const aptos = new Aptos(new AptosConfig({ fullnode }));
+    const aptos = initAptos(network, fullnode);
 
     const txn = await aptos.transaction.build.simple({
       sender: signer.accountAddress,

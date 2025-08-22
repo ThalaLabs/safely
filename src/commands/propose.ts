@@ -1,7 +1,7 @@
 import { Command, Option } from 'commander';
-import { Aptos, AptosConfig, MoveFunctionId } from '@aptos-labs/ts-sdk';
+import { MoveFunctionId } from '@aptos-labs/ts-sdk';
 import { parseEntryFunctionPayload, isBatchPayload, parseBatchPayload } from '../entryFunction.js';
-import { resolvePayloadInput } from '../utils.js';
+import { resolvePayloadInput, initAptos } from '../utils.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
@@ -87,7 +87,7 @@ Examples:
           }
           
           const { signer, fullnode } = await loadProfile(profile, network);
-          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          const aptos = initAptos(network, fullnode);
           
           // Process each transaction sequentially
           for (let i = 0; i < payloads.length; i++) {
@@ -115,7 +115,7 @@ Examples:
           const entryFunction = parseEntryFunctionPayload(jsonContent);
 
           const { signer, fullnode } = await loadProfile(profile, network);
-          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
             aptos,
             signer,
@@ -171,7 +171,7 @@ Examples:
         try {
           const network = await ensureNetworkExists(parentOptions.network);
           const { signer, fullnode } = await loadProfile(profile, network);
-          const aptos = new Aptos(new AptosConfig({ fullnode }));
+          const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
             aptos,
             signer,

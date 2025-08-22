@@ -2,10 +2,8 @@ import { Command, Option } from 'commander';
 import {
   AccountAddress,
   Aptos,
-  AptosConfig,
   generateRawTransaction,
   generateTransactionPayload,
-  Network,
   SimpleTransaction,
 } from '@aptos-labs/ts-sdk';
 import { decode } from '@thalalabs/multisig-utils';
@@ -18,7 +16,7 @@ import {
   ensureNetworkExists,
 } from '../storage.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import { getExplorerUrl } from '../utils.js';
+import { getExplorerUrl, initAptos } from '../utils.js';
 
 export const registerExecuteCommand = (program: Command) => {
   program
@@ -45,7 +43,7 @@ export async function handleExecuteCommand(
 ) {
   try {
     const { signer, fullnode } = await loadProfile(profile, network);
-    const aptos = new Aptos(new AptosConfig({ fullnode }));
+    const aptos = initAptos(network, fullnode);
 
     const [lastResolvedSn] = await aptos.view<[string]>({
       payload: {

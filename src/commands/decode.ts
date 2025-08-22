@@ -1,10 +1,9 @@
 import { Command, Option } from 'commander';
-import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { decode } from '@thalalabs/multisig-utils';
 import { ensureNetworkExists } from '../storage.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import { getFullnodeUrl } from '../utils.js';
+import { initAptos } from '../utils.js';
 
 export function registerDecodeCommand(program: Command) {
   program
@@ -31,11 +30,7 @@ export function registerDecodeCommand(program: Command) {
     })
     .action(async (options: { bytes: string; network: NetworkChoice; fullnode: string }) => {
       const network = await ensureNetworkExists(options.network);
-      const aptos = new Aptos(
-        new AptosConfig({
-          fullnode: options.fullnode || getFullnodeUrl(network),
-        })
-      );
+      const aptos = initAptos(network, options.fullnode);
 
       try {
         console.log(chalk.blue(`Decoding multisig payload: ${options.bytes}`));

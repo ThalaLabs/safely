@@ -1,3 +1,4 @@
+import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import { NetworkChoice } from './constants.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,6 +21,14 @@ export function getFullnodeUrl(network: NetworkChoice): string {
     default:
       throw new Error(`Unknown network: ${network}`);
   }
+}
+
+export function initAptos(network: NetworkChoice, fullnode?: string): Aptos {
+  return new Aptos(
+    new AptosConfig({
+      fullnode: fullnode || getFullnodeUrl(network),
+    })
+  );
 }
 
 export function getConfigPath(network: NetworkChoice): string {
