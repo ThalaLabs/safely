@@ -21,7 +21,7 @@ export const registerProposeCommand = (program: Command) => {
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .option('-p, --profile <string>', 'Profile to use for the transaction')
-    .option('--ignore-simulate <boolean>', 'ignore tx simulation', false);
+    .option('--no-simulate', 'skip tx simulation');
 
   // Raw transaction from file
   propose
@@ -100,7 +100,7 @@ Examples:
                 payloads[i],
                 multisig,
                 network,
-                !parentOptions.ignoreSimulate
+                parentOptions.simulate
               );
             } catch (error) {
               console.error(chalk.red(`\nTransaction ${i + 1}/${payloads.length} failed: ${(error as Error).message}`));
@@ -122,7 +122,7 @@ Examples:
             entryFunction,
             multisig,
             network,
-            !parentOptions.ignoreSimulate
+            parentOptions.simulate
           );
         }
       } catch (error) {
@@ -178,7 +178,7 @@ Examples:
             entryFunction,
             multisig,
             network,
-            !parentOptions.ignoreSimulate
+            parentOptions.simulate
           );
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
