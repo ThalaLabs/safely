@@ -68,7 +68,7 @@ Options:
                                     "movement-mainnet", "movement-testnet",
                                     "custom")
   -p, --profile <string>            Profile to use for the transaction
-  --ignore-simulate <boolean>       ignore tx simulation (default: false)
+  --no-simulate                      skip tx simulation
   -h, --help                        display help for command
 Commands:
   raw [options]                     Propose a raw transaction from a payload
