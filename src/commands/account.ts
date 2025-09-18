@@ -1,8 +1,4 @@
-import {
-  MoveFunctionId,
-  WriteSetChange,
-  WriteSetChangeWriteResource,
-} from '@aptos-labs/ts-sdk';
+import { MoveFunctionId, WriteSetChange, WriteSetChangeWriteResource } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { numPendingTxns } from '@thalalabs/multisig-utils';

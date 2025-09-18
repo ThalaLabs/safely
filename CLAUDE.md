@@ -35,7 +35,6 @@ The project is a CLI tool for managing Aptos/Movement multisig accounts, built w
 
 1. **Entry Point**: `src/index.ts` - Registers all commands and initializes the CLI
 2. **Commands**: `src/commands/` - Each file implements a specific CLI command
-
    - `account.ts` - Multisig account creation, updates, and info
    - `propose.ts` - Submit new transactions to multisigs
    - `vote.ts` - Vote on pending transactions
@@ -44,7 +43,6 @@ The project is a CLI tool for managing Aptos/Movement multisig accounts, built w
    - `simulate.ts` - Simulate transactions before execution
 
 3. **Core Modules**:
-
    - `transactions.ts` - Transaction building, simulation, and submission logic
    - `signing.ts` - Handles transaction signing with Account or Ledger
    - `storage.ts` - Local database for address book and defaults (using lowdb)
@@ -62,7 +60,7 @@ The project is a CLI tool for managing Aptos/Movement multisig accounts, built w
 2. **Profile System**: Integrates with Aptos CLI profiles for key management
 3. **Interactive UI**: Uses @inquirer/prompts for user-friendly terminal interactions
 4. **Transaction Safety**: Always simulates transactions before proposing/executing
-5. **Readable Output**: Uses chalk for colored output and cli-table3 for formatted data
+5. **Readable Output**: Uses chalk for colored output and native string formatting for tables
 
 ### Dependencies
 

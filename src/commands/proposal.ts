@@ -20,8 +20,7 @@ import {
 import { handleExecuteCommand } from './execute.js';
 import { handleVoteCommand } from './vote.js';
 import { loadProfile } from '../signing.js';
-import { ProposalTableRenderer } from '../ui/proposalTable.js';
-import { ProposalDetailsFormatter } from '../ui/proposalDetails.js';
+import { NativeProposalRenderer } from '../ui/nativeProposalRenderer.js';
 
 export const registerProposalCommand = (program: Command) => {
   program
@@ -105,16 +104,15 @@ export const registerProposalCommand = (program: Command) => {
             return;
           }
 
-          // Create table renderer
+          // Create native renderer
           const safelyStorage = await getDb();
-          const tableRenderer = new ProposalTableRenderer(
+          const renderer = new NativeProposalRenderer(
             txns,
             owners,
             Number(signaturesRequired),
-            signer.accountAddress.toString()
+            signer.accountAddress.toString(),
+            safelyStorage
           );
-
-          const detailsFormatter = new ProposalDetailsFormatter(aptos, owners, safelyStorage);
 
           // Setup keyboard input
           readline.emitKeypressEvents(process.stdin);
@@ -124,35 +122,31 @@ export const registerProposalCommand = (program: Command) => {
 
           let shouldRefresh = false;
           let actionMessage = '';
-          let tableRendered = false;
+          let previousSelectedIndex = 0;
 
-          const renderFullTable = async () => {
+          const renderFullTable = () => {
             console.clear();
-            console.log(await tableRenderer.render(multisig, detailsFormatter));
-            console.log(tableRenderer.renderSelectionStatus());
+            console.log(renderer.render(multisig));
             if (actionMessage) {
               console.log('\n' + actionMessage);
               console.log(chalk.gray('[Press any key to continue]'));
             }
-            tableRendered = true;
           };
 
           const updateSelectionOnly = () => {
-            if (!tableRendered) return;
-            // Move cursor to status line area (2 lines up from bottom)
-            process.stdout.write('\x1b[3A'); // Move up 3 lines
-            process.stdout.write('\x1b[0J'); // Clear from cursor to end of screen
-            console.log(tableRenderer.renderSelectionStatus());
+            // Simple approach: just re-render without screen clear
+            console.log('\x1b[H\x1b[0J'); // Move to top and clear screen
+            console.log(renderer.render(multisig));
           };
 
-          await renderFullTable();
+          renderFullTable();
 
           // Handle keyboard input
           process.stdin.on('keypress', async (str, key) => {
             // Clear action message on any key press if it's showing
             if (actionMessage) {
               actionMessage = '';
-              await renderFullTable();
+              renderFullTable();
               return;
             }
 
@@ -162,18 +156,20 @@ export const registerProposalCommand = (program: Command) => {
               }
               process.exit(0);
             } else if (key.name === 'up') {
-              tableRenderer.moveUp();
-              updateSelectionOnly(); // Just update the status line
+              previousSelectedIndex = renderer.getSelectedIndex();
+              renderer.moveUp();
+              updateSelectionOnly();
             } else if (key.name === 'down') {
-              tableRenderer.moveDown();
-              updateSelectionOnly(); // Just update the status line
+              previousSelectedIndex = renderer.getSelectedIndex();
+              renderer.moveDown();
+              updateSelectionOnly();
             } else if (key.name === 'return' || str === 'f' || str === 'F') {
-              tableRenderer.toggleExpanded();
-              await renderFullTable(); // Full render needed for expand/collapse
+              renderer.toggleExpanded();
+              renderFullTable(); // Full render needed for expand/collapse
             } else if (str === 'r' || str === 'R') {
               shouldRefresh = true;
             } else if (str === 'y' || str === 'Y' || str === 'n' || str === 'N') {
-              const selected = tableRenderer.getSelectedProposal();
+              const selected = renderer.getSelectedProposal();
               if (selected) {
                 try {
                   const voteYes = str === 'y' || str === 'Y';
@@ -191,10 +187,10 @@ export const registerProposalCommand = (program: Command) => {
                 } catch (error) {
                   actionMessage = chalk.red(`❌ Vote failed: ${(error as Error).message}`);
                 }
-                await renderFullTable();
+                renderFullTable();
               }
             } else if (str === 'e' || str === 'E') {
-              const selected = tableRenderer.getSelectedProposal();
+              const selected = renderer.getSelectedProposal();
               if (selected) {
                 try {
                   await handleExecuteCommand(multisig, profile, network);
@@ -205,16 +201,16 @@ export const registerProposalCommand = (program: Command) => {
                 } catch (error) {
                   actionMessage = chalk.red(`❌ Execute failed: ${(error as Error).message}`);
                 }
-                await renderFullTable();
+                renderFullTable();
               }
             }
 
             // Refresh data if needed
             if (shouldRefresh) {
               const newTxns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
-              tableRenderer.updateTransactions(newTxns);
+              renderer.updateTransactions(newTxns);
               shouldRefresh = false;
-              await renderFullTable();
+              renderFullTable();
             }
           });
         } catch (error) {
