@@ -117,11 +117,8 @@ export class NativeProposalRenderer {
 
     const prefix = isSelected ? chalk.yellow('▶ ') : '  ';
 
-    // Right-align sequence numbers, left-align header
-    const isHeader = seq === '#';
-    const formattedSeq = isHeader
-      ? this.padString(seq, this.columnWidths.seq)
-      : this.rightPadString(seq, this.columnWidths.seq);
+    // Left-align sequence numbers consistently
+    const formattedSeq = this.padString(seq, this.columnWidths.seq);
 
     const formattedRow =
       prefix +
@@ -139,14 +136,6 @@ export class NativeProposalRenderer {
       actions;
 
     return formattedRow;
-  }
-
-  private rightPadString(str: string, width: number): string {
-    const ansiRegex = /\x1b\[[0-9;]*m/g;
-    const cleanStr = str.replace(ansiRegex, '');
-    const actualLength = cleanStr.length;
-    const padding = Math.max(0, width - actualLength);
-    return ' '.repeat(padding) + str; // Right align by putting spaces before
   }
 
   private renderHeader(): string {
