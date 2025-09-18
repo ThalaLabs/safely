@@ -28,7 +28,7 @@ export const registerExecuteCommand = (program: Command) => {
     .action(
       async (options: { multisigAddress?: string; network?: NetworkChoice; profile?: string }) => {
         try {
-          const network = await ensureNetworkExists(options.network);
+          const network = await ensureNetworkExists(options.network, options.profile);
           const hash = await handleExecuteCommand(
             await ensureMultisigAddressExists(options.multisigAddress),
             await ensureProfileExists(options.profile),

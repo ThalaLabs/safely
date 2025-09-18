@@ -59,7 +59,7 @@ export const registerProposalCommand = (program: Command) => {
         sequenceNumber?: number;
         limit?: number;
       }) => {
-        const network = await ensureNetworkExists(options.network);
+        const network = await ensureNetworkExists(options.network, options.profile);
         const profile = await ensureProfileExists(options.profile);
         let fullnode = options.fullnode;
 

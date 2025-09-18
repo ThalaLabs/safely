@@ -64,7 +64,7 @@ Examples:
       const parentOptions = cmd.parent.opts();
       const multisig = await ensureMultisigAddressExists(parentOptions.multisigAddress);
       const profile = await ensureProfileExists(parentOptions.profile);
-      const network = await ensureNetworkExists(parentOptions.network);
+      const network = await ensureNetworkExists(parentOptions.network, parentOptions.profile);
 
       try {
         const jsonContent = await resolvePayloadInput(options.payload);
@@ -173,7 +173,7 @@ Examples:
                 functionArguments: [options.asset.address, options.recipient, options.amount],
               };
         try {
-          const network = await ensureNetworkExists(parentOptions.network);
+          const network = await ensureNetworkExists(parentOptions.network, parentOptions.profile);
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
