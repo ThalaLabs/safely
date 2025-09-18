@@ -15,10 +15,11 @@ export class NativeProposalRenderer {
   public proposals: ProposalRow[] = [];
   private selectedIndex = 0;
   private expandedRows: Set<number> = new Set();
+  private lastRefreshedAt: Date = new Date();
   private columnWidths = {
     seq: 8,
     function: 48,
-    votes: 15,
+    votes: 10,
     simulation: 12,
     actions: 24,
   };
@@ -242,10 +243,17 @@ export class NativeProposalRenderer {
         ? `${multisigAddress.slice(0, 6)}...${multisigAddress.slice(-4)}`
         : multisigAddress;
 
+    const timeString = this.lastRefreshedAt.toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+
     output +=
       '\n' +
       chalk.cyan(
-        `Multisig: ${truncatedAddress} | Network: ${this.network} | ${this.proposals.length} pending proposals\n\n`
+        `Multisig: ${truncatedAddress} | Network: ${this.network} | ${this.proposals.length} pending proposals | Last refreshed: ${timeString}\n\n`
       );
 
     output += this.renderHeader() + '\n';
@@ -381,6 +389,7 @@ export class NativeProposalRenderer {
 
   public updateTransactions(transactions: MultisigTransactionDecoded[]) {
     this.proposals = this.formatProposals(transactions);
+    this.lastRefreshedAt = new Date();
     if (this.selectedIndex >= this.proposals.length) {
       this.selectedIndex = this.proposals.length - 1;
     }
