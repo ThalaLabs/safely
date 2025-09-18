@@ -45,7 +45,9 @@ export class NativeProposalRenderer {
   private formatProposals(transactions: MultisigTransactionDecoded[]): ProposalRow[] {
     return transactions.map((txn) => ({
       sequenceNumber: txn.sequence_number,
-      function: this.formatFunctionId(txn.payload_decoded.function),
+      function: txn.payload_decoded.success
+        ? this.formatFunctionId(txn.payload_decoded.data.function)
+        : 'Failed to decode',
       votes: this.formatVotes(txn),
       simulation: this.formatSimulation(txn),
       transaction: txn,
@@ -65,16 +67,8 @@ export class NativeProposalRenderer {
   }
 
   private formatVotes(txn: MultisigTransactionDecoded): string {
-    let yesCount = 0;
-    let noCount = 0;
-
-    txn.votes.forEach((vote: string) => {
-      if (vote.includes('✅')) {
-        yesCount++;
-      } else if (vote.includes('❌')) {
-        noCount++;
-      }
-    });
+    const yesCount = txn.yesVotes.length;
+    const noCount = txn.noVotes.length;
 
     let voteDisplay = '';
     const totalOwners = this.owners.length;
@@ -190,14 +184,23 @@ export class NativeProposalRenderer {
     details += '\n' + indent + chalk.gray('Votes:') + '\n';
 
     const voteMap = new Map<string, string>();
-    txn.votes.forEach((vote: string) => {
+
+    // Process yes votes
+    txn.yesVotes.forEach((voter) => {
+      const voterAddress = voter.toString();
       this.owners.forEach((owner) => {
-        if (vote.includes(owner)) {
-          if (vote.includes('✅')) {
-            voteMap.set(owner, 'yes');
-          } else if (vote.includes('❌')) {
-            voteMap.set(owner, 'no');
-          }
+        if (owner === voterAddress) {
+          voteMap.set(owner, 'yes');
+        }
+      });
+    });
+
+    // Process no votes
+    txn.noVotes.forEach((voter) => {
+      const voterAddress = voter.toString();
+      this.owners.forEach((owner) => {
+        if (owner === voterAddress) {
+          voteMap.set(owner, 'no');
         }
       });
     });
@@ -215,11 +218,17 @@ export class NativeProposalRenderer {
     });
 
     details += '\n' + indent + chalk.gray('Payload:') + '\n';
-    const payload = {
-      function: txn.payload_decoded.function,
-      type_arguments: txn.payload_decoded.typeArguments || [],
-      arguments: txn.payload_decoded.functionArguments || [],
-    };
+    const payload = txn.payload_decoded.success
+      ? {
+          function: txn.payload_decoded.data.function,
+          type_arguments: txn.payload_decoded.data.typeArguments || [],
+          arguments: txn.payload_decoded.data.functionArguments || [],
+        }
+      : {
+          function: 'Failed to decode',
+          type_arguments: [],
+          arguments: [],
+        };
 
     const payloadJson = JSON.stringify(
       payload,
@@ -395,11 +404,17 @@ export class NativeProposalRenderer {
   ): number {
     let count = 7;
     count += this.owners.length;
-    const payload = {
-      function: txn.payload_decoded.function,
-      type_arguments: txn.payload_decoded.typeArguments || [],
-      arguments: txn.payload_decoded.functionArguments || [],
-    };
+    const payload = txn.payload_decoded.success
+      ? {
+          function: txn.payload_decoded.data.function,
+          type_arguments: txn.payload_decoded.data.typeArguments || [],
+          arguments: txn.payload_decoded.data.functionArguments || [],
+        }
+      : {
+          function: 'Failed to decode',
+          type_arguments: [],
+          arguments: [],
+        };
     const payloadJson = JSON.stringify(payload, null, 2);
     count += payloadJson.split('\n').length;
 

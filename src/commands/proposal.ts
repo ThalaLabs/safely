@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import readline from 'readline';
-import { fetchPendingTxnsSafely } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { initAptos, getExplorerUrl } from '../utils.js';
@@ -15,6 +14,7 @@ import { handleExecuteCommand } from './execute.js';
 import { handleVoteCommand } from './vote.js';
 import { loadProfile } from '../signing.js';
 import { NativeProposalRenderer } from '../ui/nativeProposalRenderer.js';
+import { fetchPendingTxns } from '@thalalabs/multisig-utils';
 
 export const registerProposalCommand = (program: Command) => {
   program
@@ -91,7 +91,7 @@ export const registerProposalCommand = (program: Command) => {
 
           // Fetch pending transactions
           console.log(chalk.blue(`Fetching pending transactions for multisig: ${multisig}`));
-          const txns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
+          const txns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
 
           if (txns.length === 0) {
             console.log(chalk.yellow('No pending transactions found.'));
@@ -208,7 +208,7 @@ export const registerProposalCommand = (program: Command) => {
 
             // Refresh data if needed
             if (shouldRefresh) {
-              const newTxns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
+              const newTxns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
               renderer.updateTransactions(newTxns);
               shouldRefresh = false;
               await renderFullTable();
