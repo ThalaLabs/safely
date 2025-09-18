@@ -163,7 +163,7 @@ export const registerProposalCommand = (program: Command) => {
               if (selected) {
                 try {
                   const voteYes = str === 'y' || str === 'Y';
-                  await handleVoteCommand(
+                  const hash = await handleVoteCommand(
                     selected.sequenceNumber,
                     voteYes,
                     multisig,
@@ -171,7 +171,7 @@ export const registerProposalCommand = (program: Command) => {
                     profile
                   );
                   actionMessage = chalk.green(
-                    `✅ Vote submitted: ${getExplorerUrl(network, 'txn/[hash]')}`
+                    `✅ Vote submitted: ${getExplorerUrl(network, `txn/${hash}`)}`
                   );
                   shouldRefresh = true;
                 } catch (error) {
@@ -183,9 +183,9 @@ export const registerProposalCommand = (program: Command) => {
               const selected = renderer.getSelectedProposal();
               if (selected) {
                 try {
-                  await handleExecuteCommand(multisig, profile, network);
+                  const hash = await handleExecuteCommand(multisig, profile, network);
                   actionMessage = chalk.green(
-                    `✅ Execute successful: ${getExplorerUrl(network, 'txn/[hash]')}`
+                    `✅ Execute successful: ${getExplorerUrl(network, `txn/${hash}`)}`
                   );
                   shouldRefresh = true;
                 } catch (error) {

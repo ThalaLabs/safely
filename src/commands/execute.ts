@@ -27,11 +27,17 @@ export const registerExecuteCommand = (program: Command) => {
     .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .action(
       async (options: { multisigAddress?: string; network?: NetworkChoice; profile?: string }) => {
-        await handleExecuteCommand(
-          await ensureMultisigAddressExists(options.multisigAddress),
-          await ensureProfileExists(options.profile),
-          await ensureNetworkExists(options.network)
-        );
+        try {
+          const network = await ensureNetworkExists(options.network);
+          const hash = await handleExecuteCommand(
+            await ensureMultisigAddressExists(options.multisigAddress),
+            await ensureProfileExists(options.profile),
+            network
+          );
+          console.log(chalk.green(`Execute ok: ${getExplorerUrl(network, `txn/${hash}`)}`));
+        } catch (error) {
+          console.error(chalk.red(`Error: ${(error as Error).message}`));
+        }
       }
     );
 };
@@ -40,7 +46,7 @@ export async function handleExecuteCommand(
   multisig: string,
   profile: string,
   network: NetworkChoice
-) {
+): Promise<string> {
   try {
     const { signer, fullnode } = await loadProfile(profile, network);
     const aptos = initAptos(network, fullnode);
@@ -76,8 +82,7 @@ export async function handleExecuteCommand(
     ]);
 
     if (!canReject && !canExecute) {
-      console.error(chalk.red('No executable transaction found'));
-      return;
+      throw new Error('No executable transaction found');
     }
 
     const txn = canReject
@@ -90,20 +95,12 @@ export async function handleExecuteCommand(
       transactionHash: pendingTxn.hash,
     });
     if (success) {
-      console.log(
-        chalk.green(
-          `${canReject ? 'Reject' : 'Execute'} ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
-        )
-      );
+      return pendingTxn.hash;
     } else {
-      console.log(
-        chalk.red(
-          `${canReject ? 'Reject' : 'Execute'} nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`
-        )
-      );
+      throw new Error(`${canReject ? 'Reject' : 'Execute'} failed with status ${vm_status}`);
     }
   } catch (error) {
-    console.error(chalk.red(`Error: ${(error as Error).message}`));
+    throw new Error(`Execute error: ${(error as Error).message}`);
   }
 }
 
