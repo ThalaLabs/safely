@@ -106,7 +106,8 @@ export const registerProposalCommand = (program: Command) => {
             Number(signaturesRequired),
             signer.accountAddress.toString(),
             safelyStorage,
-            network
+            network,
+            aptos
           );
 
           // Setup keyboard input
@@ -118,23 +119,23 @@ export const registerProposalCommand = (program: Command) => {
           let shouldRefresh = false;
           let actionMessage = '';
 
-          const renderFullTable = () => {
+          const renderFullTable = async () => {
             console.clear();
-            console.log(renderer.render(multisig));
+            console.log(await renderer.render(multisig));
             if (actionMessage) {
               console.log('\n' + actionMessage);
               console.log(chalk.gray('[Press any key to continue]'));
             }
           };
 
-          renderFullTable();
+          await renderFullTable();
 
           // Handle keyboard input
           process.stdin.on('keypress', async (str, key) => {
             // Clear action message on any key press if it's showing
             if (actionMessage) {
               actionMessage = '';
-              renderFullTable();
+              await renderFullTable();
               return;
             }
 
@@ -147,15 +148,15 @@ export const registerProposalCommand = (program: Command) => {
               renderer.moveUp();
               // Use a simple clear and redraw but without the jarring console.clear()
               process.stdout.write('\x1b[H'); // Move to top without clearing
-              console.log(renderer.render(multisig));
+              console.log(await renderer.render(multisig));
             } else if (key.name === 'down') {
               renderer.moveDown();
               // Use a simple clear and redraw but without the jarring console.clear()
               process.stdout.write('\x1b[H'); // Move to top without clearing
-              console.log(renderer.render(multisig));
+              console.log(await renderer.render(multisig));
             } else if (key.name === 'return' || str === 'f' || str === 'F') {
               renderer.toggleExpanded();
-              renderFullTable(); // Full render needed for expand/collapse
+              await renderFullTable(); // Full render needed for expand/collapse
             } else if (str === 'r' || str === 'R') {
               shouldRefresh = true;
             } else if (str === 'y' || str === 'Y' || str === 'n' || str === 'N') {
@@ -182,7 +183,7 @@ export const registerProposalCommand = (program: Command) => {
                   process.stdout.write(`\r❌ Vote failed: ${(error as Error).message}\n`);
                   actionMessage = chalk.red(`❌ Vote failed: ${(error as Error).message}`);
                 }
-                renderFullTable();
+                await renderFullTable();
               }
             } else if (str === 'e' || str === 'E') {
               const selected = renderer.getSelectedProposal();
@@ -201,7 +202,7 @@ export const registerProposalCommand = (program: Command) => {
                   process.stdout.write(`\r❌ Execution failed: ${(error as Error).message}\n`);
                   actionMessage = chalk.red(`❌ Execute failed: ${(error as Error).message}`);
                 }
-                renderFullTable();
+                await renderFullTable();
               }
             }
 
@@ -210,7 +211,7 @@ export const registerProposalCommand = (program: Command) => {
               const newTxns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
               renderer.updateTransactions(newTxns);
               shouldRefresh = false;
-              renderFullTable();
+              await renderFullTable();
             }
           });
         } catch (error) {

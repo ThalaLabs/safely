@@ -1,7 +1,12 @@
 import chalk from 'chalk';
-import { MultisigTransactionDecoded } from '@thalalabs/multisig-utils';
+import {
+  MultisigTransactionDecoded,
+  getBalanceChangesData,
+  BalanceChange,
+} from '@thalalabs/multisig-utils';
 import { AddressBook } from '../storage.js';
 import { Low } from 'lowdb';
+import { Aptos } from '@aptos-labs/ts-sdk';
 
 export interface ProposalRow {
   sequenceNumber: number;
@@ -9,6 +14,7 @@ export interface ProposalRow {
   votes: string;
   simulation: string;
   transaction: MultisigTransactionDecoded;
+  balanceChanges?: BalanceChange[];
 }
 
 export class NativeProposalRenderer {
@@ -25,12 +31,13 @@ export class NativeProposalRenderer {
   };
 
   constructor(
-    private transactions: MultisigTransactionDecoded[],
+    transactions: MultisigTransactionDecoded[],
     private owners: string[],
-    private signaturesRequired: number,
-    private currentUserAddress: string,
+    signaturesRequired: number,
+    currentUserAddress: string,
     private safelyStorage: Low<any>,
-    private network: string = 'unknown'
+    private network: string = 'unknown',
+    private aptos?: Aptos
   ) {
     this.proposals = this.formatProposals(transactions);
   }
@@ -42,6 +49,7 @@ export class NativeProposalRenderer {
       votes: this.formatVotes(txn),
       simulation: this.formatSimulation(txn),
       transaction: txn,
+      balanceChanges: undefined, // Will be populated on demand
     }));
   }
 
@@ -86,13 +94,10 @@ export class NativeProposalRenderer {
   }
 
   private formatSimulation(txn: MultisigTransactionDecoded): string {
-    if (txn.simulationChanges !== undefined) {
-      return 'OK';
+    if (txn.simulationSuccess) {
+      return chalk.green('OK');
     }
-    if (txn.payload_decoded && !txn.simulationChanges) {
-      return 'NOK';
-    }
-    return '?';
+    return chalk.red('NOK');
   }
 
   private padString(str: string, width: number): string {
@@ -158,7 +163,10 @@ export class NativeProposalRenderer {
     return chalk.cyan(header) + '\n' + chalk.gray(separator);
   }
 
-  private formatDetails(txn: MultisigTransactionDecoded): string {
+  private async formatDetails(
+    txn: MultisigTransactionDecoded,
+    balanceChanges?: BalanceChange[]
+  ): Promise<string> {
     let details = '';
     const indent = '     ';
 
@@ -215,7 +223,7 @@ export class NativeProposalRenderer {
 
     const payloadJson = JSON.stringify(
       payload,
-      (key, value) => {
+      (_, value) => {
         if (typeof value === 'bigint') {
           return value.toString();
         } else if (value instanceof Uint8Array) {
@@ -230,12 +238,42 @@ export class NativeProposalRenderer {
       details += indent + '  ' + chalk.gray(line) + '\n';
     });
 
+    // Add simulation status
+    details += '\n' + indent + chalk.gray('Simulation Status: ');
+    if (txn.simulationSuccess) {
+      details += chalk.green('Success') + '\n';
+    } else {
+      details += chalk.red('Failed') + '\n';
+      details += indent + chalk.gray('  VM Status: ') + chalk.red(txn.simulationVmStatus) + '\n';
+    }
+
+    // Add balance changes if available
+    if (balanceChanges && balanceChanges.length > 0) {
+      details += '\n' + indent + chalk.gray('Balance Changes:') + '\n';
+      balanceChanges.forEach((change) => {
+        const addressAlias = AddressBook.findAliasOrReturnAddress(
+          this.safelyStorage.data,
+          change.address
+        );
+        const changeAmount = change.balanceAfter - change.balanceBefore;
+        const changeSign = changeAmount >= 0 ? '+' : '';
+        const changeColor = changeAmount >= 0 ? chalk.green : chalk.red;
+        details +=
+          indent +
+          '  ' +
+          changeColor(
+            `${addressAlias}: ${change.balanceBefore} → ${change.balanceAfter} ${change.symbol} (${changeSign}${changeAmount.toFixed(4)})`
+          ) +
+          '\n';
+      });
+    }
+
     details += chalk.gray('─'.repeat(100));
 
     return details;
   }
 
-  public render(multisigAddress: string): string {
+  public async render(multisigAddress: string): Promise<string> {
     let output = '';
 
     // Clean header with multisig and network info
@@ -276,7 +314,18 @@ export class NativeProposalRenderer {
         ) + '\n';
 
       if (this.expandedRows.has(i)) {
-        output += this.formatDetails(proposal.transaction) + '\n';
+        // Load balance changes if not already loaded and we have aptos client
+        if (!proposal.balanceChanges && this.aptos && proposal.transaction.simulationChanges) {
+          try {
+            proposal.balanceChanges = await getBalanceChangesData(
+              this.aptos,
+              proposal.transaction.simulationChanges
+            );
+          } catch (error) {
+            // If we can't get balance changes, continue without them
+          }
+        }
+        output += (await this.formatDetails(proposal.transaction, proposal.balanceChanges)) + '\n';
       }
     }
 
@@ -314,7 +363,10 @@ export class NativeProposalRenderer {
     // Add lines for expanded details above this index
     for (let i = 0; i < index; i++) {
       if (this.expandedRows.has(i)) {
-        offset += this.getDetailsLineCount(this.proposals[i].transaction);
+        offset += this.getDetailsLineCount(
+          this.proposals[i].transaction,
+          this.proposals[i].balanceChanges
+        );
       }
     }
 
@@ -327,26 +379,20 @@ export class NativeProposalRenderer {
 
     // Add lines for expanded details
     this.expandedRows.forEach((index) => {
-      lines += this.getDetailsLineCount(this.proposals[index].transaction);
+      lines += this.getDetailsLineCount(
+        this.proposals[index].transaction,
+        this.proposals[index].balanceChanges
+      );
     });
 
     lines += 2; // Footer lines
     return lines;
   }
 
-  private getTotalLines(): number {
-    let lines = 6;
-    for (let i = 0; i < this.proposals.length; i++) {
-      lines++;
-      if (this.expandedRows.has(i)) {
-        lines += this.getDetailsLineCount(this.proposals[i].transaction);
-      }
-    }
-    lines += 2;
-    return lines;
-  }
-
-  private getDetailsLineCount(txn: MultisigTransactionDecoded): number {
+  private getDetailsLineCount(
+    txn: MultisigTransactionDecoded,
+    balanceChanges?: BalanceChange[]
+  ): number {
     let count = 7;
     count += this.owners.length;
     const payload = {
@@ -356,6 +402,25 @@ export class NativeProposalRenderer {
     };
     const payloadJson = JSON.stringify(payload, null, 2);
     count += payloadJson.split('\n').length;
+
+    // Add lines for simulation status if present
+    if (txn.simulationSuccess !== undefined) {
+      count += 2; // For simulation status line and blank line
+      if (
+        !txn.simulationSuccess &&
+        txn.simulationVmStatus &&
+        txn.simulationVmStatus !== 'EXECUTED'
+      ) {
+        count += 1; // For VM status line
+      }
+    }
+
+    // Add lines for balance changes if they exist
+    if (balanceChanges && balanceChanges.length > 0) {
+      count += 2; // For "Balance Changes:" header and blank line
+      count += balanceChanges.length; // One line per balance change
+    }
+
     count += 2;
     return count;
   }
