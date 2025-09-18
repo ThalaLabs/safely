@@ -12,7 +12,6 @@
 ### Minor Changes
 
 - Add batch payload support and improve RPC configuration
-
   - Add batch payload support for propose raw command
   - Add YAML file support for payloads
   - Use Sentio RPC to bypass mainnet rate limits

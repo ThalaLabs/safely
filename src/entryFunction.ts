@@ -17,11 +17,11 @@ export function isBatchPayload(jsonContent: string): boolean {
 
 export function parseBatchPayload(jsonContent: string): InputEntryFunctionData[] {
   const payloads = JSON.parse(jsonContent);
-  
+
   if (!Array.isArray(payloads)) {
     throw new Error('Batch payload must be an array');
   }
-  
+
   return payloads.map((payload, index) => {
     try {
       return parseSinglePayload(payload);
@@ -39,7 +39,9 @@ export function parseEntryFunctionPayload(jsonContent: string): InputEntryFuncti
 function parseSinglePayload(content: {
   function_id: string;
   type_args: string[];
-  args: Array<{ type: string; value: SimpleEntryFunctionArgumentTypes } | SimpleEntryFunctionArgumentTypes>;
+  args: Array<
+    { type: string; value: SimpleEntryFunctionArgumentTypes } | SimpleEntryFunctionArgumentTypes
+  >;
 }): InputEntryFunctionData {
   // Validate required fields
   if (!content.function_id) {
@@ -58,7 +60,7 @@ function parseSinglePayload(content: {
     if (typeof arg === 'object' && arg !== null && 'type' in arg && 'value' in arg) {
       // Object format with type field
       const typedArg = arg as { type: string; value: SimpleEntryFunctionArgumentTypes };
-      
+
       // Hex args need to be decoded into vector<u8> equivalents
       if (typedArg.type === 'hex') {
         // vector<u8>
@@ -71,10 +73,10 @@ function parseSinglePayload(content: {
           return typedArg.value.map((hexStr) => hexToBytes(hexStr));
         }
       }
-      
+
       return typedArg.value;
     }
-    
+
     // Direct value format
     return arg;
   });

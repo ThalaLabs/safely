@@ -31,13 +31,19 @@ export const registerVoteCommand = (program: Command) => {
         network?: NetworkChoice;
         profile?: string;
       }) => {
-        await handleVoteCommand(
-          options.sequenceNumber,
-          options.approve,
-          await ensureMultisigAddressExists(options.multisigAddress),
-          await ensureNetworkExists(options.network),
-          await ensureProfileExists(options.profile)
-        );
+        try {
+          const network = await ensureNetworkExists(options.network);
+          const hash = await handleVoteCommand(
+            options.sequenceNumber,
+            options.approve,
+            await ensureMultisigAddressExists(options.multisigAddress),
+            network,
+            await ensureProfileExists(options.profile)
+          );
+          console.log(chalk.green(`Vote ok: ${getExplorerUrl(network, `txn/${hash}`)}`));
+        } catch (error) {
+          console.error(chalk.red(`Error: ${(error as Error).message}`));
+        }
       }
     );
 };
@@ -48,7 +54,7 @@ export async function handleVoteCommand(
   multisig: string,
   network: NetworkChoice,
   profile: string
-) {
+): Promise<string> {
   try {
     const { signer, fullnode } = await loadProfile(profile, network);
     const aptos = initAptos(network, fullnode);
@@ -68,13 +74,11 @@ export async function handleVoteCommand(
     });
 
     if (success) {
-      console.log(chalk.green(`Vote ok: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`));
+      return pendingTxn.hash;
     } else {
-      console.log(
-        chalk.red(`Vote nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`)
-      );
+      throw new Error(`Vote failed with status ${vm_status}`);
     }
   } catch (error) {
-    console.error(chalk.red(`Error: ${(error as Error).message}`));
+    throw new Error(`Vote error: ${(error as Error).message}`);
   }
 }

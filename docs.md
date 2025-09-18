@@ -68,23 +68,24 @@ Options:
                                     "movement-mainnet", "movement-testnet",
                                     "custom")
   -p, --profile <string>            Profile to use for the transaction
-  --no-simulate                      skip tx simulation
+  --no-simulate                     skip tx simulation
   -h, --help                        display help for command
 Commands:
   raw [options]                     Propose a raw transaction from a payload
-                                    file
+                                    file (supports batch payloads)
   predefined                        Propose a predefined transaction type
   help [command]                    display help for command
 ```
 
 ## safely propose raw [options]
 
-Propose a raw transaction from a payload file
+Propose a raw transaction from a payload file (supports batch payloads)
 
 ```
 Options:
-  --payload <payload>  Transaction payload (file path, JSON string, or - for
-                       stdin)
+  --payload <payload>  Transaction payload (JSON/YAML file path, JSON string,
+                       or - for stdin)
+  --yes                Skip confirmation prompt for batch payloads
   -h, --help           display help for command
 ```
 

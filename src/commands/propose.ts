@@ -68,31 +68,31 @@ Examples:
 
       try {
         const jsonContent = await resolvePayloadInput(options.payload);
-        
+
         // Check if it's a batch payload
         if (isBatchPayload(jsonContent)) {
           const payloads = parseBatchPayload(jsonContent);
-          
+
           // Show confirmation unless --yes is provided
           if (!options.yes) {
             const shouldContinue = await confirm({
               message: `Found ${payloads.length} transactions to propose. Continue?`,
               default: true,
             });
-            
+
             if (!shouldContinue) {
               console.log('Batch proposal cancelled.');
               return;
             }
           }
-          
+
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
-          
+
           // Process each transaction sequentially
           for (let i = 0; i < payloads.length; i++) {
             console.log(chalk.blue(`\nProposing transaction ${i + 1}/${payloads.length}...`));
-            
+
             try {
               await proposeEntryFunction(
                 aptos,
@@ -103,12 +103,16 @@ Examples:
                 parentOptions.simulate
               );
             } catch (error) {
-              console.error(chalk.red(`\nTransaction ${i + 1}/${payloads.length} failed: ${(error as Error).message}`));
+              console.error(
+                chalk.red(
+                  `\nTransaction ${i + 1}/${payloads.length} failed: ${(error as Error).message}`
+                )
+              );
               console.error(chalk.red('Stopping batch processing due to failure.'));
               process.exit(1);
             }
           }
-          
+
           console.log(chalk.green(`\nSuccessfully proposed all ${payloads.length} transactions.`));
         } else {
           // Single payload - use existing logic
