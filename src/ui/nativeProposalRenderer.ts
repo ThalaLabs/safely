@@ -85,12 +85,12 @@ export class NativeProposalRenderer {
 
   private formatSimulation(txn: MultisigTransactionDecoded): string {
     if (txn.simulationChanges !== undefined) {
-      return chalk.green('OK');
+      return 'OK';
     }
     if (txn.payload_decoded && !txn.simulationChanges) {
-      return chalk.red('NOK');
+      return 'NOK';
     }
-    return chalk.yellow('?');
+    return '?';
   }
 
   private padString(str: string, width: number): string {
