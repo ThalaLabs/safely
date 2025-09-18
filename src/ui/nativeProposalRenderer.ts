@@ -253,7 +253,7 @@ export class NativeProposalRenderer {
     output +=
       '\n' +
       chalk.cyan(
-        `Multisig: ${truncatedAddress} | Network: ${this.network} | ${this.proposals.length} pending proposals | Last refreshed: ${timeString}\n\n`
+        `${truncatedAddress} | ${this.network} | ${this.proposals.length} pending proposals | Last refreshed: ${timeString}\n\n`
       );
 
     output += this.renderHeader() + '\n';
