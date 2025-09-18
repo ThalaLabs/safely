@@ -253,9 +253,11 @@ export class NativeProposalRenderer {
         ? `${multisigAddress.slice(0, 6)}...${multisigAddress.slice(-4)}`
         : multisigAddress;
 
-    output += '\n' + chalk.blue(`Multisig: ${truncatedAddress}`);
-    output += chalk.gray(` | Network: ${this.network}`);
-    output += chalk.gray(` | ${this.proposals.length} pending proposals\n\n`);
+    output +=
+      '\n' +
+      chalk.cyan(
+        `Multisig: ${truncatedAddress} | Network: ${this.network} | ${this.proposals.length} pending proposals\n\n`
+      );
 
     output += this.renderHeader() + '\n';
 
