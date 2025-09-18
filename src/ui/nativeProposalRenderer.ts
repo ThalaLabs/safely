@@ -71,13 +71,13 @@ export class NativeProposalRenderer {
     const pendingCount = totalOwners - yesCount - noCount;
 
     for (let i = 0; i < yesCount; i++) {
-      voteDisplay += '✅';
+      voteDisplay += 'Y';
     }
     for (let i = 0; i < noCount; i++) {
-      voteDisplay += '❌';
+      voteDisplay += 'N';
     }
     for (let i = 0; i < pendingCount; i++) {
-      voteDisplay += '⬜';
+      voteDisplay += '.';
     }
 
     return voteDisplay;
@@ -116,8 +116,11 @@ export class NativeProposalRenderer {
 
     const prefix = isSelected ? chalk.yellow('▶ ') : '  ';
 
-    // Right-align both header and sequence numbers
-    const formattedSeq = this.rightPadString(seq, this.columnWidths.seq);
+    // Right-align sequence numbers, left-align header
+    const isHeader = seq === '#';
+    const formattedSeq = isHeader
+      ? this.padString(seq, this.columnWidths.seq)
+      : this.rightPadString(seq, this.columnWidths.seq);
 
     const formattedRow =
       prefix +
@@ -203,11 +206,11 @@ export class NativeProposalRenderer {
       const ownerAlias = AddressBook.findAliasOrReturnAddress(this.safelyStorage.data, owner);
       const voteStatus = voteMap.get(owner);
       if (voteStatus === 'yes') {
-        details += indent + '  ✅ ' + ownerAlias + '\n';
+        details += indent + '  Y ' + ownerAlias + '\n';
       } else if (voteStatus === 'no') {
-        details += indent + '  ❌ ' + ownerAlias + '\n';
+        details += indent + '  N ' + ownerAlias + '\n';
       } else {
-        details += indent + '  ⬜ ' + ownerAlias + '\n';
+        details += indent + '  . ' + ownerAlias + '\n';
       }
     });
 
