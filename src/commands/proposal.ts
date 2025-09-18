@@ -1,13 +1,7 @@
-import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import readline from 'readline';
-import {
-  fetchPendingTxnsSafely,
-  canUserVote,
-  canUserExecute,
-  canUserReject,
-} from '../transactions.js';
+import { fetchPendingTxnsSafely } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { initAptos, getExplorerUrl } from '../utils.js';
@@ -111,7 +105,8 @@ export const registerProposalCommand = (program: Command) => {
             owners,
             Number(signaturesRequired),
             signer.accountAddress.toString(),
-            safelyStorage
+            safelyStorage,
+            network
           );
 
           // Setup keyboard input
@@ -122,7 +117,6 @@ export const registerProposalCommand = (program: Command) => {
 
           let shouldRefresh = false;
           let actionMessage = '';
-          let previousSelectedIndex = 0;
 
           const renderFullTable = () => {
             console.clear();
@@ -156,11 +150,9 @@ export const registerProposalCommand = (program: Command) => {
               }
               process.exit(0);
             } else if (key.name === 'up') {
-              previousSelectedIndex = renderer.getSelectedIndex();
               renderer.moveUp();
               updateSelectionOnly();
             } else if (key.name === 'down') {
-              previousSelectedIndex = renderer.getSelectedIndex();
               renderer.moveDown();
               updateSelectionOnly();
             } else if (key.name === 'return' || str === 'f' || str === 'F') {

@@ -28,7 +28,8 @@ export class NativeProposalRenderer {
     private owners: string[],
     private signaturesRequired: number,
     private currentUserAddress: string,
-    private safelyStorage: Low<any>
+    private safelyStorage: Low<any>,
+    private network: string = 'unknown'
   ) {
     this.proposals = this.formatProposals(transactions);
   }
@@ -246,9 +247,15 @@ export class NativeProposalRenderer {
   public render(multisigAddress: string): string {
     let output = '';
 
-    output += '\n' + chalk.blue(`Pending Proposals for ${multisigAddress}`);
-    output += '                                                    ';
-    output += chalk.cyan('[R]efresh | [Q]uit\n\n');
+    // Clean header with multisig and network info
+    const truncatedAddress =
+      multisigAddress.length > 16
+        ? `${multisigAddress.slice(0, 6)}...${multisigAddress.slice(-4)}`
+        : multisigAddress;
+
+    output += '\n' + chalk.blue(`Multisig: ${truncatedAddress}`);
+    output += chalk.gray(` | Network: ${this.network}`);
+    output += chalk.gray(` | ${this.proposals.length} pending proposals\n\n`);
 
     output += this.renderHeader() + '\n';
 
@@ -275,7 +282,9 @@ export class NativeProposalRenderer {
 
     output +=
       '\n' +
-      chalk.gray('[↑/↓] Navigate | [Enter/F] Toggle details | Press key for action | [Q]uit');
+      chalk.gray(
+        '[↑/↓] Navigate | [Enter/F] Toggle details | [Y]es [N]o [E]xe | [R]efresh | [Q]uit'
+      );
 
     return output;
   }
