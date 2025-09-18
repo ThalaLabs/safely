@@ -40,6 +40,64 @@ export async function fetchPendingTxnsSafely(
   return pendingTxns;
 }
 
+// Helper functions for proposal UI
+export async function canUserVote(
+  aptos: Aptos,
+  multisigAddress: string,
+  userAddress: string,
+  sequenceNumber: number
+): Promise<boolean> {
+  try {
+    const [canVote] = await aptos.view<[boolean]>({
+      payload: {
+        function: '0x1::multisig_account::can_vote',
+        functionArguments: [userAddress, multisigAddress, sequenceNumber],
+      },
+    });
+    return canVote;
+  } catch {
+    return false;
+  }
+}
+
+export async function canUserExecute(
+  aptos: Aptos,
+  multisigAddress: string,
+  userAddress: string,
+  sequenceNumber: number
+): Promise<boolean> {
+  try {
+    const [canExecute] = await aptos.view<[boolean]>({
+      payload: {
+        function: '0x1::multisig_account::can_execute',
+        functionArguments: [userAddress, multisigAddress, sequenceNumber],
+      },
+    });
+    return canExecute;
+  } catch {
+    return false;
+  }
+}
+
+export async function canUserReject(
+  aptos: Aptos,
+  multisigAddress: string,
+  userAddress: string,
+  sequenceNumber: number
+): Promise<boolean> {
+  try {
+    const [canReject] = await aptos.view<[boolean]>({
+      payload: {
+        function: '0x1::multisig_account::can_reject',
+        functionArguments: [userAddress, multisigAddress, sequenceNumber],
+      },
+    });
+    return canReject;
+  } catch {
+    return false;
+  }
+}
+
 export async function proposeEntryFunction(
   aptos: Aptos,
   signer: Account | LedgerSigner,

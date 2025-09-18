@@ -1,23 +1,27 @@
 import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
-import { select } from '@inquirer/prompts';
-import { fetchPendingTxnsSafely } from '../transactions.js';
-import { validateAddress, validateUInt } from '../validators.js';
-import { decode, summarizeTransactionBalanceChanges } from '@thalalabs/multisig-utils';
-import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import { initAptos } from '../utils.js';
+import readline from 'readline';
 import {
-  AddressBook,
+  fetchPendingTxnsSafely,
+  canUserVote,
+  canUserExecute,
+  canUserReject,
+} from '../transactions.js';
+import { validateAddress, validateUInt } from '../validators.js';
+import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
+import { initAptos, getExplorerUrl } from '../utils.js';
+import {
   ensureMultisigAddressExists,
   ensureNetworkExists,
   ensureProfileExists,
   getDb,
 } from '../storage.js';
-import { knownAddresses } from '../labels.js';
 import { handleExecuteCommand } from './execute.js';
 import { handleVoteCommand } from './vote.js';
 import { loadProfile } from '../signing.js';
+import { ProposalTableRenderer } from '../ui/proposalTable.js';
+import { ProposalDetailsFormatter } from '../ui/proposalDetails.js';
 
 export const registerProposalCommand = (program: Command) => {
   program
@@ -65,243 +69,160 @@ export const registerProposalCommand = (program: Command) => {
         const network = await ensureNetworkExists(options.network);
         const profile = await ensureProfileExists(options.profile);
         let fullnode = options.fullnode;
+
+        const profileData = await loadProfile(profile, network, true);
+        const { signer } = profileData;
         if (!fullnode) {
-          ({ fullnode } = await loadProfile(profile, network, false));
+          fullnode = profileData.fullnode;
         }
 
         const aptos = initAptos(network, fullnode);
-        const n = options.limit || 20;
         const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
-        const fetchTransactions = async (filter: 'pending' | 'succeeded' | 'failed') => {
-          let txns;
-          if (filter === 'pending') {
-            console.log(chalk.blue(`Fetching pending transactions for multisig: ${multisig}`));
-            txns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
-          } else if (filter === 'succeeded' || filter === 'failed') {
-            const eventType =
-              filter === 'succeeded'
-                ? '0x1::multisig_account::TransactionExecutionSucceededEvent'
-                : '0x1::multisig_account::TransactionExecutionFailedEvent';
-
-            console.log(
-              chalk.blue(
-                `Fetching the most recent ${n} ${filter} transactions for multisig: ${multisig}`
-              )
-            );
-
-            const events = await aptos.getAccountEventsByEventType({
-              accountAddress: multisig,
-              eventType,
-              options: {
-                limit: n,
-                orderBy: [{ sequence_number: 'desc' }],
-              },
-            });
-
-            const entryFunctions = await Promise.all(
-              events.map((event) => decode(aptos, event.data.transaction_payload))
-            );
-
-            let safelyStorage = await getDb();
-            txns = events.map((event, i) => {
-              const version = event.transaction_version as number;
-              const sn = Number(event.data.sequence_number);
-              const executor = AddressBook.findAliasOrReturnAddress(
-                safelyStorage.data,
-                event.data.executor
-              );
-              const [packageAddress] = entryFunctions[i].function.split('::');
-              const contract = knownAddresses[packageAddress] || 'unknown';
-
-              return {
-                sequence_number: sn,
-                executor,
-                payload_decoded: entryFunctions[i],
-                contract,
-                version,
-              };
-            });
-          } else {
-            throw new Error(`Unsupported filter: ${filter}`);
-          }
-          return txns;
-        };
-
         try {
-          let txns = await fetchTransactions(options.filter);
+          // Get multisig owners and signature requirements
+          const [[owners], [signaturesRequired]] = await Promise.all([
+            aptos.view<string[][]>({
+              payload: {
+                function: '0x1::multisig_account::owners',
+                functionArguments: [multisig],
+              },
+            }),
+            aptos.view<string[]>({
+              payload: {
+                function: '0x1::multisig_account::num_signatures_required',
+                functionArguments: [multisig],
+              },
+            }),
+          ]);
 
-          while (true) {
-            const txChoices = txns.map((txn) => ({
-              // @ts-ignore
-              name: `#${txn.sequence_number} ${chalk.yellow(txn.payload_decoded.function)}`,
-              value: txn.sequence_number.toString(),
-            }));
+          // Fetch pending transactions
+          console.log(chalk.blue(`Fetching pending transactions for multisig: ${multisig}`));
+          const txns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
 
-            txChoices.push({
-              name: 'Exit',
-              value: 'quit',
-            });
-
-            let selectedSequenceNumber = await select({
-              message: `Select a ${options.filter} transaction:`,
-              choices: txChoices,
-              pageSize: 20,
-            });
-
-            if (selectedSequenceNumber === 'quit') {
-              break;
-            }
-
-            let selectedTxn = txns.find(
-              (txn) => txn.sequence_number.toString() === selectedSequenceNumber
-            );
-
-            // New action selection loop for the chosen transaction
-            while (true) {
-              const action = await select({
-                message: `Transaction #${selectedSequenceNumber} - Choose action:`,
-                choices: fetchTransactionChoices(options.filter),
-              });
-
-              switch (action) {
-                case 'details':
-                  logTransactionDetails(selectedTxn);
-                  if (options.filter === 'pending') {
-                    await logExpectedBalanceChanges(aptos, selectedTxn);
-                  }
-                  break;
-                case 'execute':
-                  if (selectedSequenceNumber !== txns[0].sequence_number.toString()) {
-                    console.log(
-                      chalk.red(
-                        'Execute functionality only available for next proposed transaction'
-                      )
-                    );
-                    break;
-                  }
-
-                  await handleExecuteCommand(multisig, profile, network);
-                  break;
-                case 'vote_yes':
-                  await handleVoteCommand(
-                    Number(selectedSequenceNumber),
-                    true,
-                    multisig,
-                    network,
-                    profile
-                  );
-                  break;
-                case 'vote_no':
-                  await handleVoteCommand(
-                    Number(selectedSequenceNumber),
-                    false,
-                    multisig,
-                    network,
-                    profile
-                  );
-                  break;
-
-                case 'next':
-                  if (
-                    !txns ||
-                    Number(selectedSequenceNumber) === txns[txns.length - 1].sequence_number
-                  ) {
-                    console.log(
-                      chalk.yellow(
-                        `No pending transactions beyond sequence number ${selectedSequenceNumber}.`
-                      )
-                    );
-                    break;
-                  }
-                  selectedSequenceNumber = (Number(selectedSequenceNumber) + 1).toString();
-                  selectedTxn = txns.find(
-                    (txn) => txn.sequence_number.toString() === selectedSequenceNumber
-                  );
-                  break;
-
-                case 'back':
-                  break;
-              }
-
-              txns = await fetchTransactions(options.filter);
-              selectedTxn = txns.find(
-                (txn) => txn.sequence_number.toString() === selectedSequenceNumber
-              );
-
-              if (action === 'back') {
-                break; // Exit action loop, return to transaction list
-              }
-            }
+          if (txns.length === 0) {
+            console.log(chalk.yellow('No pending transactions found.'));
+            return;
           }
+
+          // Create table renderer
+          const safelyStorage = await getDb();
+          const tableRenderer = new ProposalTableRenderer(
+            txns,
+            owners,
+            Number(signaturesRequired),
+            signer.accountAddress.toString()
+          );
+
+          const detailsFormatter = new ProposalDetailsFormatter(aptos, owners, safelyStorage);
+
+          // Setup keyboard input
+          readline.emitKeypressEvents(process.stdin);
+          if (process.stdin.isTTY) {
+            process.stdin.setRawMode(true);
+          }
+
+          let shouldRefresh = false;
+          let actionMessage = '';
+          let tableRendered = false;
+
+          const renderFullTable = async () => {
+            console.clear();
+            console.log(await tableRenderer.render(multisig, detailsFormatter));
+            console.log(tableRenderer.renderSelectionStatus());
+            if (actionMessage) {
+              console.log('\n' + actionMessage);
+              console.log(chalk.gray('[Press any key to continue]'));
+            }
+            tableRendered = true;
+          };
+
+          const updateSelectionOnly = () => {
+            if (!tableRendered) return;
+            // Move cursor to status line area (2 lines up from bottom)
+            process.stdout.write('\x1b[3A'); // Move up 3 lines
+            process.stdout.write('\x1b[0J'); // Clear from cursor to end of screen
+            console.log(tableRenderer.renderSelectionStatus());
+          };
+
+          await renderFullTable();
+
+          // Handle keyboard input
+          process.stdin.on('keypress', async (str, key) => {
+            // Clear action message on any key press if it's showing
+            if (actionMessage) {
+              actionMessage = '';
+              await renderFullTable();
+              return;
+            }
+
+            if (key.name === 'q') {
+              if (process.stdin.isTTY) {
+                process.stdin.setRawMode(false);
+              }
+              process.exit(0);
+            } else if (key.name === 'up') {
+              tableRenderer.moveUp();
+              updateSelectionOnly(); // Just update the status line
+            } else if (key.name === 'down') {
+              tableRenderer.moveDown();
+              updateSelectionOnly(); // Just update the status line
+            } else if (key.name === 'return' || str === 'f' || str === 'F') {
+              tableRenderer.toggleExpanded();
+              await renderFullTable(); // Full render needed for expand/collapse
+            } else if (str === 'r' || str === 'R') {
+              shouldRefresh = true;
+            } else if (str === 'y' || str === 'Y' || str === 'n' || str === 'N') {
+              const selected = tableRenderer.getSelectedProposal();
+              if (selected) {
+                try {
+                  const voteYes = str === 'y' || str === 'Y';
+                  await handleVoteCommand(
+                    selected.sequenceNumber,
+                    voteYes,
+                    multisig,
+                    network,
+                    profile
+                  );
+                  actionMessage = chalk.green(
+                    `✅ Vote submitted: ${getExplorerUrl(network, 'txn/[hash]')}`
+                  );
+                  shouldRefresh = true;
+                } catch (error) {
+                  actionMessage = chalk.red(`❌ Vote failed: ${(error as Error).message}`);
+                }
+                await renderFullTable();
+              }
+            } else if (str === 'e' || str === 'E') {
+              const selected = tableRenderer.getSelectedProposal();
+              if (selected) {
+                try {
+                  await handleExecuteCommand(multisig, profile, network);
+                  actionMessage = chalk.green(
+                    `✅ Execute successful: ${getExplorerUrl(network, 'txn/[hash]')}`
+                  );
+                  shouldRefresh = true;
+                } catch (error) {
+                  actionMessage = chalk.red(`❌ Execute failed: ${(error as Error).message}`);
+                }
+                await renderFullTable();
+              }
+            }
+
+            // Refresh data if needed
+            if (shouldRefresh) {
+              const newTxns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
+              tableRenderer.updateTransactions(newTxns);
+              shouldRefresh = false;
+              await renderFullTable();
+            }
+          });
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
+          if (process.stdin.isTTY) {
+            process.stdin.setRawMode(false);
+          }
         }
       }
     );
 };
-
-function fetchTransactionChoices(filter: string) {
-  switch (filter) {
-    case 'pending':
-      return [
-        { name: 'View Details', value: 'details' },
-        { name: 'Execute Transaction', value: 'execute' },
-        { name: 'Vote Yes', value: 'vote_yes' },
-        { name: 'Vote No', value: 'vote_no' },
-        { name: 'Next', value: 'next' },
-        { name: 'Back', value: 'back' },
-      ];
-    case 'succeeded':
-      return [
-        { name: 'View Details', value: 'details' },
-        { name: 'Next', value: 'next' },
-        { name: 'Back', value: 'back' },
-      ];
-    case 'failed':
-      return [
-        { name: 'View Details', value: 'details' },
-        { name: 'Next', value: 'next' },
-        { name: 'Back', value: 'back' },
-      ];
-    default:
-      throw new Error(`Invalid txListType: ${filter}`);
-  }
-}
-
-function logTransactionDetails(txn: any) {
-  console.log(
-    JSON.stringify(
-      txn,
-      (key, value) =>
-        key === 'simulationChanges'
-          ? undefined
-          : typeof value === 'bigint'
-            ? value.toString()
-            : value instanceof Uint8Array
-              ? Buffer.from(value).toString('hex')
-              : value,
-      2
-    )
-  );
-}
-
-async function logExpectedBalanceChanges(aptos: Aptos, txn: any) {
-  try {
-    if (!txn.simulationChanges) {
-      console.log(
-        chalk.yellow(
-          `No Simulation Changes Detected for Transaction ${txn.sequence_number}. Transaction may fail to simulate.`
-        )
-      );
-      return;
-    }
-
-    console.log(chalk.blue('Expected Balance Changes:'));
-    console.log(
-      (await summarizeTransactionBalanceChanges(aptos, txn.simulationChanges)).toString()
-    );
-  } catch (e) {
-    console.log(chalk.yellow('Unable to Fetch Balance Changes: ', e));
-  }
-}
