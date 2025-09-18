@@ -32,7 +32,7 @@ export const registerVoteCommand = (program: Command) => {
         profile?: string;
       }) => {
         try {
-          const network = await ensureNetworkExists(options.network);
+          const network = await ensureNetworkExists(options.network, options.profile);
           const hash = await handleVoteCommand(
             options.sequenceNumber,
             options.approve,

@@ -1,6 +1,9 @@
 import { Low } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
 import { NetworkChoice } from './constants.js';
+import { getConfigPath } from './utils.js';
+import fs from 'fs';
+import { parse } from 'yaml';
 
 type Address = {
   alias: string;
@@ -147,9 +150,68 @@ export async function ensureMultisigAddressExists(multisigAddressOption?: string
   return storedAddress;
 }
 
-export async function ensureNetworkExists(networkOption?: NetworkChoice): Promise<NetworkChoice> {
+function inferNetworkFromProfile(profileName?: string): NetworkChoice | undefined {
+  if (!profileName) {
+    return undefined;
+  }
+
+  // Try both config paths to find the profile
+  const configPaths = ['.aptos/config.yaml', '.movement/config.yaml'];
+
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        const file = fs.readFileSync(configPath, 'utf8');
+        const profiles: Record<string, any> = parse(file).profiles;
+        const profileData = profiles[profileName];
+
+        if (profileData && profileData.network) {
+          const networkName = profileData.network.toLowerCase();
+
+          // Map profile network names to NetworkChoice
+          if (configPath.includes('movement')) {
+            switch (networkName) {
+              case 'testnet':
+                return 'movement-testnet';
+              case 'mainnet':
+                return 'movement-mainnet';
+            }
+          } else {
+            switch (networkName) {
+              case 'devnet':
+                return 'aptos-devnet';
+              case 'testnet':
+                return 'aptos-testnet';
+              case 'mainnet':
+                return 'aptos-mainnet';
+            }
+          }
+        }
+      } catch {
+        // Continue to next config path if this one fails
+        continue;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export async function ensureNetworkExists(
+  networkOption?: NetworkChoice,
+  profileOption?: string
+): Promise<NetworkChoice> {
   if (networkOption) {
     return networkOption;
+  }
+
+  // Try to infer from profile first
+  const profileName = profileOption || (await ProfileDefault.get());
+  if (profileName) {
+    const inferredNetwork = inferNetworkFromProfile(profileName);
+    if (inferredNetwork) {
+      return inferredNetwork;
+    }
   }
 
   const storedNetwork = await NetworkDefault.get();

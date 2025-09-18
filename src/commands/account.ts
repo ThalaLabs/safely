@@ -52,7 +52,7 @@ export const registerAccountCommand = (program: Command) => {
         };
         try {
           const profile = await ensureProfileExists(options.profile);
-          const network = await ensureNetworkExists(options.network);
+          const network = await ensureNetworkExists(options.network, options.profile);
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
           const preparedTxn = await aptos.transaction.build.simple({
@@ -123,7 +123,7 @@ export const registerAccountCommand = (program: Command) => {
         try {
           const multisig = await ensureMultisigAddressExists(options.multisigAddress);
           const profile = await ensureProfileExists(options.profile);
-          const network = await ensureNetworkExists(options.network);
+          const network = await ensureNetworkExists(options.network, options.profile);
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
 
