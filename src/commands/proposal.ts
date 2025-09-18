@@ -161,8 +161,9 @@ export const registerProposalCommand = (program: Command) => {
             } else if (str === 'y' || str === 'Y' || str === 'n' || str === 'N') {
               const selected = renderer.getSelectedProposal();
               if (selected) {
+                const voteYes = str === 'y' || str === 'Y';
+                process.stdout.write(`\n${voteYes ? 'Voting Yes' : 'Voting No'}...`);
                 try {
-                  const voteYes = str === 'y' || str === 'Y';
                   const hash = await handleVoteCommand(
                     selected.sequenceNumber,
                     voteYes,
@@ -170,11 +171,15 @@ export const registerProposalCommand = (program: Command) => {
                     network,
                     profile
                   );
+                  process.stdout.write(
+                    `\r✅ Vote submitted successfully: ${getExplorerUrl(network, `txn/${hash}`)}\n`
+                  );
                   actionMessage = chalk.green(
                     `✅ Vote submitted: ${getExplorerUrl(network, `txn/${hash}`)}`
                   );
                   shouldRefresh = true;
                 } catch (error) {
+                  process.stdout.write(`\r❌ Vote failed: ${(error as Error).message}\n`);
                   actionMessage = chalk.red(`❌ Vote failed: ${(error as Error).message}`);
                 }
                 renderFullTable();
@@ -182,13 +187,18 @@ export const registerProposalCommand = (program: Command) => {
             } else if (str === 'e' || str === 'E') {
               const selected = renderer.getSelectedProposal();
               if (selected) {
+                process.stdout.write('\nExecuting transaction...');
                 try {
                   const hash = await handleExecuteCommand(multisig, profile, network);
+                  process.stdout.write(
+                    `\r✅ Transaction executed successfully: ${getExplorerUrl(network, `txn/${hash}`)}\n`
+                  );
                   actionMessage = chalk.green(
                     `✅ Execute successful: ${getExplorerUrl(network, `txn/${hash}`)}`
                   );
                   shouldRefresh = true;
                 } catch (error) {
+                  process.stdout.write(`\r❌ Execution failed: ${(error as Error).message}\n`);
                   actionMessage = chalk.red(`❌ Execute failed: ${(error as Error).message}`);
                 }
                 renderFullTable();
