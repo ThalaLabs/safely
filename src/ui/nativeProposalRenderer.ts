@@ -294,7 +294,7 @@ export class NativeProposalRenderer {
     const headerLines = 4;
     const lineOffset = this.calculateLineOffset(previousIndex);
 
-    // Move to previous selection line
+    // Move to previous selection line and clear arrow (now just 2 spaces to overwrite "▶ ")
     process.stdout.write(`\x1b[${headerLines + lineOffset}H`); // Move to specific line
     process.stdout.write('  '); // Clear arrow with spaces
 

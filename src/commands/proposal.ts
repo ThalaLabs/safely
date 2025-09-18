@@ -127,12 +127,6 @@ export const registerProposalCommand = (program: Command) => {
             }
           };
 
-          const updateSelectionOnly = () => {
-            // Simple approach: just re-render without screen clear
-            console.log('\x1b[H\x1b[0J'); // Move to top and clear screen
-            console.log(renderer.render(multisig));
-          };
-
           renderFullTable();
 
           // Handle keyboard input
@@ -151,10 +145,14 @@ export const registerProposalCommand = (program: Command) => {
               process.exit(0);
             } else if (key.name === 'up') {
               renderer.moveUp();
-              updateSelectionOnly();
+              // Use a simple clear and redraw but without the jarring console.clear()
+              process.stdout.write('\x1b[H'); // Move to top without clearing
+              console.log(renderer.render(multisig));
             } else if (key.name === 'down') {
               renderer.moveDown();
-              updateSelectionOnly();
+              // Use a simple clear and redraw but without the jarring console.clear()
+              process.stdout.write('\x1b[H'); // Move to top without clearing
+              console.log(renderer.render(multisig));
             } else if (key.name === 'return' || str === 'f' || str === 'F') {
               renderer.toggleExpanded();
               renderFullTable(); // Full render needed for expand/collapse
