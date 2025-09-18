@@ -164,10 +164,11 @@ export class NativeProposalRenderer {
 
     details += chalk.gray('─'.repeat(100)) + '\n';
 
+    const createdDate = new Date(Number(txn.creation_time_secs) * 1000);
     details +=
       indent +
       chalk.gray('Created: ') +
-      chalk.gray(new Date().toISOString().replace('T', ' ').split('.')[0]) +
+      chalk.gray(createdDate.toISOString().replace('T', ' ').split('.')[0]) +
       '\n';
 
     if (txn.creator) {
