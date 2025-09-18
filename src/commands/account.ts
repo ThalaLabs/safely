@@ -21,7 +21,7 @@ export const registerAccountCommand = (program: Command) => {
   account
     .command('create')
     .description('Create a new multisig account')
-    .requiredOption(
+    .option(
       '-o, --additional-owners <addresses>',
       'Comma-separated list of additional owner addresses',
       validateAddresses
@@ -35,7 +35,7 @@ export const registerAccountCommand = (program: Command) => {
     .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .action(
       async (options: {
-        additionalOwners: string[];
+        additionalOwners?: string[];
         numSignaturesRequired: number;
         network?: NetworkChoice;
         profile?: string;
@@ -43,7 +43,12 @@ export const registerAccountCommand = (program: Command) => {
         const entryFunction = {
           function: '0x1::multisig_account::create_with_owners' as MoveFunctionId,
           typeArguments: [],
-          functionArguments: [options.additionalOwners, options.numSignaturesRequired, [], []],
+          functionArguments: [
+            options.additionalOwners || [],
+            options.numSignaturesRequired,
+            [],
+            [],
+          ],
         };
         try {
           const profile = await ensureProfileExists(options.profile);
