@@ -167,7 +167,7 @@ export class NativeProposalRenderer {
     details +=
       indent +
       chalk.gray('Created: ') +
-      new Date().toISOString().replace('T', ' ').split('.')[0] +
+      chalk.gray(new Date().toISOString().replace('T', ' ').split('.')[0]) +
       '\n';
 
     if (txn.creator) {
@@ -175,10 +175,10 @@ export class NativeProposalRenderer {
         this.safelyStorage.data,
         txn.creator
       );
-      details += indent + chalk.gray('Creator: ') + creatorAlias + '\n';
+      details += indent + chalk.gray('Creator: ') + chalk.gray(creatorAlias) + '\n';
     }
 
-    details += '\n' + indent + chalk.cyan('Votes:') + '\n';
+    details += '\n' + indent + chalk.gray('Votes:') + '\n';
 
     const voteMap = new Map<string, string>();
     txn.votes.forEach((vote: string) => {
@@ -197,15 +197,15 @@ export class NativeProposalRenderer {
       const ownerAlias = AddressBook.findAliasOrReturnAddress(this.safelyStorage.data, owner);
       const voteStatus = voteMap.get(owner);
       if (voteStatus === 'yes') {
-        details += indent + '  Y ' + ownerAlias + '\n';
+        details += indent + chalk.gray('  Y ' + ownerAlias) + '\n';
       } else if (voteStatus === 'no') {
-        details += indent + '  N ' + ownerAlias + '\n';
+        details += indent + chalk.gray('  N ' + ownerAlias) + '\n';
       } else {
-        details += indent + '  . ' + ownerAlias + '\n';
+        details += indent + chalk.gray('  . ' + ownerAlias) + '\n';
       }
     });
 
-    details += '\n' + indent + chalk.cyan('Payload:') + '\n';
+    details += '\n' + indent + chalk.gray('Payload:') + '\n';
     const payload = {
       function: txn.payload_decoded.function,
       type_arguments: txn.payload_decoded.typeArguments || [],
