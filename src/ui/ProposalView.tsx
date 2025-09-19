@@ -389,72 +389,94 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
 
       {/* Expanded details */}
       {expanded && (
-        <Box flexDirection="column" paddingLeft={2}>
+        <Box flexDirection="column" paddingLeft={2} gap={1}>
           <Text>{'─'.repeat(94)}</Text>
-          <Text>Created: {new Date(proposal.createdAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          })}</Text>
-          <Text>Creator: {proposal.creator}</Text>
-          <Text></Text>
 
-          <Text>Votes:</Text>
-          {proposal.yesVotes.map((voter, i) => {
-            const ownerIndex = owners.indexOf(voter);
-            const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
-            return (
-              <Text key={`yes-${i}`}>  Y {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
-            );
-          })}
-          {proposal.noVotes.map((voter, i) => {
-            const ownerIndex = owners.indexOf(voter);
-            const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
-            return (
-              <Text key={`no-${i}`}>  N {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
-            );
-          })}
-
-          <Text></Text>
-          <Text>Payload:</Text>
-          <Box paddingLeft={2}>
-            <Text>{safeStringify(proposal.payload)}</Text>
+          {/* Created & Creator Box */}
+          <Box borderStyle="single" paddingX={1}>
+            <Box flexDirection="column">
+              <Text bold>Details</Text>
+              <Text>Created: {new Date(proposal.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })}</Text>
+              <Text>Creator: {proposal.creator}</Text>
+            </Box>
           </Box>
 
-          {proposal.simulationStatus === 'NOK' && (
-            <>
-              <Text></Text>
-              <Text color="red">Simulation Status: Failed</Text>
-              {proposal.simulationError && (
-                <Text color="red">  VM Status: {proposal.simulationError}</Text>
-              )}
-            </>
-          )}
-
-          {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
-            <>
-              <Text></Text>
-              <Text dimColor>Balance Changes:</Text>
-              {proposal.balanceChanges.map((change: any, i) => {
-                // Use full address or alias if available
-                const addr = change.address?.toString() || '';
-
-                // Calculate the change amount
-                const changeAmount = change.balanceAfter - change.balanceBefore;
-                const changeSign = changeAmount >= 0 ? '+' : '';
-                const changeColor = changeAmount >= 0 ? 'green' : 'red';
-
+          {/* Votes Box */}
+          <Box borderStyle="single" paddingX={1}>
+            <Box flexDirection="column">
+              <Text bold>Votes</Text>
+              {proposal.yesVotes.map((voter, i) => {
+                const ownerIndex = owners.indexOf(voter);
+                const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
                 return (
-                  <Text key={i} color={changeColor}>
-                    {'  '}{addr}: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
-                  </Text>
+                  <Text key={`yes-${i}`} color="green">  ✓ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
                 );
               })}
-            </>
-          )}
+              {proposal.noVotes.map((voter, i) => {
+                const ownerIndex = owners.indexOf(voter);
+                const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
+                return (
+                  <Text key={`no-${i}`} color="red">  ✗ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
+                );
+              })}
+              {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
+                <Text dimColor>  No votes yet</Text>
+              )}
+            </Box>
+          </Box>
+
+          {/* Payload Box */}
+          <Box borderStyle="single" paddingX={1}>
+            <Box flexDirection="column">
+              <Text bold>Payload</Text>
+              <Box paddingTop={1}>
+                <Text>{safeStringify(proposal.payload)}</Text>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Simulation Box */}
+          <Box
+            borderStyle="single"
+            paddingX={1}
+            borderColor={proposal.simulationStatus === 'OK' ? 'green' : 'red'}
+          >
+            <Box flexDirection="column">
+              <Text bold>Simulation</Text>
+              <Text color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
+                Status: {proposal.simulationStatus === 'OK' ? 'Success' : 'Failed'}
+              </Text>
+              {proposal.simulationError && (
+                <Text color="red">VM Status: {proposal.simulationError}</Text>
+              )}
+
+              {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
+                <>
+                  <Text></Text>
+                  <Text dimColor>Balance Changes:</Text>
+                  {proposal.balanceChanges.map((change: any, i) => {
+                    const addr = change.address?.toString() || '';
+                    const changeAmount = change.balanceAfter - change.balanceBefore;
+                    const changeSign = changeAmount >= 0 ? '+' : '';
+                    const changeColor = changeAmount >= 0 ? 'green' : 'red';
+
+                    return (
+                      <Text key={i} color={changeColor}>
+                        {'  '}{addr}: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
+                      </Text>
+                    );
+                  })}
+                </>
+              )}
+            </Box>
+          </Box>
 
           <Text>{'─'.repeat(94)}</Text>
         </Box>
