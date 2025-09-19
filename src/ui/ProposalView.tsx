@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Text, useInput, useApp, render } from 'ink';
+import Link from 'ink-link';
 import chalk from 'chalk';
 import { Aptos } from '@aptos-labs/ts-sdk';
 import {
@@ -12,15 +13,39 @@ import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../signing.js';
 
+// Helper function to truncate address uniformly
+function truncateAddress(address: string): string {
+  if (address.length > 10) {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  }
+  return address;
+}
+
+// Reusable AddressLink component
+interface AddressLinkProps {
+  address: string;
+  network: string;
+  color?: string;
+}
+
+const AddressLink: React.FC<AddressLinkProps> = ({ address, network, color }) => {
+  const url = getExplorerUrl(network as any, `account/${address}`);
+  const displayAddr = truncateAddress(address);
+
+  return (
+    <Link url={url}>
+      {color ? <Text color={color}>{displayAddr}</Text> : displayAddr}
+    </Link>
+  );
+}
+
 // Helper function to format function ID
 function formatFunctionId(functionId: string): string {
   const parts = functionId.split('::');
   if (parts.length === 3) {
     const [address, module, func] = parts;
     // Shorten the address for display
-    const shortAddr = address.length > 10
-      ? `${address.slice(0, 6)}...${address.slice(-4)}`
-      : address;
+    const shortAddr = truncateAddress(address);
     return `${shortAddr}::${module}::${func}`;
   }
   return functionId;
@@ -284,7 +309,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       {/* Header */}
       <Box borderStyle="single" paddingX={1}>
         <Box flexDirection="column">
-          <Text bold>{'Multisig: '.padEnd(10)}{multisigAddress.slice(0, 6)}...{multisigAddress.slice(-4)}</Text>
+          <Text bold>{'Multisig: '.padEnd(10)}<AddressLink address={multisigAddress} network={network} /></Text>
           <Text bold>{'Network:'.padEnd(10)}{network}</Text>
           <Text bold>{'#Pending:'.padEnd(10)}{proposals.length}</Text>
           <Text bold>{'Updated:'.padEnd(10)}{lastRefreshed.toLocaleTimeString('en-US')}</Text>
@@ -311,6 +336,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               expanded={expandedRows.has(proposal.sequenceNumber)}
               owners={owners}
               signaturesRequired={signaturesRequired}
+              network={network}
             />
           ))}
         </Box>
@@ -348,13 +374,15 @@ interface ProposalRowProps {
   expanded: boolean;
   owners: string[];
   signaturesRequired: number;
+  network: string;
 }
 
 const ProposalRow: React.FC<ProposalRowProps> = ({
   proposal,
   selected,
   expanded,
-  owners
+  owners,
+  network
 }) => {
   // Format votes display (like native renderer)
   const yesCount = proposal.yesVotes.length;
@@ -407,7 +435,7 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
                 minute: '2-digit',
                 second: '2-digit'
               })}</Text>
-              <Text>Creator: {proposal.creator}</Text>
+              <Text>Creator: <AddressLink address={proposal.creator} network={network} /></Text>
             </Box>
           </Box>
 
@@ -417,16 +445,18 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
               <Text bold>Votes</Text>
               {proposal.yesVotes.map((voter, i) => {
                 const ownerIndex = owners.indexOf(voter);
-                const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
                 return (
-                  <Text key={`yes-${i}`} color="green">  ✓ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
+                  <Text key={`yes-${i}`} color="green">
+                    {'  '}✓ <AddressLink address={voter} network={network} /> {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}
+                  </Text>
                 );
               })}
               {proposal.noVotes.map((voter, i) => {
                 const ownerIndex = owners.indexOf(voter);
-                const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
                 return (
-                  <Text key={`no-${i}`} color="red">  ✗ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
+                  <Text key={`no-${i}`} color="red">
+                    {'  '}✗ <AddressLink address={voter} network={network} /> {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}
+                  </Text>
                 );
               })}
               {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
@@ -472,7 +502,7 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
 
                     return (
                       <Text key={i} color={changeColor}>
-                        {'  '}{addr}: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
+                        {'  '}<AddressLink address={addr} network={network} />: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
                       </Text>
                     );
                   })}
