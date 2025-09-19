@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Text, useInput, useApp, render } from 'ink';
 import Link from 'ink-link';
 import chalk from 'chalk';
@@ -28,7 +28,7 @@ interface AddressLinkProps {
   color?: string;
 }
 
-const AddressLink: React.FC<AddressLinkProps> = ({ address, network, color }) => {
+const AddressLink: React.FC<AddressLinkProps> = React.memo(({ address, network, color }) => {
   const url = getExplorerUrl(network as any, `account/${address}`);
   const displayAddr = truncateAddress(address);
 
@@ -37,7 +37,7 @@ const AddressLink: React.FC<AddressLinkProps> = ({ address, network, color }) =>
       {color ? <Text color={color}>{displayAddr}</Text> : displayAddr}
     </Link>
   );
-}
+});
 
 // Helper function to format function ID
 function formatFunctionId(functionId: string): string {
@@ -97,7 +97,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string>('');
   const [owners, setOwners] = useState<string[]>([]);
@@ -203,7 +202,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       );
 
       setProposals(processedProposals);
-      setLastRefreshed(new Date());
       setError(null);
     } catch (err) {
       setError(`Failed to fetch proposals: ${err}`);
@@ -314,8 +312,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         <Box flexDirection="column">
           <Text bold>{'Multisig: '.padEnd(10)}<AddressLink address={multisigAddress} network={network} /></Text>
           <Text bold>{'Network:'.padEnd(10)}{network}</Text>
-          <Text bold>{'#Pending:'.padEnd(10)}{proposals.length}</Text>
-          <Text bold>{'Updated:'.padEnd(10)}{lastRefreshed.toLocaleTimeString('en-US')}</Text>
         </Box>
       </Box>
 
@@ -337,7 +333,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               proposal={proposal}
               selected={index === selectedIndex}
               expanded={expandedRows.has(proposal.sequenceNumber)}
-              owners={owners}
+              totalOwners={owners.length}
               signaturesRequired={signaturesRequired}
               network={network}
             />
@@ -375,7 +371,7 @@ interface ProposalRowProps {
   proposal: ProposalData;
   selected: boolean;
   expanded: boolean;
-  owners: string[];
+  totalOwners: number;
   signaturesRequired: number;
   network: string;
 }
@@ -384,14 +380,31 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   proposal,
   selected,
   expanded,
-  owners,
+  totalOwners,
   network
 }) => {
   // Format votes display (like native renderer)
   const yesCount = proposal.yesVotes.length;
   const noCount = proposal.noVotes.length;
-  const totalOwners = owners.length;
   const pendingCount = totalOwners - yesCount - noCount;
+
+  // Memoize heavy computations
+  const payloadString = useMemo(() =>
+    proposal.payload ? safeStringify(proposal.payload) : null,
+    [proposal.payload]
+  );
+
+  const createdDateString = useMemo(() =>
+    new Date(proposal.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }),
+    [proposal.createdAt]
+  );
 
   let voteDisplay = '';
   for (let i = 0; i < yesCount; i++) voteDisplay += 'Y';
@@ -430,14 +443,7 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
           <Box borderStyle="single" paddingX={1}>
             <Box flexDirection="column">
               <Text bold>Details</Text>
-              <Text>Created: {new Date(proposal.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-              })}</Text>
+              <Text>Created: {createdDateString}</Text>
               <Text>Creator: <AddressLink address={proposal.creator} network={network} /></Text>
             </Box>
           </Box>
@@ -446,22 +452,16 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
           <Box borderStyle="single" paddingX={1}>
             <Box flexDirection="column">
               <Text bold>Votes</Text>
-              {proposal.yesVotes.map((voter, i) => {
-                const ownerIndex = owners.indexOf(voter);
-                return (
-                  <Text key={`yes-${i}`} color="green">
-                    {'  '}✓ <AddressLink address={voter} network={network} /> {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}
-                  </Text>
-                );
-              })}
-              {proposal.noVotes.map((voter, i) => {
-                const ownerIndex = owners.indexOf(voter);
-                return (
-                  <Text key={`no-${i}`} color="red">
-                    {'  '}✗ <AddressLink address={voter} network={network} /> {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}
-                  </Text>
-                );
-              })}
+              {proposal.yesVotes.map((voter, i) => (
+                <Text key={`yes-${i}`} color="green">
+                  {'  '}✓ <AddressLink address={voter} network={network} />
+                </Text>
+              ))}
+              {proposal.noVotes.map((voter, i) => (
+                <Text key={`no-${i}`} color="red">
+                  {'  '}✗ <AddressLink address={voter} network={network} />
+                </Text>
+              ))}
               {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
                 <Text dimColor>  No votes yet</Text>
               )}
@@ -473,7 +473,7 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
             <Box flexDirection="column">
               <Text bold>Payload</Text>
               <Box paddingTop={1}>
-                <Text>{safeStringify(proposal.payload)}</Text>
+                <Text>{payloadString}</Text>
               </Box>
             </Box>
           </Box>
@@ -518,6 +518,17 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
         </Box>
       )}
     </Box>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if these specific things change
+  return (
+    prevProps.selected === nextProps.selected &&
+    prevProps.expanded === nextProps.expanded &&
+    prevProps.proposal.sequenceNumber === nextProps.proposal.sequenceNumber &&
+    prevProps.proposal.yesVotes.length === nextProps.proposal.yesVotes.length &&
+    prevProps.proposal.noVotes.length === nextProps.proposal.noVotes.length &&
+    prevProps.totalOwners === nextProps.totalOwners &&
+    prevProps.network === nextProps.network
   );
 });
 
