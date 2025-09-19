@@ -33,6 +33,7 @@
   "devDependencies": {
     "@changesets/cli": "^2.27.11",
     "@types/node": "^22.10.1",
+    "@types/react": "^19.1.13",
     "husky": "^9.1.7",
     "prettier": "^3.4.2",
     "ts-node": "^10.9.2",
@@ -69,7 +70,9 @@
     "@thalalabs/multisig-utils": "0.1.4",
     "chalk": "5.3.0",
     "commander": "^12.1.0",
+    "ink": "^6.3.1",
     "lowdb": "^7.0.1",
+    "react": "^19.1.1",
     "yaml": "^2.6.1"
   },
   "engines": {
