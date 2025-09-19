@@ -280,46 +280,57 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   }
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" gap={1}>
       {/* Header */}
-      <Box marginBottom={1}>
+      <Box borderStyle="round" paddingX={1}>
         <Text bold>
           {multisigAddress.slice(0, 6)}...{multisigAddress.slice(-4)} | {network} | {proposals.length} pending proposals | Last refreshed: {lastRefreshed.toLocaleTimeString()}
         </Text>
       </Box>
 
-      {/* Table Header */}
-      <Box>
-        <Text>{'  #       │ Function                                        │ Votes     │ Simulation  │ Actions'}</Text>
-      </Box>
-      <Box>
-        <Text>{'  ' + '─'.repeat(94)}</Text>
-      </Box>
+      {/* Table */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          {/* Table Header */}
+          <Box>
+            <Text>{'  #       │ Function                                        │ Votes     │ Simulation  │ Actions'}</Text>
+          </Box>
+          <Box>
+            <Text>{'  ' + '─'.repeat(94)}</Text>
+          </Box>
 
-      {/* Proposals */}
-      {proposals.map((proposal, index) => (
-        <ProposalRow
-          key={`proposal-${proposal.sequenceNumber}`}
-          proposal={proposal}
-          selected={index === selectedIndex}
-          expanded={expandedRows.has(proposal.sequenceNumber)}
-          owners={owners}
-          signaturesRequired={signaturesRequired}
-        />
-      ))}
+          {/* Proposals */}
+          {proposals.map((proposal, index) => (
+            <ProposalRow
+              key={`proposal-${proposal.sequenceNumber}`}
+              proposal={proposal}
+              selected={index === selectedIndex}
+              expanded={expandedRows.has(proposal.sequenceNumber)}
+              owners={owners}
+              signaturesRequired={signaturesRequired}
+            />
+          ))}
+        </Box>
+      </Box>
 
       {/* Action message */}
       {actionMessage && (
-        <Box marginTop={1}>
-          <Text>{actionMessage}</Text>
-          {!actionMessage.includes('...') && (
-            <Text dimColor>[Press any key to continue]</Text>
-          )}
+        <Box
+          borderStyle="double"
+          borderColor={actionMessage.includes('✅') ? 'green' : actionMessage.includes('❌') ? 'red' : 'yellow'}
+          padding={1}
+        >
+          <Box flexDirection="column">
+            <Text>{actionMessage}</Text>
+            {!actionMessage.includes('...') && (
+              <Text dimColor>[Press any key to continue]</Text>
+            )}
+          </Box>
         </Box>
       )}
 
       {/* Footer */}
-      <Box marginTop={1}>
+      <Box borderStyle="single" paddingX={1}>
         <Text dimColor>
           [↑/↓] Navigate | [Enter/F] Toggle details | [Y]es [N]o [E]xe | [R]efresh | [Q]uit
         </Text>
