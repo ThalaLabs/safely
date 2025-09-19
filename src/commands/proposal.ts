@@ -49,6 +49,7 @@ export const registerProposalCommand = (program: Command) => {
     )
     .option('-p, --profile <string>', 'Profile to use for the transaction')
     .option('-l, --limit <number>', 'number of transactions to fetch (default: 20)', validateUInt)
+    .option('--ink', 'Use new Ink-based UI (experimental)')
     .action(
       async (options: {
         multisigAddress: string;
@@ -58,6 +59,7 @@ export const registerProposalCommand = (program: Command) => {
         filter: 'pending' | 'succeeded' | 'failed';
         sequenceNumber?: number;
         limit?: number;
+        ink?: boolean;
       }) => {
         const network = await ensureNetworkExists(options.network, options.profile);
         const profile = await ensureProfileExists(options.profile);
@@ -69,8 +71,21 @@ export const registerProposalCommand = (program: Command) => {
           fullnode = profileData.fullnode;
         }
 
-        const aptos = initAptos(network, fullnode);
         const multisig = await ensureMultisigAddressExists(options.multisigAddress);
+
+        // Use Ink UI if flag is set
+        if (options.ink) {
+          const { runProposalInk } = await import('./proposalInk.js');
+          return runProposalInk({
+            multisigAddress: multisig,
+            network,
+            fullnode,
+            profile,
+            sequenceNumber: options.sequenceNumber,
+          });
+        }
+
+        const aptos = initAptos(network, fullnode);
 
         try {
           // Get multisig owners and signature requirements
