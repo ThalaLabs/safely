@@ -219,11 +219,8 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     }
   }, [aptos, fetchProposals]);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(fetchProposals, 30000);
-    return () => clearInterval(interval);
-  }, [fetchProposals]);
+  // Removed auto-refresh to prevent flicker
+  // Manual refresh available with [R] key
 
   // Handle vote
   const handleVote = async (seqNum: number, approved: boolean) => {
@@ -286,7 +283,13 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     } else if (input === 'e' && proposals[selectedIndex]) {
       handleExecute();
     } else if (input === 'r') {
-      fetchProposals();
+      setActionMessage(chalk.yellow('Refreshing...'));
+      fetchProposals().then(() => {
+        setActionMessage(chalk.green('✅ Refreshed'));
+        setTimeout(() => setActionMessage(''), 2000);
+      }).catch((err) => {
+        setActionMessage(chalk.red(`❌ Refresh failed: ${err}`));
+      });
     } else if (input === 'q') {
       exit();
     }
