@@ -95,7 +95,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   const { exit } = useApp();
   const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [isSelectedExpanded, setIsSelectedExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string>('');
@@ -260,22 +260,13 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
     if (key.upArrow) {
       setSelectedIndex(prev => Math.max(0, prev - 1));
+      setIsSelectedExpanded(false); // Collapse when navigating
     } else if (key.downArrow) {
       setSelectedIndex(prev => Math.min(proposals.length - 1, prev + 1));
+      setIsSelectedExpanded(false); // Collapse when navigating
     } else if (key.return || input === 'f') {
-      // Toggle expand
-      setExpandedRows(prev => {
-        const newSet = new Set(prev);
-        const proposal = proposals[selectedIndex];
-        if (proposal) {
-          if (newSet.has(proposal.sequenceNumber)) {
-            newSet.delete(proposal.sequenceNumber);
-          } else {
-            newSet.add(proposal.sequenceNumber);
-          }
-        }
-        return newSet;
-      });
+      // Toggle expand for current selection only
+      setIsSelectedExpanded(prev => !prev);
     } else if ((input === 'y' || input === 'n') && proposals[selectedIndex]) {
       handleVote(proposals[selectedIndex].sequenceNumber, input === 'y');
     } else if (input === 'e' && proposals[selectedIndex]) {
@@ -332,7 +323,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               key={`proposal-${proposal.sequenceNumber}`}
               proposal={proposal}
               selected={index === selectedIndex}
-              expanded={expandedRows.has(proposal.sequenceNumber)}
+              expanded={index === selectedIndex && isSelectedExpanded}
               totalOwners={owners.length}
               signaturesRequired={signaturesRequired}
               network={network}
@@ -376,18 +367,16 @@ interface ProposalRowProps {
   network: string;
 }
 
-const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
+interface ProposalExpandedContentProps {
+  proposal: ProposalData;
+  network: string;
+}
+
+// Separate component for expanded content - always shows fresh data when mounted
+const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
   proposal,
-  selected,
-  expanded,
-  totalOwners,
   network
 }) => {
-  // Format votes display (like native renderer)
-  const yesCount = proposal.yesVotes.length;
-  const noCount = proposal.noVotes.length;
-  const pendingCount = totalOwners - yesCount - noCount;
-
   // Memoize heavy computations
   const payloadString = useMemo(() =>
     proposal.payload ? safeStringify(proposal.payload) : null,
@@ -405,6 +394,101 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
     }),
     [proposal.createdAt]
   );
+
+  return (
+    <Box flexDirection="column" paddingLeft={2} gap={1}>
+      <Text>{'─'.repeat(94)}</Text>
+
+      {/* Created & Creator Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Details</Text>
+          <Text>Created: {createdDateString}</Text>
+          <Text>Creator: <AddressLink address={proposal.creator} network={network} /></Text>
+        </Box>
+      </Box>
+
+      {/* Votes Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Votes</Text>
+          {proposal.yesVotes.map((voter, i) => (
+            <Text key={`yes-${i}`} color="green">
+              {'  '}Y <AddressLink address={voter} network={network} />
+            </Text>
+          ))}
+          {proposal.noVotes.map((voter, i) => (
+            <Text key={`no-${i}`} color="red">
+              {'  '}N <AddressLink address={voter} network={network} />
+            </Text>
+          ))}
+          {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
+            <Text dimColor>  No votes yet</Text>
+          )}
+        </Box>
+      </Box>
+
+      {/* Payload Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Payload</Text>
+          <Box paddingTop={1}>
+            <Text>{payloadString}</Text>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Simulation Box */}
+      <Box
+        borderStyle="single"
+        paddingX={1}
+        borderColor={proposal.simulationStatus === 'OK' ? 'green' : 'red'}
+      >
+        <Box flexDirection="column">
+          <Text bold>Simulation</Text>
+          <Text color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
+            Status: {proposal.simulationStatus === 'OK' ? 'Success' : 'Failed'}
+          </Text>
+          {proposal.simulationError && (
+            <Text color="red">VM Status: {proposal.simulationError}</Text>
+          )}
+
+          {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
+            <>
+              <Text></Text>
+              <Text dimColor>Balance Changes:</Text>
+              {proposal.balanceChanges.map((change: any, i) => {
+                const addr = change.address?.toString() || '';
+                const changeAmount = change.balanceAfter - change.balanceBefore;
+                const changeSign = changeAmount >= 0 ? '+' : '';
+                const changeColor = changeAmount >= 0 ? 'green' : 'red';
+
+                return (
+                  <Text key={i} color={changeColor}>
+                    {'  '}<AddressLink address={addr} network={network} />: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
+                  </Text>
+                );
+              })}
+            </>
+          )}
+        </Box>
+      </Box>
+
+      <Text>{'─'.repeat(94)}</Text>
+    </Box>
+  );
+};
+
+const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
+  proposal,
+  selected,
+  expanded,
+  totalOwners,
+  network
+}) => {
+  const yesCount = proposal.yesVotes.length;
+  const noCount = proposal.noVotes.length;
+  const pendingCount = totalOwners - yesCount - noCount;
 
   let voteDisplay = '';
   for (let i = 0; i < yesCount; i++) voteDisplay += 'Y';
@@ -434,89 +518,7 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
         </Text>
       </Box>
 
-      {/* Expanded details */}
-      {expanded && (
-        <Box flexDirection="column" paddingLeft={2} gap={1}>
-          <Text>{'─'.repeat(94)}</Text>
-
-          {/* Created & Creator Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Details</Text>
-              <Text>Created: {createdDateString}</Text>
-              <Text>Creator: <AddressLink address={proposal.creator} network={network} /></Text>
-            </Box>
-          </Box>
-
-          {/* Votes Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Votes</Text>
-              {proposal.yesVotes.map((voter, i) => (
-                <Text key={`yes-${i}`} color="green">
-                  {'  '}✓ <AddressLink address={voter} network={network} />
-                </Text>
-              ))}
-              {proposal.noVotes.map((voter, i) => (
-                <Text key={`no-${i}`} color="red">
-                  {'  '}✗ <AddressLink address={voter} network={network} />
-                </Text>
-              ))}
-              {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
-                <Text dimColor>  No votes yet</Text>
-              )}
-            </Box>
-          </Box>
-
-          {/* Payload Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Payload</Text>
-              <Box paddingTop={1}>
-                <Text>{payloadString}</Text>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Simulation Box */}
-          <Box
-            borderStyle="single"
-            paddingX={1}
-            borderColor={proposal.simulationStatus === 'OK' ? 'green' : 'red'}
-          >
-            <Box flexDirection="column">
-              <Text bold>Simulation</Text>
-              <Text color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
-                Status: {proposal.simulationStatus === 'OK' ? 'Success' : 'Failed'}
-              </Text>
-              {proposal.simulationError && (
-                <Text color="red">VM Status: {proposal.simulationError}</Text>
-              )}
-
-              {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
-                <>
-                  <Text></Text>
-                  <Text dimColor>Balance Changes:</Text>
-                  {proposal.balanceChanges.map((change: any, i) => {
-                    const addr = change.address?.toString() || '';
-                    const changeAmount = change.balanceAfter - change.balanceBefore;
-                    const changeSign = changeAmount >= 0 ? '+' : '';
-                    const changeColor = changeAmount >= 0 ? 'green' : 'red';
-
-                    return (
-                      <Text key={i} color={changeColor}>
-                        {'  '}<AddressLink address={addr} network={network} />: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
-                      </Text>
-                    );
-                  })}
-                </>
-              )}
-            </Box>
-          </Box>
-
-          <Text>{'─'.repeat(94)}</Text>
-        </Box>
-      )}
+      {expanded && <ProposalExpandedContent proposal={proposal} network={network} />}
     </Box>
   );
 }, (prevProps, nextProps) => {
@@ -524,11 +526,8 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   return (
     prevProps.selected === nextProps.selected &&
     prevProps.expanded === nextProps.expanded &&
-    prevProps.proposal.sequenceNumber === nextProps.proposal.sequenceNumber &&
     prevProps.proposal.yesVotes.length === nextProps.proposal.yesVotes.length &&
-    prevProps.proposal.noVotes.length === nextProps.proposal.noVotes.length &&
-    prevProps.totalOwners === nextProps.totalOwners &&
-    prevProps.network === nextProps.network
+    prevProps.proposal.noVotes.length === nextProps.proposal.noVotes.length
   );
 });
 
