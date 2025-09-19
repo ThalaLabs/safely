@@ -296,23 +296,78 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         <Box flexDirection="column">
           {/* Table Header */}
           <Box>
-            <Text>{'  #       │ Function                                        │ Votes     │ Simulation  │ Actions'}</Text>
-          </Box>
-          <Box>
-            <Text>{'  ' + '─'.repeat(94)}</Text>
+            <Text bold>
+              {'  '}
+              {'#'.padEnd(8)}
+              {'│ '}
+              {'Function'.padEnd(48)}
+              {'│ '}
+              {'Votes'.padEnd(10)}
+              {'│ '}
+              {'Simulation'.padEnd(12)}
+              {'│ '}
+              {'Actions'}
+            </Text>
           </Box>
 
-          {/* Proposals */}
-          {proposals.map((proposal, index) => (
-            <ProposalRow
-              key={`proposal-${proposal.sequenceNumber}`}
-              proposal={proposal}
-              selected={index === selectedIndex}
-              expanded={expandedRows.has(proposal.sequenceNumber)}
-              owners={owners}
-              signaturesRequired={signaturesRequired}
-            />
-          ))}
+          {/* Separator */}
+          <Box>
+            <Text>{'  '}{'─'.repeat(108)}</Text>
+          </Box>
+
+          {/* Table Rows */}
+          {proposals.map((proposal, index) => {
+            // Format votes display
+            const yesCount = proposal.yesVotes.length;
+            const noCount = proposal.noVotes.length;
+            const totalOwners = owners.length;
+            const pendingCount = totalOwners - yesCount - noCount;
+
+            let voteDisplay = '';
+            for (let i = 0; i < yesCount; i++) voteDisplay += 'Y';
+            for (let i = 0; i < noCount; i++) voteDisplay += 'N';
+            for (let i = 0; i < pendingCount; i++) voteDisplay += '.';
+
+            const isSelected = index === selectedIndex;
+            const seqNumStr = String(proposal.sequenceNumber).padEnd(8);
+            const funcStr = proposal.function.length > 47
+              ? proposal.function.substring(0, 44) + '...'
+              : proposal.function.padEnd(47);
+            const votesStr = voteDisplay.padEnd(10);
+            const simStatus = proposal.simulationStatus.padEnd(12);
+            const actions = '[Y]es [N]o [E]xe [F]ull';
+
+            return (
+              <React.Fragment key={`row-${proposal.sequenceNumber}`}>
+                <Box>
+                  <Text inverse={isSelected}>
+                    {isSelected ? '▶ ' : '  '}
+                    {seqNumStr}
+                    {'│ '}
+                    {funcStr}
+                    {' │ '}
+                    {votesStr}
+                    {'│ '}
+                  </Text>
+                  <Text inverse={isSelected} color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
+                    {simStatus}
+                  </Text>
+                  <Text inverse={isSelected}>
+                    {'│ '}
+                    {actions}
+                  </Text>
+                </Box>
+
+                {/* Expanded details */}
+                {expandedRows.has(proposal.sequenceNumber) && (
+                  <ProposalDetails
+                    proposal={proposal}
+                    owners={owners}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
         </Box>
       </Box>
 
@@ -342,148 +397,102 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   );
 };
 
-interface ProposalRowProps {
+interface ProposalDetailsProps {
   proposal: ProposalData;
-  selected: boolean;
-  expanded: boolean;
   owners: string[];
-  signaturesRequired: number;
 }
 
-const ProposalRow: React.FC<ProposalRowProps> = ({
+const ProposalDetails: React.FC<ProposalDetailsProps> = ({
   proposal,
-  selected,
-  expanded,
   owners
 }) => {
-  // Format votes display (like native renderer)
-  const yesCount = proposal.yesVotes.length;
-  const noCount = proposal.noVotes.length;
-  const totalOwners = owners.length;
-  const pendingCount = totalOwners - yesCount - noCount;
-
-  let voteDisplay = '';
-  for (let i = 0; i < yesCount; i++) voteDisplay += 'Y';
-  for (let i = 0; i < noCount; i++) voteDisplay += 'N';
-  for (let i = 0; i < pendingCount; i++) voteDisplay += '.';
-
-  const votesStr = voteDisplay.padEnd(9);
-
-  // Format simulation status
-  const simColor = proposal.simulationStatus === 'OK' ? 'green' : 'red';
-  const simText = proposal.simulationStatus.padEnd(11);
-
-  // Format function name (truncate if needed)
-  const funcName = proposal.function.length > 47
-    ? proposal.function.substring(0, 44) + '...'
-    : proposal.function.padEnd(47);
-
-  // Format actions
-  const actions = '[Y]es [N]o [E]xe [F]ull';
-
   return (
-    <Box flexDirection="column">
-      {/* Main row */}
-      <Box>
-        <Text inverse={selected}>
-          {selected ? '▶' : ' '} {String(proposal.sequenceNumber).padEnd(7)} │ {funcName} │ {votesStr} │ <Text color={simColor}>{simText}</Text> │ {actions}
-        </Text>
+    <Box flexDirection="column" paddingLeft={2} paddingTop={1} gap={1}>
+      {/* Created & Creator Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Details</Text>
+          <Text>Created: {new Date(proposal.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          })}</Text>
+          <Text>Creator: {proposal.creator}</Text>
+        </Box>
       </Box>
 
-      {/* Expanded details */}
-      {expanded && (
-        <Box flexDirection="column" paddingLeft={2} gap={1}>
-          <Text>{'─'.repeat(94)}</Text>
-
-          {/* Created & Creator Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Details</Text>
-              <Text>Created: {new Date(proposal.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-              })}</Text>
-              <Text>Creator: {proposal.creator}</Text>
-            </Box>
-          </Box>
-
-          {/* Votes Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Votes</Text>
-              {proposal.yesVotes.map((voter, i) => {
-                const ownerIndex = owners.indexOf(voter);
-                const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
-                return (
-                  <Text key={`yes-${i}`} color="green">  ✓ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
-                );
-              })}
-              {proposal.noVotes.map((voter, i) => {
-                const ownerIndex = owners.indexOf(voter);
-                const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
-                return (
-                  <Text key={`no-${i}`} color="red">  ✗ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
-                );
-              })}
-              {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
-                <Text dimColor>  No votes yet</Text>
-              )}
-            </Box>
-          </Box>
-
-          {/* Payload Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Payload</Text>
-              <Box paddingTop={1}>
-                <Text>{safeStringify(proposal.payload)}</Text>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Simulation Box */}
-          <Box
-            borderStyle="single"
-            paddingX={1}
-            borderColor={proposal.simulationStatus === 'OK' ? 'green' : 'red'}
-          >
-            <Box flexDirection="column">
-              <Text bold>Simulation</Text>
-              <Text color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
-                Status: {proposal.simulationStatus === 'OK' ? 'Success' : 'Failed'}
-              </Text>
-              {proposal.simulationError && (
-                <Text color="red">VM Status: {proposal.simulationError}</Text>
-              )}
-
-              {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
-                <>
-                  <Text></Text>
-                  <Text dimColor>Balance Changes:</Text>
-                  {proposal.balanceChanges.map((change: any, i) => {
-                    const addr = change.address?.toString() || '';
-                    const changeAmount = change.balanceAfter - change.balanceBefore;
-                    const changeSign = changeAmount >= 0 ? '+' : '';
-                    const changeColor = changeAmount >= 0 ? 'green' : 'red';
-
-                    return (
-                      <Text key={i} color={changeColor}>
-                        {'  '}{addr}: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
-                      </Text>
-                    );
-                  })}
-                </>
-              )}
-            </Box>
-          </Box>
-
-          <Text>{'─'.repeat(94)}</Text>
+      {/* Votes Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Votes</Text>
+          {proposal.yesVotes.map((voter, i) => {
+            const ownerIndex = owners.indexOf(voter);
+            const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
+            return (
+              <Text key={`yes-${i}`} color="green">  ✓ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
+            );
+          })}
+          {proposal.noVotes.map((voter, i) => {
+            const ownerIndex = owners.indexOf(voter);
+            const displayAddr = voter.slice(0, 6) + '...' + voter.slice(-4);
+            return (
+              <Text key={`no-${i}`} color="red">  ✗ {displayAddr} {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}</Text>
+            );
+          })}
+          {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
+            <Text dimColor>  No votes yet</Text>
+          )}
         </Box>
-      )}
+      </Box>
+
+      {/* Payload Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Payload</Text>
+          <Box paddingTop={1}>
+            <Text>{safeStringify(proposal.payload)}</Text>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Simulation Box */}
+      <Box
+        borderStyle="single"
+        paddingX={1}
+        borderColor={proposal.simulationStatus === 'OK' ? 'green' : 'red'}
+      >
+        <Box flexDirection="column">
+          <Text bold>Simulation</Text>
+          <Text color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
+            Status: {proposal.simulationStatus === 'OK' ? 'Success' : 'Failed'}
+          </Text>
+          {proposal.simulationError && (
+            <Text color="red">VM Status: {proposal.simulationError}</Text>
+          )}
+
+          {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
+            <>
+              <Text></Text>
+              <Text dimColor>Balance Changes:</Text>
+              {proposal.balanceChanges.map((change: any, i) => {
+                const addr = change.address?.toString() || '';
+                const changeAmount = change.balanceAfter - change.balanceBefore;
+                const changeSign = changeAmount >= 0 ? '+' : '';
+                const changeColor = changeAmount >= 0 ? 'green' : 'red';
+
+                return (
+                  <Text key={i} color={changeColor}>
+                    {'  '}{addr}: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
+                  </Text>
+                );
+              })}
+            </>
+          )}
+        </Box>
+      </Box>
     </Box>
   );
 };
