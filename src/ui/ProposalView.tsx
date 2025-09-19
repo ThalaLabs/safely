@@ -380,7 +380,7 @@ interface ProposalRowProps {
   network: string;
 }
 
-const ProposalRow: React.FC<ProposalRowProps> = ({
+const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   proposal,
   selected,
   expanded,
@@ -519,7 +519,7 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
       )}
     </Box>
   );
-};
+});
 
 export const runProposalView = (props: ProposalViewProps) => {
   // Check if TTY is available
