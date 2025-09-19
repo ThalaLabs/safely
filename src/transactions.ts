@@ -1,4 +1,3 @@
-import { AddressBook, getDb } from './storage.js';
 import { NetworkChoice } from './constants.js';
 import { getExplorerUrl } from './utils.js';
 import {
@@ -11,54 +10,6 @@ import {
 import chalk from 'chalk';
 import LedgerSigner from './ledger/LedgerSigner.js';
 import { signAndSubmitTransaction } from './signing.js';
-import { MultisigTransactionDecoded, fetchPendingTxns } from '@thalalabs/multisig-utils';
-
-// Pending Txns
-
-export async function fetchPendingTxnsSafely(
-  aptos: Aptos,
-  multisig: string,
-  sequence_number: number | undefined
-): Promise<Array<MultisigTransactionDecoded>> {
-  let pendingTxns = await fetchPendingTxns(aptos, multisig, sequence_number);
-
-  let safelyStorage = await getDb();
-  const votesDecoded = pendingTxns.map((p) =>
-    p.votes.map((key) => {
-      const parsedVoter = key.split(' ');
-      let voterAddress = parsedVoter[0];
-      let vote = parsedVoter[1];
-      const voter = AddressBook.findAliasOrReturnAddress(safelyStorage.data, voterAddress);
-      return `${voter} ${vote}`;
-    })
-  );
-
-  pendingTxns.forEach((txn, i) => (txn.votes = votesDecoded[i]));
-
-  // return all transactions
-  // @ts-ignore
-  return pendingTxns;
-}
-
-// Helper functions for proposal UI
-export async function canUserVote(
-  aptos: Aptos,
-  multisigAddress: string,
-  userAddress: string,
-  sequenceNumber: number
-): Promise<boolean> {
-  try {
-    const [canVote] = await aptos.view<[boolean]>({
-      payload: {
-        function: '0x1::multisig_account::can_vote',
-        functionArguments: [userAddress, multisigAddress, sequenceNumber],
-      },
-    });
-    return canVote;
-  } catch {
-    return false;
-  }
-}
 
 export async function canUserExecute(
   aptos: Aptos,

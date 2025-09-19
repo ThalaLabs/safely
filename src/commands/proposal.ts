@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import readline from 'readline';
-import { fetchPendingTxnsSafely } from '../transactions.js';
 import { validateAddress, validateUInt } from '../validators.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { initAptos, getExplorerUrl } from '../utils.js';
@@ -15,6 +14,7 @@ import { handleExecuteCommand } from './execute.js';
 import { handleVoteCommand } from './vote.js';
 import { loadProfile } from '../signing.js';
 import { NativeProposalRenderer } from '../ui/nativeProposalRenderer.js';
+import { fetchPendingTxns } from '@thalalabs/multisig-utils';
 
 export const registerProposalCommand = (program: Command) => {
   program
@@ -91,7 +91,7 @@ export const registerProposalCommand = (program: Command) => {
 
           // Fetch pending transactions
           console.log(chalk.blue(`Fetching pending transactions for multisig: ${multisig}`));
-          const txns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
+          const txns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
 
           if (txns.length === 0) {
             console.log(chalk.yellow('No pending transactions found.'));
@@ -106,7 +106,8 @@ export const registerProposalCommand = (program: Command) => {
             Number(signaturesRequired),
             signer.accountAddress.toString(),
             safelyStorage,
-            network
+            network,
+            aptos
           );
 
           // Setup keyboard input
@@ -118,23 +119,23 @@ export const registerProposalCommand = (program: Command) => {
           let shouldRefresh = false;
           let actionMessage = '';
 
-          const renderFullTable = () => {
+          const renderFullTable = async () => {
             console.clear();
-            console.log(renderer.render(multisig));
+            console.log(await renderer.render(multisig));
             if (actionMessage) {
               console.log('\n' + actionMessage);
               console.log(chalk.gray('[Press any key to continue]'));
             }
           };
 
-          renderFullTable();
+          await renderFullTable();
 
           // Handle keyboard input
           process.stdin.on('keypress', async (str, key) => {
             // Clear action message on any key press if it's showing
             if (actionMessage) {
               actionMessage = '';
-              renderFullTable();
+              await renderFullTable();
               return;
             }
 
@@ -147,15 +148,15 @@ export const registerProposalCommand = (program: Command) => {
               renderer.moveUp();
               // Use a simple clear and redraw but without the jarring console.clear()
               process.stdout.write('\x1b[H'); // Move to top without clearing
-              console.log(renderer.render(multisig));
+              console.log(await renderer.render(multisig));
             } else if (key.name === 'down') {
               renderer.moveDown();
               // Use a simple clear and redraw but without the jarring console.clear()
               process.stdout.write('\x1b[H'); // Move to top without clearing
-              console.log(renderer.render(multisig));
+              console.log(await renderer.render(multisig));
             } else if (key.name === 'return' || str === 'f' || str === 'F') {
               renderer.toggleExpanded();
-              renderFullTable(); // Full render needed for expand/collapse
+              await renderFullTable(); // Full render needed for expand/collapse
             } else if (str === 'r' || str === 'R') {
               shouldRefresh = true;
             } else if (str === 'y' || str === 'Y' || str === 'n' || str === 'N') {
@@ -182,7 +183,7 @@ export const registerProposalCommand = (program: Command) => {
                   process.stdout.write(`\r❌ Vote failed: ${(error as Error).message}\n`);
                   actionMessage = chalk.red(`❌ Vote failed: ${(error as Error).message}`);
                 }
-                renderFullTable();
+                await renderFullTable();
               }
             } else if (str === 'e' || str === 'E') {
               const selected = renderer.getSelectedProposal();
@@ -201,16 +202,16 @@ export const registerProposalCommand = (program: Command) => {
                   process.stdout.write(`\r❌ Execution failed: ${(error as Error).message}\n`);
                   actionMessage = chalk.red(`❌ Execute failed: ${(error as Error).message}`);
                 }
-                renderFullTable();
+                await renderFullTable();
               }
             }
 
             // Refresh data if needed
             if (shouldRefresh) {
-              const newTxns = await fetchPendingTxnsSafely(aptos, multisig, options.sequenceNumber);
+              const newTxns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
               renderer.updateTransactions(newTxns);
               shouldRefresh = false;
-              renderFullTable();
+              await renderFullTable();
             }
           });
         } catch (error) {
