@@ -297,7 +297,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   }
 
   return (
-    <Box flexDirection="column" gap={1}>
+    <Box flexDirection="column">
       {/* Header */}
       <Box borderStyle="single" paddingX={1}>
         <Box flexDirection="column">
