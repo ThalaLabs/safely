@@ -2,8 +2,7 @@ import { Aptos } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { ensureMultisigAddressExists, ensureNetworkExists } from '../storage.js';
-import { MultisigTransaction, summarizeTransactionBalanceChanges } from '@thalalabs/multisig-utils';
-import { decode } from '@thalalabs/multisig-utils';
+import { MultisigTransaction, decode, getBalanceChangesData } from '@thalalabs/multisig-utils';
 import { validateAddress, validateUInt } from '../validators.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { initAptos } from '../utils.js';
@@ -85,15 +84,35 @@ export async function handleSimulateCommand(
 
     console.log(chalk.blue(`\nSimulation Result: `, simulateMultisigTx.success ? '✅' : '❌'));
 
-    // TODO: Display expected changes in sanitized format
-    // 3. Display expected changes in human-readable form
-    // console.log(chalk.blue('\nExpected Changes:'));
-    // await summarizeTransactionSimulation(simulateMultisigTx.changes);
+    // 4. Display simulation status and balance changes
+    if (!simulateMultisigTx.success) {
+      console.log(chalk.red(`\nSimulation failed with VM status: ${simulateMultisigTx.vm_status}`));
+    } else {
+      console.log(chalk.green('\nSimulation succeeded'));
 
-    // 4. Display balance changes in human-readable form
-    console.log(chalk.blue('Expected Balance Changes:'));
-    const table = await summarizeTransactionBalanceChanges(aptos, simulateMultisigTx.changes);
-    console.log(table.toString());
+      // Display balance changes
+      try {
+        const balanceChanges = await getBalanceChangesData(aptos, simulateMultisigTx.changes);
+        if (balanceChanges.length > 0) {
+          console.log(chalk.blue('\nExpected Balance Changes:'));
+          for (const change of balanceChanges) {
+            const diff = change.balanceAfter - change.balanceBefore;
+            const sign = diff >= 0 ? '+' : '';
+            const color = diff >= 0 ? chalk.green : chalk.red;
+            console.log(
+              `  ${chalk.gray(change.address.slice(0, 6) + '...' + change.address.slice(-4))}: ` +
+                `${change.balanceBefore} → ${change.balanceAfter} ${change.symbol} ` +
+                `(${color(sign + diff.toFixed(4))})`
+            );
+          }
+        } else {
+          console.log(chalk.gray('\nNo balance changes detected'));
+        }
+      } catch (error) {
+        // If balance changes can't be fetched, just show success message
+        console.log(chalk.blue('Transaction would execute successfully if approved.'));
+      }
+    }
   } catch (error) {
     console.error(chalk.red(`Error: ${(error as Error).message}`));
   }
