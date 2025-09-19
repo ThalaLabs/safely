@@ -389,7 +389,7 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
 
       {/* Expanded details */}
       {expanded && (
-        <Box flexDirection="column" paddingLeft={2} paddingTop={1} paddingBottom={1}>
+        <Box flexDirection="column" paddingLeft={2}>
           <Text>{'─'.repeat(94)}</Text>
           <Text>Created: {new Date(proposal.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
