@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Text, useInput, useApp, render } from 'ink';
 import Link from 'ink-link';
 import chalk from 'chalk';
@@ -28,7 +28,7 @@ interface AddressLinkProps {
   color?: string;
 }
 
-const AddressLink: React.FC<AddressLinkProps> = ({ address, network, color }) => {
+const AddressLink: React.FC<AddressLinkProps> = React.memo(({ address, network, color }) => {
   const url = getExplorerUrl(network as any, `account/${address}`);
   const displayAddr = truncateAddress(address);
 
@@ -37,7 +37,7 @@ const AddressLink: React.FC<AddressLinkProps> = ({ address, network, color }) =>
       {color ? <Text color={color}>{displayAddr}</Text> : displayAddr}
     </Link>
   );
-}
+});
 
 // Helper function to format function ID
 function formatFunctionId(functionId: string): string {
@@ -95,9 +95,8 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   const { exit } = useApp();
   const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [isSelectedExpanded, setIsSelectedExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string>('');
   const [owners, setOwners] = useState<string[]>([]);
@@ -203,7 +202,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       );
 
       setProposals(processedProposals);
-      setLastRefreshed(new Date());
       setError(null);
     } catch (err) {
       setError(`Failed to fetch proposals: ${err}`);
@@ -219,11 +217,8 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     }
   }, [aptos, fetchProposals]);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(fetchProposals, 30000);
-    return () => clearInterval(interval);
-  }, [fetchProposals]);
+  // Removed auto-refresh to prevent flicker
+  // Manual refresh available with [R] key
 
   // Handle vote
   const handleVote = async (seqNum: number, approved: boolean) => {
@@ -265,28 +260,25 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
     if (key.upArrow) {
       setSelectedIndex(prev => Math.max(0, prev - 1));
+      setIsSelectedExpanded(false); // Collapse when navigating
     } else if (key.downArrow) {
       setSelectedIndex(prev => Math.min(proposals.length - 1, prev + 1));
+      setIsSelectedExpanded(false); // Collapse when navigating
     } else if (key.return || input === 'f') {
-      // Toggle expand
-      setExpandedRows(prev => {
-        const newSet = new Set(prev);
-        const proposal = proposals[selectedIndex];
-        if (proposal) {
-          if (newSet.has(proposal.sequenceNumber)) {
-            newSet.delete(proposal.sequenceNumber);
-          } else {
-            newSet.add(proposal.sequenceNumber);
-          }
-        }
-        return newSet;
-      });
+      // Toggle expand for current selection only
+      setIsSelectedExpanded(prev => !prev);
     } else if ((input === 'y' || input === 'n') && proposals[selectedIndex]) {
       handleVote(proposals[selectedIndex].sequenceNumber, input === 'y');
     } else if (input === 'e' && proposals[selectedIndex]) {
       handleExecute();
     } else if (input === 'r') {
-      fetchProposals();
+      setActionMessage(chalk.yellow('Refreshing...'));
+      fetchProposals().then(() => {
+        setActionMessage(chalk.green('✅ Refreshed'));
+        setTimeout(() => setActionMessage(''), 2000);
+      }).catch((err) => {
+        setActionMessage(chalk.red(`❌ Refresh failed: ${err}`));
+      });
     } else if (input === 'q') {
       exit();
     }
@@ -311,8 +303,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         <Box flexDirection="column">
           <Text bold>{'Multisig: '.padEnd(10)}<AddressLink address={multisigAddress} network={network} /></Text>
           <Text bold>{'Network:'.padEnd(10)}{network}</Text>
-          <Text bold>{'#Pending:'.padEnd(10)}{proposals.length}</Text>
-          <Text bold>{'Updated:'.padEnd(10)}{lastRefreshed.toLocaleTimeString('en-US')}</Text>
         </Box>
       </Box>
 
@@ -333,8 +323,8 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               key={`proposal-${proposal.sequenceNumber}`}
               proposal={proposal}
               selected={index === selectedIndex}
-              expanded={expandedRows.has(proposal.sequenceNumber)}
-              owners={owners}
+              expanded={index === selectedIndex && isSelectedExpanded}
+              totalOwners={owners.length}
               signaturesRequired={signaturesRequired}
               network={network}
             />
@@ -372,22 +362,132 @@ interface ProposalRowProps {
   proposal: ProposalData;
   selected: boolean;
   expanded: boolean;
-  owners: string[];
+  totalOwners: number;
   signaturesRequired: number;
   network: string;
 }
 
-const ProposalRow: React.FC<ProposalRowProps> = ({
+interface ProposalExpandedContentProps {
+  proposal: ProposalData;
+  network: string;
+}
+
+// Separate component for expanded content - always shows fresh data when mounted
+const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
+  proposal,
+  network
+}) => {
+  // Memoize heavy computations
+  const payloadString = useMemo(() =>
+    proposal.payload ? safeStringify(proposal.payload) : null,
+    [proposal.payload]
+  );
+
+  const createdDateString = useMemo(() =>
+    new Date(proposal.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }),
+    [proposal.createdAt]
+  );
+
+  return (
+    <Box flexDirection="column" paddingLeft={2} gap={1}>
+      <Text>{'─'.repeat(94)}</Text>
+
+      {/* Created & Creator Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Details</Text>
+          <Text>Created: {createdDateString}</Text>
+          <Text>Creator: <AddressLink address={proposal.creator} network={network} /></Text>
+        </Box>
+      </Box>
+
+      {/* Votes Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Votes</Text>
+          {proposal.yesVotes.map((voter, i) => (
+            <Text key={`yes-${i}`} color="green">
+              {'  '}Y <AddressLink address={voter} network={network} />
+            </Text>
+          ))}
+          {proposal.noVotes.map((voter, i) => (
+            <Text key={`no-${i}`} color="red">
+              {'  '}N <AddressLink address={voter} network={network} />
+            </Text>
+          ))}
+          {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
+            <Text dimColor>  No votes yet</Text>
+          )}
+        </Box>
+      </Box>
+
+      {/* Payload Box */}
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>Payload</Text>
+          <Box paddingTop={1}>
+            <Text>{payloadString}</Text>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Simulation Box */}
+      <Box
+        borderStyle="single"
+        paddingX={1}
+        borderColor={proposal.simulationStatus === 'OK' ? 'green' : 'red'}
+      >
+        <Box flexDirection="column">
+          <Text bold>Simulation</Text>
+          <Text color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
+            Status: {proposal.simulationStatus === 'OK' ? 'Success' : 'Failed'}
+          </Text>
+          {proposal.simulationError && (
+            <Text color="red">VM Status: {proposal.simulationError}</Text>
+          )}
+
+          {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
+            <>
+              <Text></Text>
+              <Text dimColor>Balance Changes:</Text>
+              {proposal.balanceChanges.map((change: any, i) => {
+                const addr = change.address?.toString() || '';
+                const changeAmount = change.balanceAfter - change.balanceBefore;
+                const changeSign = changeAmount >= 0 ? '+' : '';
+                const changeColor = changeAmount >= 0 ? 'green' : 'red';
+
+                return (
+                  <Text key={i} color={changeColor}>
+                    {'  '}<AddressLink address={addr} network={network} />: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
+                  </Text>
+                );
+              })}
+            </>
+          )}
+        </Box>
+      </Box>
+
+      <Text>{'─'.repeat(94)}</Text>
+    </Box>
+  );
+};
+
+const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   proposal,
   selected,
   expanded,
-  owners,
+  totalOwners,
   network
 }) => {
-  // Format votes display (like native renderer)
   const yesCount = proposal.yesVotes.length;
   const noCount = proposal.noVotes.length;
-  const totalOwners = owners.length;
   const pendingCount = totalOwners - yesCount - noCount;
 
   let voteDisplay = '';
@@ -418,105 +518,18 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
         </Text>
       </Box>
 
-      {/* Expanded details */}
-      {expanded && (
-        <Box flexDirection="column" paddingLeft={2} gap={1}>
-          <Text>{'─'.repeat(94)}</Text>
-
-          {/* Created & Creator Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Details</Text>
-              <Text>Created: {new Date(proposal.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-              })}</Text>
-              <Text>Creator: <AddressLink address={proposal.creator} network={network} /></Text>
-            </Box>
-          </Box>
-
-          {/* Votes Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Votes</Text>
-              {proposal.yesVotes.map((voter, i) => {
-                const ownerIndex = owners.indexOf(voter);
-                return (
-                  <Text key={`yes-${i}`} color="green">
-                    {'  '}✓ <AddressLink address={voter} network={network} /> {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}
-                  </Text>
-                );
-              })}
-              {proposal.noVotes.map((voter, i) => {
-                const ownerIndex = owners.indexOf(voter);
-                return (
-                  <Text key={`no-${i}`} color="red">
-                    {'  '}✗ <AddressLink address={voter} network={network} /> {ownerIndex >= 0 ? `(Owner ${ownerIndex + 1})` : ''}
-                  </Text>
-                );
-              })}
-              {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
-                <Text dimColor>  No votes yet</Text>
-              )}
-            </Box>
-          </Box>
-
-          {/* Payload Box */}
-          <Box borderStyle="single" paddingX={1}>
-            <Box flexDirection="column">
-              <Text bold>Payload</Text>
-              <Box paddingTop={1}>
-                <Text>{safeStringify(proposal.payload)}</Text>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Simulation Box */}
-          <Box
-            borderStyle="single"
-            paddingX={1}
-            borderColor={proposal.simulationStatus === 'OK' ? 'green' : 'red'}
-          >
-            <Box flexDirection="column">
-              <Text bold>Simulation</Text>
-              <Text color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
-                Status: {proposal.simulationStatus === 'OK' ? 'Success' : 'Failed'}
-              </Text>
-              {proposal.simulationError && (
-                <Text color="red">VM Status: {proposal.simulationError}</Text>
-              )}
-
-              {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
-                <>
-                  <Text></Text>
-                  <Text dimColor>Balance Changes:</Text>
-                  {proposal.balanceChanges.map((change: any, i) => {
-                    const addr = change.address?.toString() || '';
-                    const changeAmount = change.balanceAfter - change.balanceBefore;
-                    const changeSign = changeAmount >= 0 ? '+' : '';
-                    const changeColor = changeAmount >= 0 ? 'green' : 'red';
-
-                    return (
-                      <Text key={i} color={changeColor}>
-                        {'  '}<AddressLink address={addr} network={network} />: {change.balanceBefore} → {change.balanceAfter} {change.symbol} ({changeSign}{changeAmount.toFixed(4)})
-                      </Text>
-                    );
-                  })}
-                </>
-              )}
-            </Box>
-          </Box>
-
-          <Text>{'─'.repeat(94)}</Text>
-        </Box>
-      )}
+      {expanded && <ProposalExpandedContent proposal={proposal} network={network} />}
     </Box>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if these specific things change
+  return (
+    prevProps.selected === nextProps.selected &&
+    prevProps.expanded === nextProps.expanded &&
+    prevProps.proposal.yesVotes.length === nextProps.proposal.yesVotes.length &&
+    prevProps.proposal.noVotes.length === nextProps.proposal.noVotes.length
+  );
+});
 
 export const runProposalView = (props: ProposalViewProps) => {
   // Check if TTY is available
