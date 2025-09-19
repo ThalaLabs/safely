@@ -282,10 +282,13 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   return (
     <Box flexDirection="column" gap={1}>
       {/* Header */}
-      <Box borderStyle="round" paddingX={1}>
-        <Text bold>
-          {multisigAddress.slice(0, 6)}...{multisigAddress.slice(-4)} | {network} | {proposals.length} pending proposals | Last refreshed: {lastRefreshed.toLocaleTimeString()}
-        </Text>
+      <Box borderStyle="single" paddingX={1}>
+        <Box flexDirection="column">
+          <Text bold>{'Multisig: '.padEnd(10)}{multisigAddress.slice(0, 6)}...{multisigAddress.slice(-4)}</Text>
+          <Text bold>{'Network:'.padEnd(10)}{network}</Text>
+          <Text bold>{'#Pending:'.padEnd(10)}{proposals.length}</Text>
+          <Text bold>{'Updated:'.padEnd(10)}{lastRefreshed.toLocaleTimeString('en-US')}</Text>
+        </Box>
       </Box>
 
       {/* Table */}
