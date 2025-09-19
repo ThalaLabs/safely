@@ -340,20 +340,34 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             return (
               <React.Fragment key={`row-${proposal.sequenceNumber}`}>
                 <Box>
-                  <Text inverse={isSelected}>
+                  <Text>
                     {isSelected ? '▶ ' : '  '}
+                  </Text>
+                  <Text inverse={isSelected}>
                     {seqNumStr}
+                  </Text>
+                  <Text>
                     {'│ '}
+                  </Text>
+                  <Text inverse={isSelected}>
                     {funcStr}
+                  </Text>
+                  <Text>
                     {' │ '}
+                  </Text>
+                  <Text inverse={isSelected}>
                     {votesStr}
+                  </Text>
+                  <Text>
                     {'│ '}
                   </Text>
                   <Text inverse={isSelected} color={proposal.simulationStatus === 'OK' ? 'green' : 'red'}>
                     {simStatus}
                   </Text>
-                  <Text inverse={isSelected}>
+                  <Text>
                     {'│ '}
+                  </Text>
+                  <Text inverse={isSelected}>
                     {actions}
                   </Text>
                 </Box>
