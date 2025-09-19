@@ -1,18 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Text, useInput, useApp, Static, render } from 'ink';
+import { Box, Text, useInput, useApp, render } from 'ink';
 import chalk from 'chalk';
 import { Aptos } from '@aptos-labs/ts-sdk';
 import {
   fetchPendingTxns,
   MultisigTransactionDecoded,
-  getBalanceChangesData,
-  BalanceChange
+  getBalanceChangesData
 } from '@thalalabs/multisig-utils';
 import { initAptos, getExplorerUrl } from '../utils.js';
-import { handleExecuteCommand } from './execute.js';
-import { handleVoteCommand } from './vote.js';
+import { handleExecuteCommand } from '../commands/execute.js';
+import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../signing.js';
-import { getDb } from '../storage.js';
 
 // Helper function to format function ID
 function formatFunctionId(functionId: string): string {
@@ -30,7 +28,7 @@ function formatFunctionId(functionId: string): string {
 
 // Helper to safely stringify objects with BigInt
 function safeStringify(obj: any, indent: number = 2): string {
-  return JSON.stringify(obj, (key, value) => {
+  return JSON.stringify(obj, (_key, value) => {
     if (typeof value === 'bigint') {
       return value.toString();
     }
@@ -38,7 +36,7 @@ function safeStringify(obj: any, indent: number = 2): string {
   }, indent);
 }
 
-interface ProposalInkProps {
+interface ProposalViewProps {
   multisigAddress: string;
   network: string;
   fullnode?: string;
@@ -62,7 +60,7 @@ interface ProposalData {
   hasVoted: boolean;
 }
 
-const ProposalInkApp: React.FC<ProposalInkProps> = ({
+const ProposalView: React.FC<ProposalViewProps> = ({
   multisigAddress,
   network,
   fullnode,
@@ -342,8 +340,7 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
   proposal,
   selected,
   expanded,
-  owners,
-  signaturesRequired
+  owners
 }) => {
   // Format votes display (like native renderer)
   const yesCount = proposal.yesVotes.length;
@@ -455,19 +452,18 @@ const ProposalRow: React.FC<ProposalRowProps> = ({
   );
 };
 
-export const runProposalInk = (props: ProposalInkProps) => {
+export const runProposalView = (props: ProposalViewProps) => {
   // Check if TTY is available
   if (!process.stdin.isTTY) {
-    console.error('Error: Ink UI requires an interactive terminal (TTY).');
-    console.error('The --ink flag is not supported in non-interactive environments.');
-    console.error('Please run without the --ink flag or in an interactive terminal.');
+    console.error('Error: This command requires an interactive terminal (TTY).');
+    console.error('Please run this command in an interactive terminal.');
     process.exit(1);
   }
 
   // Enable raw mode for keyboard input
   process.stdin.setRawMode(true);
 
-  render(<ProposalInkApp {...props} />, {
+  render(<ProposalView {...props} />, {
     exitOnCtrlC: false // We'll handle exit ourselves with 'q' key
   });
 };

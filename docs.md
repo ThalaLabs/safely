@@ -157,13 +157,9 @@ Options:
                                     "movement-mainnet", "movement-testnet",
                                     "custom")
   --fullnode <url>                  Fullnode URL for custom network
-  -f, --filter <status>             filter proposals by status (default:
-                                    "pending")
   -s, --sequence-number <number>    fetch transaction with specific sequence
                                     number
   -p, --profile <string>            Profile to use for the transaction
-  -l, --limit <number>              number of transactions to fetch (default:
-                                    20)
   -h, --help                        display help for command
 ```
 
