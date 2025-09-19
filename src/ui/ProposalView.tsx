@@ -396,7 +396,7 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
   );
 
   return (
-    <Box flexDirection="column" paddingLeft={2} gap={1}>
+    <Box flexDirection="column" paddingLeft={2}>
       <Text>{'─'.repeat(94)}</Text>
 
       {/* Created & Creator Box */}
