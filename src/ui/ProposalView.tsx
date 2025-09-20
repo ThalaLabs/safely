@@ -82,6 +82,7 @@ interface ProposalData {
   balanceChanges?: any[];
   txn: MultisigTransactionDecoded;
   canExecute: boolean;
+  canReject: boolean;
   hasVoted: boolean;
 }
 
@@ -182,6 +183,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           const hasVoted = txn.yesVotes.some((addr: any) => addr.toString() === signerAddress) ||
                            txn.noVotes.some((addr: any) => addr.toString() === signerAddress);
           const canExecute = txn.yesVotes.length >= signaturesRequired;
+          const canReject = txn.noVotes.length >= signaturesRequired;
 
           return {
             sequenceNumber: txn.sequence_number,
@@ -196,6 +198,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             balanceChanges,
             txn,
             canExecute,
+            canReject,
             hasVoted
           };
         })
@@ -239,21 +242,23 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   };
 
   // Handle execute
-  const handleExecute = async () => {
+  const handleExecute = async (reject: boolean = false) => {
     try {
-      setActionMessage(chalk.yellow('Executing transaction...'));
-      const hash = await handleExecuteCommand(multisigAddress, profile, network as any);
-      setActionMessage(chalk.green(`✅ Execute successful: ${getExplorerUrl(network as any, `txn/${hash}`)}`));
+      const action = reject ? 'Rejecting' : 'Executing';
+      const actionPast = reject ? 'Reject' : 'Execute';
+      setActionMessage(chalk.yellow(`${action} transaction...`));
+      const hash = await handleExecuteCommand(multisigAddress, profile, network as any, reject);
+      setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as any, `txn/${hash}`)}`));
       await fetchProposals();
     } catch (error) {
-      setActionMessage(chalk.red(`❌ Execute failed: ${(error as Error).message}`));
+      setActionMessage(chalk.red(`❌ ${reject ? 'Reject' : 'Execute'} failed: ${(error as Error).message}`));
     }
   };
 
   // Handle keyboard input
   useInput((input: string, key: any) => {
     // Clear action message on any key if showing
-    if (actionMessage && !['y', 'n', 'e'].includes(input)) {
+    if (actionMessage && !['y', 'n', 'e', 'r'].includes(input)) {
       setActionMessage('');
       return;
     }
@@ -270,14 +275,20 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     } else if ((input === 'y' || input === 'n') && proposals[selectedIndex]) {
       handleVote(proposals[selectedIndex].sequenceNumber, input === 'y');
     } else if (input === 'e' && proposals[selectedIndex]) {
-      handleExecute();
-    } else if (input === 'r') {
-      setActionMessage(chalk.yellow('Refreshing...'));
+      if (proposals[selectedIndex].canExecute) {
+        handleExecute(false);
+      }
+    } else if (input === 'r' && proposals[selectedIndex]) {
+      if (proposals[selectedIndex].canReject) {
+        handleExecute(true);
+      }
+    } else if (input === 'l') {
+      setActionMessage(chalk.yellow('Loading...'));
       fetchProposals().then(() => {
-        setActionMessage(chalk.green('✅ Refreshed'));
+        setActionMessage(chalk.green('✅ Loaded'));
         setTimeout(() => setActionMessage(''), 2000);
       }).catch((err) => {
-        setActionMessage(chalk.red(`❌ Refresh failed: ${err}`));
+        setActionMessage(chalk.red(`❌ Load failed: ${err}`));
       });
     } else if (input === 'q') {
       exit();
@@ -297,7 +308,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   }
 
   return (
-    <Box flexDirection="column" gap={1}>
+    <Box flexDirection="column">
       {/* Header */}
       <Box borderStyle="single" paddingX={1}>
         <Box flexDirection="column">
@@ -327,6 +338,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               totalOwners={owners.length}
               signaturesRequired={signaturesRequired}
               network={network}
+              signerAddress={signerAddress}
             />
           ))}
         </Box>
@@ -351,7 +363,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       {/* Footer */}
       <Box borderStyle="single" paddingX={1}>
         <Text dimColor>
-          [↑/↓] Navigate | [Enter/F] Toggle details | [Y]es [N]o [E]xe | [R]efresh | [Q]uit
+          [↑/↓] Navigate | [Enter/F] Toggle details | [Y]es [N]o [E]xe [R]eject | [L]oad | [Q]uit
         </Text>
       </Box>
     </Box>
@@ -365,6 +377,7 @@ interface ProposalRowProps {
   totalOwners: number;
   signaturesRequired: number;
   network: string;
+  signerAddress: string;
 }
 
 interface ProposalExpandedContentProps {
@@ -484,7 +497,8 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   selected,
   expanded,
   totalOwners,
-  network
+  network,
+  signerAddress
 }) => {
   const yesCount = proposal.yesVotes.length;
   const noCount = proposal.noVotes.length;
@@ -506,8 +520,20 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
     ? proposal.function.substring(0, 44) + '...'
     : proposal.function.padEnd(47);
 
-  // Format actions
-  const actions = '[Y]es [N]o [E]xe [F]ull';
+  // Format actions based on what's possible
+  let actions = '';
+  if (!proposal.hasVoted) {
+    actions += '[Y]es [N]o ';
+  }
+  if (proposal.canExecute && proposal.canReject) {
+    actions += '[E]xe [R]eject ';
+  } else if (proposal.canExecute) {
+    actions += '[E]xecute ';
+  } else if (proposal.canReject) {
+    actions += '[R]eject ';
+  }
+  actions += '[F]ull';
+  actions = actions.padEnd(24);
 
   return (
     <Box flexDirection="column">
