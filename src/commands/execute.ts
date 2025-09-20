@@ -24,17 +24,25 @@ export const registerExecuteCommand = (program: Command) => {
     .description('Execute a multisig transaction')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .option('-p, --profile <string>', 'Profile to use for the transaction')
+    .option('--reject', 'Reject the transaction instead of executing it')
     .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
     .action(
-      async (options: { multisigAddress?: string; network?: NetworkChoice; profile?: string }) => {
+      async (options: {
+        multisigAddress?: string;
+        network?: NetworkChoice;
+        profile?: string;
+        reject?: boolean;
+      }) => {
         try {
           const network = await ensureNetworkExists(options.network, options.profile);
           const hash = await handleExecuteCommand(
             await ensureMultisigAddressExists(options.multisigAddress),
             await ensureProfileExists(options.profile),
-            network
+            network,
+            options.reject
           );
-          console.log(chalk.green(`Execute ok: ${getExplorerUrl(network, `txn/${hash}`)}`));
+          const action = options.reject ? 'Reject' : 'Execute';
+          console.log(chalk.green(`${action} ok: ${getExplorerUrl(network, `txn/${hash}`)}`));
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }
@@ -45,7 +53,8 @@ export const registerExecuteCommand = (program: Command) => {
 export async function handleExecuteCommand(
   multisig: string,
   profile: string,
-  network: NetworkChoice
+  network: NetworkChoice,
+  reject?: boolean
 ): Promise<string> {
   try {
     const { signer, fullnode } = await loadProfile(profile, network);
@@ -81,13 +90,33 @@ export async function handleExecuteCommand(
       }),
     ]);
 
-    if (!canReject && !canExecute) {
-      throw new Error('No executable transaction found');
-    }
+    // Determine which action to take based on the --reject flag
+    let txn: SimpleTransaction;
+    let actionName: string;
 
-    const txn = canReject
-      ? await buildRejectTxn(aptos, signer.accountAddress, multisig)
-      : await buildApproveTxn(aptos, signer.accountAddress, multisig);
+    if (reject) {
+      // User explicitly wants to reject
+      if (!canReject) {
+        throw new Error(
+          'Cannot reject this transaction (insufficient no votes or already executed)'
+        );
+      }
+      txn = await buildRejectTxn(aptos, signer.accountAddress, multisig);
+      actionName = 'Reject';
+    } else {
+      // User wants to execute (default behavior)
+      if (!canExecute) {
+        if (canReject) {
+          throw new Error(
+            'Cannot execute this transaction (insufficient yes votes). You can reject it with --reject flag'
+          );
+        } else {
+          throw new Error('Cannot execute this transaction (insufficient yes votes)');
+        }
+      }
+      txn = await buildApproveTxn(aptos, signer.accountAddress, multisig);
+      actionName = 'Execute';
+    }
 
     // Sign & Submit transaction
     const pendingTxn = await signAndSubmitTransaction(aptos, signer, txn);
@@ -97,7 +126,7 @@ export async function handleExecuteCommand(
     if (success) {
       return pendingTxn.hash;
     } else {
-      throw new Error(`${canReject ? 'Reject' : 'Execute'} failed with status ${vm_status}`);
+      throw new Error(`${actionName} failed with status ${vm_status}`);
     }
   } catch (error) {
     throw new Error(`Execute error: ${(error as Error).message}`);
