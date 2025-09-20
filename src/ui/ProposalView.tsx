@@ -83,7 +83,7 @@ interface ProposalData {
   txn: MultisigTransactionDecoded;
   canExecute: boolean;
   canReject: boolean;
-  hasVoted: boolean;
+  userVoteType: 'yes' | 'no' | null;
 }
 
 const ProposalView: React.FC<ProposalViewProps> = ({
@@ -180,10 +180,15 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             ? formatFunctionId(txn.payload_decoded.data.function)
             : 'Failed to decode';
 
-          const hasVoted = txn.yesVotes.some((addr: any) => addr.toString() === signerAddress) ||
-                           txn.noVotes.some((addr: any) => addr.toString() === signerAddress);
           const canExecute = txn.yesVotes.length >= signaturesRequired;
           const canReject = txn.noVotes.length >= signaturesRequired;
+
+          let userVoteType: 'yes' | 'no' | null = null;
+          if (txn.yesVotes.some((addr: any) => addr.toString() === signerAddress)) {
+            userVoteType = 'yes';
+          } else if (txn.noVotes.some((addr: any) => addr.toString() === signerAddress)) {
+            userVoteType = 'no';
+          }
 
           return {
             sequenceNumber: txn.sequence_number,
@@ -199,7 +204,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             txn,
             canExecute,
             canReject,
-            hasVoted
+            userVoteType
           };
         })
       );
@@ -215,13 +220,10 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
   // Fetch on mount and refresh
   useEffect(() => {
-    if (aptos) {
+    if (aptos && signaturesRequired > 0) {
       fetchProposals();
     }
-  }, [aptos, fetchProposals]);
-
-  // Removed auto-refresh to prevent flicker
-  // Manual refresh available with [R] key
+  }, [aptos, signaturesRequired, fetchProposals]);
 
   // Handle vote
   const handleVote = async (seqNum: number, approved: boolean) => {
@@ -269,7 +271,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     } else if (key.downArrow) {
       setSelectedIndex(prev => Math.min(proposals.length - 1, prev + 1));
       setIsSelectedExpanded(false); // Collapse when navigating
-    } else if (key.return || input === 'f') {
+    } else if (key.return) {
       // Toggle expand for current selection only
       setIsSelectedExpanded(prev => !prev);
     } else if ((input === 'y' || input === 'n') && proposals[selectedIndex]) {
@@ -322,7 +324,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         <Box flexDirection="column">
           {/* Table Header */}
           <Box>
-            <Text>{'  #       │ Function                                        │ Votes     │ Simulation  │ Actions'}</Text>
+            <Text>{'  #       │ Function                                        │ Votes         │ Simulation  │ Status'}</Text>
           </Box>
           <Box>
             <Text>{'  ' + '─'.repeat(94)}</Text>
@@ -338,7 +340,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               totalOwners={owners.length}
               signaturesRequired={signaturesRequired}
               network={network}
-              signerAddress={signerAddress}
             />
           ))}
         </Box>
@@ -363,7 +364,22 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       {/* Footer */}
       <Box borderStyle="single" paddingX={1}>
         <Text dimColor>
-          [↑/↓] Navigate | [Enter/F] Toggle details | [Y]es [N]o [E]xe [R]eject | [L]oad | [Q]uit
+          {proposals[selectedIndex] && (
+            <>
+              #{proposals[selectedIndex].sequenceNumber}: {(() => {
+                const p = proposals[selectedIndex];
+                let actions = '[Y]es [N]o ';
+                if (p.canExecute) {
+                  actions += '[E]xecute ';
+                }
+                if (p.canReject) {
+                  actions += '[R]eject ';
+                }
+                return actions;
+              })()}
+            </>
+          )}
+          | [↑/↓] Navigate | [Enter] Expand | [L]oad | [Q]uit
         </Text>
       </Box>
     </Box>
@@ -377,7 +393,6 @@ interface ProposalRowProps {
   totalOwners: number;
   signaturesRequired: number;
   network: string;
-  signerAddress: string;
 }
 
 interface ProposalExpandedContentProps {
@@ -498,49 +513,81 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   expanded,
   totalOwners,
   network,
-  signerAddress
 }) => {
   const yesCount = proposal.yesVotes.length;
   const noCount = proposal.noVotes.length;
   const pendingCount = totalOwners - yesCount - noCount;
 
+  // Build vote display with bracket notation for user's vote
   let voteDisplay = '';
-  for (let i = 0; i < yesCount; i++) voteDisplay += 'Y';
-  for (let i = 0; i < noCount; i++) voteDisplay += 'N';
-  for (let i = 0; i < pendingCount; i++) voteDisplay += '.';
 
-  const votesStr = voteDisplay.padEnd(9);
+  // If user voted yes, show it first with brackets
+  if (proposal.userVoteType === 'yes') {
+    voteDisplay += '[●]';
+    // Add remaining yes votes
+    for (let i = 1; i < yesCount; i++) {
+      voteDisplay += '●';
+    }
+  } else {
+    // Add all yes votes without brackets
+    for (let i = 0; i < yesCount; i++) {
+      voteDisplay += '●';
+    }
+  }
 
-  // Format simulation status
-  const simColor = proposal.simulationStatus === 'OK' ? 'green' : 'red';
-  const simText = proposal.simulationStatus.padEnd(11);
+  // If user voted no, show it with brackets
+  if (proposal.userVoteType === 'no') {
+    voteDisplay += '[✗]';
+    // Add remaining no votes
+    for (let i = 1; i < noCount; i++) {
+      voteDisplay += '✗';
+    }
+  } else {
+    // Add all no votes without brackets
+    for (let i = 0; i < noCount; i++) {
+      voteDisplay += '✗';
+    }
+  }
+
+  // Add pending votes
+  for (let i = 0; i < pendingCount; i++) {
+    voteDisplay += '○';
+  }
+
+  const votesStr = voteDisplay.padEnd(13);
 
   // Format function name (truncate if needed)
   const funcName = proposal.function.length > 47
     ? proposal.function.substring(0, 44) + '...'
     : proposal.function.padEnd(47);
 
-  // Format actions based on what's possible
-  let actions = '';
-  if (!proposal.hasVoted) {
-    actions += '[Y]es [N]o ';
-  }
+  // Format simulation status
+  const simColor = proposal.simulationStatus === 'OK' ? 'green' : 'red';
+  const simText = proposal.simulationStatus.padEnd(11);
+
+  // Determine status
+  let status = '';
+  let statusColor: string | undefined;
   if (proposal.canExecute && proposal.canReject) {
-    actions += '[E]xe [R]eject ';
+    status = 'Execute or Reject';
+    statusColor = 'yellow';
   } else if (proposal.canExecute) {
-    actions += '[E]xecute ';
+    status = 'Execute ready';
+    statusColor = 'green';
   } else if (proposal.canReject) {
-    actions += '[R]eject ';
+    status = 'Reject ready';
+    statusColor = 'red';
+  } else {
+    status = 'Need more votes';
+    statusColor = undefined;
   }
-  actions += '[F]ull';
-  actions = actions.padEnd(24);
 
   return (
     <Box flexDirection="column">
       {/* Main row */}
       <Box>
         <Text inverse={selected}>
-          {selected ? '▶' : ' '} {String(proposal.sequenceNumber).padEnd(7)} │ {funcName} │ {votesStr} │ <Text color={simColor}>{simText}</Text> │ {actions}
+          {selected ? '▶' : ' '} {String(proposal.sequenceNumber).padEnd(7)} │ {funcName} │ {votesStr} │ <Text color={simColor}>{simText}</Text> │ {statusColor ? <Text color={statusColor}>{status}</Text> : status}
         </Text>
       </Box>
 
