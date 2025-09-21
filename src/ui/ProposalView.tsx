@@ -186,17 +186,24 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
           // Fetch module changes if there are any code-related changes
           let moduleChanges: ModuleChangesByAddress | undefined;
-          // FIXME: redundant if check
           if (txn.simulationChanges) {
             const hasCodeChanges = txn.simulationChanges.some(change => {
+              if (change.type === 'write_module') {
+                return true;
+              }
               if (isWriteSetChangeWriteResource(change)) {
                 return change.data.type === '0x1::code::PackageRegistry';
               }
+              return false;
             });
 
             if (hasCodeChanges) {
               try {
-                moduleChanges = await analyzeModuleChanges(aptos, txn.simulationChanges);
+                const changes = await analyzeModuleChanges(aptos, txn.simulationChanges);
+                // Only set moduleChanges if there are actual changes after bytecode comparison
+                if (Object.keys(changes).length > 0) {
+                  moduleChanges = changes;
+                }
               } catch (err) {
                 console.debug('Could not analyze module changes:', err);
               }

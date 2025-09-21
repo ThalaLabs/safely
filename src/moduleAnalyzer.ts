@@ -126,7 +126,10 @@ export async function analyzeModuleChanges(
       }
     }
 
-    changesByAddress[address] = moduleChangeList;
+    // Only add to result if there are actual module changes
+    if (moduleChangeList.length > 0) {
+      changesByAddress[address] = moduleChangeList;
+    }
   }
 
   return changesByAddress;
