@@ -573,27 +573,32 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
               <Text dimColor>Code Changes:</Text>
               {Object.entries(proposal.moduleChanges).map(([address, modules]) => (
                 <Box key={address} flexDirection="column">
-                  <Text color="cyan">  📦 <AddressLink address={address} network={network} /> ({modules.length} module{modules.length > 1 ? 's' : ''})</Text>
+                  <Text>  📦 <AddressLink address={address} network={network} /></Text>
                   {modules.map((module, idx) => (
-                    <Box key={`${address}-${idx}`} flexDirection="column" paddingLeft={4}>
-                      <Text>└─ Module: {module.moduleName}</Text>
-                      <Box paddingLeft={3} flexDirection="column">
-                        <Text color={module.upgraded ? 'yellow' : 'green'}>• Type: {module.upgraded ? 'Module Upgrade' : 'New Module'}</Text>
-                        {module.upgraded && (
+                    <Box key={`${address}-${idx}`} paddingLeft={2}>
+                      <Text>
+                        {module.upgraded ? (
                           <>
-                            {module.newFunctions.length > 0 && (
-                              <Text color="green">• New Functions: {module.newFunctions.join(', ')}</Text>
-                            )}
-                            {module.newStructs.length > 0 && (
-                              <Text color="green">• New Structs: {module.newStructs.join(', ')}</Text>
-                            )}
-                            {module.newFunctions.length === 0 &&
-                             module.newStructs.length === 0 && (
-                              <Text dimColor>• No ABI changes (bytecode only)</Text>
+                            <Text color="yellow">↑</Text> {module.moduleName}
+                            {module.newFunctions.length > 0 || module.newStructs.length > 0 ? (
+                              <>
+                                {module.newFunctions.length > 0 && (
+                                  <Text color="green">: +{module.newFunctions.map(f => `${f}()`).join(', +')}</Text>
+                                )}
+                                {module.newStructs.length > 0 && (
+                                  <Text color="green">{module.newFunctions.length > 0 ? ' | ' : ': '}+{module.newStructs.join(', +')}</Text>
+                                )}
+                              </>
+                            ) : (
+                              <Text dimColor>: (bytecode)</Text>
                             )}
                           </>
+                        ) : (
+                          <>
+                            <Text color="green">+</Text> {module.moduleName}
+                          </>
                         )}
-                      </Box>
+                      </Text>
                     </Box>
                   ))}
                 </Box>
