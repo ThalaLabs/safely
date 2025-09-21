@@ -9,7 +9,8 @@ import {
 } from '../transactions.js';
 import {
   getBalanceChangesData,
-  BalanceChange
+  BalanceChange,
+  isWriteSetChangeWriteResource
 } from '../utils.js';
 import { InputEntryFunctionData } from '@aptos-labs/ts-sdk';
 import { initAptos, getExplorerUrl } from '../utils.js';
@@ -17,6 +18,7 @@ import { NetworkChoice } from '../constants.js';
 import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../signing.js';
+import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
 
 // Helper function to truncate address uniformly
 function truncateAddress(address: string): string {
@@ -85,6 +87,7 @@ interface ProposalData {
   payload: InputEntryFunctionData | null;
   simulationError?: string;
   balanceChanges?: BalanceChange[];
+  moduleChanges?: ModuleChangesByAddress;
   txn: MultisigTransactionDecoded;
   canExecute: boolean;
   canReject: boolean;
@@ -161,8 +164,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           // Check simulation status
           let simulationStatus: 'OK' | 'NOK' = 'OK';
           let simulationError: string | undefined;
-          let balanceChanges: BalanceChange[] | undefined;
-
+          
           // Use the simulation status from the transaction (doesn't change with votes)
           if (txn.simulationSuccess !== undefined) {
             simulationStatus = txn.simulationSuccess ? 'OK' : 'NOK';
@@ -171,6 +173,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             }
           }
 
+          let balanceChanges: BalanceChange[] | undefined;
           // Fetch balance changes if simulation was successful
           if (txn.simulationSuccess && txn.simulationChanges) {
             try {
@@ -178,6 +181,25 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             } catch (err) {
               // If we can't get balance changes, continue without them
               console.debug('Could not fetch balance changes:', err);
+            }
+          }
+
+          // Fetch module changes if there are any code-related changes
+          let moduleChanges: ModuleChangesByAddress | undefined;
+          // FIXME: redundant if check
+          if (txn.simulationChanges) {
+            const hasCodeChanges = txn.simulationChanges.some(change => {
+              if (isWriteSetChangeWriteResource(change)) {
+                return change.data.type === '0x1::code::PackageRegistry';
+              }
+            });
+
+            if (hasCodeChanges) {
+              try {
+                moduleChanges = await analyzeModuleChanges(aptos, txn.simulationChanges);
+              } catch (err) {
+                console.debug('Could not analyze module changes:', err);
+              }
             }
           }
 
@@ -207,6 +229,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             payload: txn.payload_decoded.success ? txn.payload_decoded.data : null,
             simulationError,
             balanceChanges,
+            moduleChanges,
             txn,
             canExecute,
             canReject,
@@ -541,6 +564,45 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
                   </Text>
                 );
               })}
+            </>
+          )}
+
+          {proposal.moduleChanges && Object.keys(proposal.moduleChanges).length > 0 && (
+            <>
+              <Text></Text>
+              <Text dimColor>Code Changes:</Text>
+              {Object.entries(proposal.moduleChanges).map(([address, modules]) => (
+                <Box key={address} flexDirection="column">
+                  <Text>  📦 <AddressLink address={address} network={network} /></Text>
+                  {modules.map((module, idx) => (
+                    <Box key={`${address}-${idx}`} paddingLeft={2}>
+                      <Text>
+                        {module.upgraded ? (
+                          <>
+                            <Text color="yellow">↑</Text> {module.moduleName}
+                            {module.newFunctions.length > 0 || module.newStructs.length > 0 ? (
+                              <>
+                                {module.newFunctions.length > 0 && (
+                                  <Text color="green">: +{module.newFunctions.map(f => `${f}()`).join(', +')}</Text>
+                                )}
+                                {module.newStructs.length > 0 && (
+                                  <Text color="green">{module.newFunctions.length > 0 ? ' | ' : ': '}+{module.newStructs.join(', +')}</Text>
+                                )}
+                              </>
+                            ) : (
+                              <Text dimColor>: (bytecode)</Text>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <Text color="green">+</Text> {module.moduleName}
+                          </>
+                        )}
+                      </Text>
+                    </Box>
+                  ))}
+                </Box>
+              ))}
             </>
           )}
         </Box>

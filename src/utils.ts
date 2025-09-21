@@ -2,6 +2,7 @@ import {
   Aptos,
   AptosConfig,
   WriteSetChange,
+  WriteSetChangeWriteModule,
   WriteSetChangeWriteResource,
 } from '@aptos-labs/ts-sdk';
 import { NetworkChoice } from './constants.js';
@@ -127,7 +128,13 @@ export interface BalanceChange {
 export function isWriteSetChangeWriteResource(
   change: WriteSetChange
 ): change is WriteSetChangeWriteResource {
-  return 'address' in change && 'data' in change && 'type' in (change.data as any);
+  return change.type === 'write_resource';
+}
+
+export function isWriteSetChangeWriteModule(
+  change: WriteSetChange
+): change is WriteSetChangeWriteModule {
+  return change.type === 'write_module';
 }
 
 export async function getStoreOwner(aptos: Aptos, storeAddress: string): Promise<string> {
@@ -181,6 +188,7 @@ export async function getFaSymbol(aptos: Aptos, assetType: string): Promise<stri
   return symbol;
 }
 
+// FIXME: move balance change related stuff to a separate file
 export async function getBalanceChangesData(
   aptos: Aptos,
   changes: WriteSetChange[]
