@@ -2,52 +2,17 @@ import { NetworkChoice } from './constants.js';
 import { getExplorerUrl } from './utils.js';
 import {
   Account,
+  AccountAddress,
   Aptos,
   fetchEntryFunctionAbi,
   generateTransactionPayload,
   InputEntryFunctionData,
+  WriteSetChange,
 } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import LedgerSigner from './ledger/LedgerSigner.js';
 import { signAndSubmitTransaction } from './signing.js';
-
-export async function canUserExecute(
-  aptos: Aptos,
-  multisigAddress: string,
-  userAddress: string,
-  sequenceNumber: number
-): Promise<boolean> {
-  try {
-    const [canExecute] = await aptos.view<[boolean]>({
-      payload: {
-        function: '0x1::multisig_account::can_execute',
-        functionArguments: [userAddress, multisigAddress, sequenceNumber],
-      },
-    });
-    return canExecute;
-  } catch {
-    return false;
-  }
-}
-
-export async function canUserReject(
-  aptos: Aptos,
-  multisigAddress: string,
-  userAddress: string,
-  sequenceNumber: number
-): Promise<boolean> {
-  try {
-    const [canReject] = await aptos.view<[boolean]>({
-      payload: {
-        function: '0x1::multisig_account::can_reject',
-        functionArguments: [userAddress, multisigAddress, sequenceNumber],
-      },
-    });
-    return canReject;
-  } catch {
-    return false;
-  }
-}
+import { decode } from './parser.js';
 
 export async function proposeEntryFunction(
   aptos: Aptos,
@@ -142,4 +107,195 @@ export async function proposeEntryFunction(
       chalk.red(`Propose nok ${vm_status}: ${getExplorerUrl(network, `txn/${pendingTxn.hash}`)}`)
     );
   }
+}
+
+// Types and interfaces
+type Result<T, E = string> = { success: true; data: T } | { success: false; error: E };
+
+export interface MultisigTransaction {
+  payload: { vec: [string] };
+  payload_hash: { vec: [string] };
+  votes: { data: [{ key: string; value: boolean }] };
+  creator: string;
+  creation_time_secs: string;
+}
+
+export interface MultisigTransactionDecoded {
+  sequence_number: number;
+  creation_time_secs: string;
+  creator: string;
+  payload_decoded: Result<InputEntryFunctionData>;
+  yesVotes: AccountAddress[];
+  noVotes: AccountAddress[];
+  simulationChanges: WriteSetChange[];
+  simulationSuccess: boolean;
+  simulationVmStatus: string;
+}
+
+async function decodeMultisigTransaction(
+  aptos: Aptos,
+  multisig: string,
+  transaction: MultisigTransaction,
+  sequenceNumber: number
+): Promise<MultisigTransactionDecoded> {
+  let payloadDecoded: Result<InputEntryFunctionData>;
+  try {
+    const decoded = await decode(aptos, transaction.payload.vec[0]);
+    payloadDecoded = { success: true, data: decoded };
+  } catch (error) {
+    payloadDecoded = { success: false, error: (error as Error).message };
+  }
+
+  const yesVotes: AccountAddress[] = [];
+  const noVotes: AccountAddress[] = [];
+
+  transaction.votes.data.forEach(({ key, value }) => {
+    const address = AccountAddress.from(key);
+    if (value) {
+      yesVotes.push(address);
+    } else {
+      noVotes.push(address);
+    }
+  });
+
+  let simulationResult = {
+    changes: [] as WriteSetChange[],
+    success: false,
+    vmStatus: 'PAYLOAD_DECODE_ERROR',
+  };
+
+  if (payloadDecoded.success) {
+    try {
+      const transactionToSimulate = await aptos.transaction.build.simple({
+        sender: multisig,
+        data: payloadDecoded.data,
+        withFeePayer: true,
+      });
+
+      const [simulateMultisigTx] = await aptos.transaction.simulate.simple({
+        transaction: transactionToSimulate,
+      });
+
+      simulationResult = {
+        changes: simulateMultisigTx.changes,
+        success: simulateMultisigTx.success,
+        vmStatus: simulateMultisigTx.vm_status,
+      };
+    } catch (e) {
+      simulationResult = {
+        changes: [],
+        success: false,
+        vmStatus: `SIMULATION_ERROR: ${(e as Error).message}`,
+      };
+    }
+  }
+
+  return {
+    sequence_number: sequenceNumber,
+    creation_time_secs: transaction.creation_time_secs,
+    creator: transaction.creator,
+    payload_decoded: payloadDecoded,
+    yesVotes,
+    noVotes,
+    simulationChanges: simulationResult.changes,
+    simulationSuccess: simulationResult.success,
+    simulationVmStatus: simulationResult.vmStatus,
+  };
+}
+
+export async function fetchPendingTxns(
+  aptos: Aptos,
+  multisig: string,
+  sequence_number: number | undefined
+): Promise<Array<MultisigTransactionDecoded>> {
+  let pendingMove: MultisigTransaction[];
+  let sequenceNumbers: number[];
+
+  if (sequence_number !== undefined) {
+    const [txn] = await aptos.view<[MultisigTransaction]>({
+      payload: {
+        function: '0x1::multisig_account::get_transaction',
+        functionArguments: [multisig, sequence_number],
+      },
+    });
+    pendingMove = [txn];
+    sequenceNumbers = [sequence_number];
+  } else {
+    const ledgerVersion = await aptos.getLedgerInfo().then((info) => BigInt(info.ledger_version));
+    const lastResolvedSnPromise = aptos.view({
+      payload: {
+        function: '0x1::multisig_account::last_resolved_sequence_number',
+        functionArguments: [multisig],
+      },
+      options: {
+        ledgerVersion,
+      },
+    });
+    const nextSnPromise = aptos.view({
+      payload: {
+        function: '0x1::multisig_account::next_sequence_number',
+        functionArguments: [multisig],
+      },
+      options: {
+        ledgerVersion,
+      },
+    });
+    const pendingPromise = aptos.view<[MultisigTransaction[]]>({
+      payload: {
+        function: '0x1::multisig_account::get_pending_transactions',
+        functionArguments: [multisig],
+      },
+      options: {
+        ledgerVersion,
+      },
+    });
+    const [[lastResolvedSnMove], [nextSnMove], [pending]] = await Promise.all([
+      lastResolvedSnPromise,
+      nextSnPromise,
+      pendingPromise,
+    ]);
+
+    const lastResolvedSn = Number(lastResolvedSnMove as string);
+    const nextSn = Number(nextSnMove as string);
+    sequenceNumbers = Array.from(
+      { length: nextSn - lastResolvedSn - 1 },
+      (_, i) => lastResolvedSn + (i + 1)
+    );
+    pendingMove = pending;
+  }
+
+  return Promise.all(
+    pendingMove.map((transaction, index) =>
+      decodeMultisigTransaction(aptos, multisig, transaction, sequenceNumbers[index])
+    )
+  );
+}
+
+export async function numPendingTxns(aptos: Aptos, multisig: string): Promise<number> {
+  const ledgerVersion = await aptos.getLedgerInfo().then((info) => BigInt(info.ledger_version));
+  const lastResolvedSnPromise = aptos.view({
+    payload: {
+      function: '0x1::multisig_account::last_resolved_sequence_number',
+      functionArguments: [multisig],
+    },
+    options: {
+      ledgerVersion,
+    },
+  });
+  const nextSnPromise = aptos.view({
+    payload: {
+      function: '0x1::multisig_account::next_sequence_number',
+      functionArguments: [multisig],
+    },
+    options: {
+      ledgerVersion,
+    },
+  });
+
+  const [[lastResolvedSnMove], [nextSnMove]] = await Promise.all([
+    lastResolvedSnPromise,
+    nextSnPromise,
+  ]);
+
+  return Number(nextSnMove as string) - Number(lastResolvedSnMove as string) - 1;
 }

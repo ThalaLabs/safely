@@ -5,10 +5,12 @@ import chalk from 'chalk';
 import { Aptos } from '@aptos-labs/ts-sdk';
 import {
   fetchPendingTxns,
-  MultisigTransactionDecoded,
+  MultisigTransactionDecoded
+} from '../transactions.js';
+import {
   getBalanceChangesData,
   BalanceChange
-} from '@thalalabs/multisig-utils';
+} from '../utils.js';
 import { InputEntryFunctionData } from '@aptos-labs/ts-sdk';
 import { initAptos, getExplorerUrl } from '../utils.js';
 import { NetworkChoice } from '../constants.js';
