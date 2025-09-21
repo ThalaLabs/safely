@@ -151,6 +151,11 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       setLoading(true);
       const txns = await fetchPendingTxns(aptos, multisigAddress, sequenceNumber);
 
+      // Find the minimum sequence number among all proposals
+      const minSequenceNumber = txns.length > 0
+        ? Math.min(...txns.map(txn => txn.sequence_number))
+        : null;
+
       const processedProposals: ProposalData[] = await Promise.all(
         txns.map(async (txn) => {
           // Check simulation status
@@ -181,8 +186,13 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             ? formatFunctionId(txn.payload_decoded.data.function)
             : 'Failed to decode';
 
-          const canExecute = txn.yesVotes.length >= signaturesRequired;
-          const canReject = txn.noVotes.length >= signaturesRequired;
+          // Only the proposal with smallest sequence number can be executed/rejected
+          const isSmallestSeqNum = txn.sequence_number === minSequenceNumber;
+          const hasEnoughYesVotes = txn.yesVotes.length >= signaturesRequired;
+          const hasEnoughNoVotes = txn.noVotes.length >= signaturesRequired;
+
+          const canExecute = isSmallestSeqNum && hasEnoughYesVotes;
+          const canReject = isSmallestSeqNum && hasEnoughNoVotes;
 
           let userVoteType: 'yes' | 'no' | null = null;
           if (txn.yesVotes.some((addr: any) => addr.toString() === signerAddress)) {
