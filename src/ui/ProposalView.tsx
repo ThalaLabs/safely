@@ -6,9 +6,12 @@ import { Aptos } from '@aptos-labs/ts-sdk';
 import {
   fetchPendingTxns,
   MultisigTransactionDecoded,
-  getBalanceChangesData
+  getBalanceChangesData,
+  BalanceChange
 } from '@thalalabs/multisig-utils';
+import { InputEntryFunctionData } from '@aptos-labs/ts-sdk';
 import { initAptos, getExplorerUrl } from '../utils.js';
+import { NetworkChoice } from '../constants.js';
 import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../signing.js';
@@ -29,7 +32,7 @@ interface AddressLinkProps {
 }
 
 const AddressLink: React.FC<AddressLinkProps> = React.memo(({ address, network, color }) => {
-  const url = getExplorerUrl(network as any, `account/${address}`);
+  const url = getExplorerUrl(network as NetworkChoice, `account/${address}`);
   const displayAddr = truncateAddress(address);
 
   return (
@@ -52,7 +55,7 @@ function formatFunctionId(functionId: string): string {
 }
 
 // Helper to safely stringify objects with BigInt
-function safeStringify(obj: any, indent: number = 2): string {
+function safeStringify(obj: unknown, indent: number = 2): string {
   return JSON.stringify(obj, (_key, value) => {
     if (typeof value === 'bigint') {
       return value.toString();
@@ -77,9 +80,9 @@ interface ProposalData {
   simulationStatus: 'OK' | 'NOK';
   createdAt: number;
   creator: string;
-  payload: any;
+  payload: InputEntryFunctionData | null;
   simulationError?: string;
-  balanceChanges?: any[];
+  balanceChanges?: BalanceChange[];
   txn: MultisigTransactionDecoded;
   canExecute: boolean;
   canReject: boolean;
@@ -110,11 +113,11 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   useEffect(() => {
     const init = async () => {
       try {
-        const profileData = await loadProfile(profile, network as any, true);
+        const profileData = await loadProfile(profile, network as NetworkChoice, true);
         const { signer } = profileData;
         setSignerAddress(signer.accountAddress.toString());
 
-        const aptosInstance = initAptos(network as any, fullnode || profileData.fullnode);
+        const aptosInstance = initAptos(network as NetworkChoice, fullnode || profileData.fullnode);
         setAptos(aptosInstance);
 
         // Get multisig info
@@ -156,7 +159,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           // Check simulation status
           let simulationStatus: 'OK' | 'NOK' = 'OK';
           let simulationError: string | undefined;
-          let balanceChanges: any[] | undefined;
+          let balanceChanges: BalanceChange[] | undefined;
 
           // Use the simulation status from the transaction (doesn't change with votes)
           if (txn.simulationSuccess !== undefined) {
@@ -185,17 +188,17 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           const canReject = txn.noVotes.length >= signaturesRequired;
 
           let userVoteType: 'yes' | 'no' | null = null;
-          if (txn.yesVotes.some((addr: any) => addr.toString() === signerAddress)) {
+          if (txn.yesVotes.some((addr) => addr.toString() === signerAddress)) {
             userVoteType = 'yes';
-          } else if (txn.noVotes.some((addr: any) => addr.toString() === signerAddress)) {
+          } else if (txn.noVotes.some((addr) => addr.toString() === signerAddress)) {
             userVoteType = 'no';
           }
 
           return {
             sequenceNumber: txn.sequence_number,
             function: functionDisplay,
-            yesVotes: txn.yesVotes.map((v: any) => v.toString()),
-            noVotes: txn.noVotes.map((v: any) => v.toString()),
+            yesVotes: txn.yesVotes.map((v) => v.toString()),
+            noVotes: txn.noVotes.map((v) => v.toString()),
             simulationStatus,
             createdAt: Number(txn.creation_time_secs) * 1000,
             creator: txn.creator,
@@ -237,10 +240,10 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         seqNum,
         approved,
         multisigAddress,
-        network as any,
+        network as NetworkChoice,
         profile
       );
-      setActionMessage(chalk.green(`✅ Vote submitted: ${getExplorerUrl(network as any, `txn/${hash}`)}`));
+      setActionMessage(chalk.green(`✅ Vote submitted: ${getExplorerUrl(network as NetworkChoice, `txn/${hash}`)}`));
       await fetchProposals();
     } catch (error) {
       setActionMessage(chalk.red(`❌ Vote failed: ${(error as Error).message}`));
@@ -254,8 +257,8 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       const actionPast = reject ? 'Reject' : 'Execute';
       setConfirmAction(null); // Clear confirmation immediately
       setActionMessage(chalk.yellow(`⏳ ${action} transaction... Please wait while the transaction is submitted to the blockchain.`));
-      const hash = await handleExecuteCommand(multisigAddress, profile, network as any, reject, true);
-      setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as any, `txn/${hash}`)}`));
+      const hash = await handleExecuteCommand(multisigAddress, profile, network as NetworkChoice, reject, true);
+      setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as NetworkChoice, `txn/${hash}`)}`));
       await fetchProposals();
     } catch (error) {
       setActionMessage(chalk.red(`❌ ${reject ? 'Reject' : 'Execute'} failed: ${(error as Error).message}`));
@@ -269,7 +272,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   };
 
   // Handle keyboard input
-  useInput((input: string, key: any) => {
+  useInput((input: string, key) => {
     // Handle confirmation
     if (confirmAction) {
       if (input === 'y' || input === 'Y') {
@@ -524,8 +527,8 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
             <>
               <Text></Text>
               <Text dimColor>Balance Changes:</Text>
-              {proposal.balanceChanges.map((change: any, i) => {
-                const addr = change.address?.toString() || '';
+              {proposal.balanceChanges.map((change, i) => {
+                const addr = change.address;
                 const changeAmount = change.balanceAfter - change.balanceBefore;
                 const changeSign = changeAmount >= 0 ? '+' : '';
                 const changeColor = changeAmount >= 0 ? 'green' : 'red';
