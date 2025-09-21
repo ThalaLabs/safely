@@ -8,6 +8,7 @@ import {
 } from '@aptos-labs/ts-sdk';
 import { decode } from '@thalalabs/multisig-utils';
 import chalk from 'chalk';
+import { confirm } from '@inquirer/prompts';
 import { validateAddress } from '../validators.js';
 import { loadProfile, signAndSubmitTransaction } from '../signing.js';
 import {
@@ -39,7 +40,8 @@ export const registerExecuteCommand = (program: Command) => {
             await ensureMultisigAddressExists(options.multisigAddress),
             await ensureProfileExists(options.profile),
             network,
-            options.reject
+            options.reject ?? false,
+            false
           );
           const action = options.reject ? 'Reject' : 'Execute';
           console.log(chalk.green(`${action} ok: ${getExplorerUrl(network, `txn/${hash}`)}`));
@@ -54,7 +56,8 @@ export async function handleExecuteCommand(
   multisig: string,
   profile: string,
   network: NetworkChoice,
-  reject?: boolean
+  reject: boolean,
+  skipConfirmation: boolean
 ): Promise<string> {
   try {
     const { signer, fullnode } = await loadProfile(profile, network);
@@ -93,6 +96,7 @@ export async function handleExecuteCommand(
     // Determine which action to take based on the --reject flag
     let txn: SimpleTransaction;
     let actionName: string;
+    const sequenceNum = Number(lastResolvedSn) + 1;
 
     if (reject) {
       // User explicitly wants to reject
@@ -101,6 +105,19 @@ export async function handleExecuteCommand(
           'Cannot reject this transaction (insufficient no votes or already executed)'
         );
       }
+
+      // Ask for confirmation before rejecting (unless skipped)
+      if (!skipConfirmation) {
+        const confirmReject = await confirm({
+          message: chalk.yellow(`⚠️  Are you sure you want to REJECT transaction #${sequenceNum}?`),
+          default: true,
+        });
+
+        if (!confirmReject) {
+          throw new Error('Rejection cancelled by user');
+        }
+      }
+
       txn = await buildRejectTxn(aptos, signer.accountAddress, multisig);
       actionName = 'Reject';
     } else {
@@ -114,6 +131,19 @@ export async function handleExecuteCommand(
           throw new Error('Cannot execute this transaction (insufficient yes votes)');
         }
       }
+
+      // Ask for confirmation before executing (unless skipped)
+      if (!skipConfirmation) {
+        const confirmExecute = await confirm({
+          message: chalk.green(`✓ Are you sure you want to EXECUTE transaction #${sequenceNum}?`),
+          default: true,
+        });
+
+        if (!confirmExecute) {
+          throw new Error('Execution cancelled by user');
+        }
+      }
+
       txn = await buildApproveTxn(aptos, signer.accountAddress, multisig);
       actionName = 'Execute';
     }

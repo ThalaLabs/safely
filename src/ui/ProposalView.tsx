@@ -100,6 +100,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string>('');
+  const [confirmAction, setConfirmAction] = useState<{ type: 'execute' | 'reject'; seqNum: number } | null>(null);
   const [owners, setOwners] = useState<string[]>([]);
   const [signaturesRequired, setSigRequired] = useState<number>(0);
   const [signerAddress, setSignerAddress] = useState<string>('');
@@ -243,22 +244,41 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     }
   };
 
-  // Handle execute
+  // Handle execute with confirmation
   const handleExecute = async (reject: boolean = false) => {
     try {
       const action = reject ? 'Rejecting' : 'Executing';
       const actionPast = reject ? 'Reject' : 'Execute';
       setActionMessage(chalk.yellow(`${action} transaction...`));
-      const hash = await handleExecuteCommand(multisigAddress, profile, network as any, reject);
+      const hash = await handleExecuteCommand(multisigAddress, profile, network as any, reject, true);
       setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as any, `txn/${hash}`)}`));
+      setConfirmAction(null);
       await fetchProposals();
     } catch (error) {
       setActionMessage(chalk.red(`❌ ${reject ? 'Reject' : 'Execute'} failed: ${(error as Error).message}`));
+      setConfirmAction(null);
     }
+  };
+
+  // Show confirmation prompt
+  const showConfirmation = (type: 'execute' | 'reject', seqNum: number) => {
+    setConfirmAction({ type, seqNum });
+    setActionMessage(''); // Clear any existing message
   };
 
   // Handle keyboard input
   useInput((input: string, key: any) => {
+    // Handle confirmation
+    if (confirmAction) {
+      if (input === 'y' || input === 'Y') {
+        handleExecute(confirmAction.type === 'reject');
+      } else {
+        setConfirmAction(null);
+        setActionMessage('');
+      }
+      return;
+    }
+
     // Clear action message on any key if showing
     if (actionMessage && !['y', 'n', 'e', 'r'].includes(input)) {
       setActionMessage('');
@@ -278,11 +298,11 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       handleVote(proposals[selectedIndex].sequenceNumber, input === 'y');
     } else if (input === 'e' && proposals[selectedIndex]) {
       if (proposals[selectedIndex].canExecute) {
-        handleExecute(false);
+        showConfirmation('execute', proposals[selectedIndex].sequenceNumber);
       }
     } else if (input === 'r' && proposals[selectedIndex]) {
       if (proposals[selectedIndex].canReject) {
-        handleExecute(true);
+        showConfirmation('reject', proposals[selectedIndex].sequenceNumber);
       }
     } else if (input === 'l') {
       setActionMessage(chalk.yellow('Loading...'));
@@ -346,16 +366,27 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       </Box>
 
       {/* Action message */}
-      {actionMessage && (
+      {(actionMessage || confirmAction) && (
         <Box
           borderStyle="double"
-          borderColor={actionMessage.includes('✅') ? 'green' : actionMessage.includes('❌') ? 'red' : 'yellow'}
+          borderColor={actionMessage.includes('✅') ? 'green' : actionMessage.includes('❌') ? 'red' : confirmAction ? 'yellow' : 'yellow'}
           padding={1}
         >
           <Box flexDirection="column">
-            <Text>{actionMessage}</Text>
-            {!actionMessage.includes('...') && (
-              <Text dimColor>[Press any key to continue]</Text>
+            {confirmAction ? (
+              <>
+                <Text color={confirmAction.type === 'execute' ? 'green' : 'yellow'}>
+                  ⚠️  Confirm {confirmAction.type === 'execute' ? 'EXECUTE' : 'REJECT'} for transaction #{confirmAction.seqNum}?
+                </Text>
+                <Text>Press [Y] to confirm, [N] to cancel</Text>
+              </>
+            ) : (
+              <>
+                <Text>{actionMessage}</Text>
+                {!actionMessage.includes('...') && (
+                  <Text dimColor>[Press any key to continue]</Text>
+                )}
+              </>
             )}
           </Box>
         </Box>
