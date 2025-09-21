@@ -210,6 +210,9 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         })
       );
 
+      // Sort proposals by sequence number to easily find the smallest
+      processedProposals.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+
       setProposals(processedProposals);
       setError(null);
     } catch (err) {
@@ -296,11 +299,13 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     } else if ((input === 'y' || input === 'n') && proposals[selectedIndex]) {
       handleVote(proposals[selectedIndex].sequenceNumber, input === 'y');
     } else if (input === 'e' && proposals[selectedIndex]) {
-      if (proposals[selectedIndex].canExecute) {
+      // Only allow execute if this is the smallest sequence number
+      if (proposals[selectedIndex].canExecute && selectedIndex === 0) {
         showConfirmation('execute', proposals[selectedIndex].sequenceNumber);
       }
     } else if (input === 'r' && proposals[selectedIndex]) {
-      if (proposals[selectedIndex].canReject) {
+      // Only allow reject if this is the smallest sequence number
+      if (proposals[selectedIndex].canReject && selectedIndex === 0) {
         showConfirmation('reject', proposals[selectedIndex].sequenceNumber);
       }
     } else if (input === 'l') {
@@ -359,6 +364,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               totalOwners={owners.length}
               signaturesRequired={signaturesRequired}
               network={network}
+              isSmallestSeqNum={index === 0}
             />
           ))}
         </Box>
@@ -398,11 +404,13 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             <>
               #{proposals[selectedIndex].sequenceNumber}: {(() => {
                 const p = proposals[selectedIndex];
+                const isSmallest = selectedIndex === 0;
                 let actions = '[Y]es [N]o ';
-                if (p.canExecute) {
+                // Only show Execute/Reject options if this is the smallest sequence number
+                if (p.canExecute && isSmallest) {
                   actions += '[E]xecute ';
                 }
-                if (p.canReject) {
+                if (p.canReject && isSmallest) {
                   actions += '[R]eject ';
                 }
                 return actions;
@@ -423,6 +431,7 @@ interface ProposalRowProps {
   totalOwners: number;
   signaturesRequired: number;
   network: string;
+  isSmallestSeqNum: boolean;
 }
 
 interface ProposalExpandedContentProps {
@@ -543,6 +552,7 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   expanded,
   totalOwners,
   network,
+  isSmallestSeqNum,
 }) => {
   const yesCount = proposal.yesVotes.length;
   const noCount = proposal.noVotes.length;
@@ -599,14 +609,29 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   let status = '';
   let statusColor: string | undefined;
   if (proposal.canExecute && proposal.canReject) {
-    status = 'Execute or Reject';
-    statusColor = 'yellow';
+    if (isSmallestSeqNum) {
+      status = 'Execute or Reject';
+      statusColor = 'yellow';
+    } else {
+      status = 'Waiting (ready)';
+      statusColor = 'yellow';
+    }
   } else if (proposal.canExecute) {
-    status = 'Execute ready';
-    statusColor = 'green';
+    if (isSmallestSeqNum) {
+      status = 'Execute ready';
+      statusColor = 'green';
+    } else {
+      status = 'Waiting (ready)';
+      statusColor = 'yellow';
+    }
   } else if (proposal.canReject) {
-    status = 'Reject ready';
-    statusColor = 'red';
+    if (isSmallestSeqNum) {
+      status = 'Reject ready';
+      statusColor = 'red';
+    } else {
+      status = 'Waiting (ready)';
+      statusColor = 'yellow';
+    }
   } else {
     status = 'Need more votes';
     statusColor = undefined;
