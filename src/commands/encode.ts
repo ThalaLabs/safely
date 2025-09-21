@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander';
 import chalk from 'chalk';
-import { encode } from '@thalalabs/multisig-utils';
+import { encode } from '../parser.js';
 import { ensureNetworkExists } from '../storage.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { initAptos, resolvePayloadInput } from '../utils.js';

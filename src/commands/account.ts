@@ -1,7 +1,7 @@
 import { MoveFunctionId, WriteSetChange, WriteSetChangeWriteResource } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
-import { numPendingTxns } from '@thalalabs/multisig-utils';
+import { numPendingTxns } from '../transactions.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import {
   AddressBook,

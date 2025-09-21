@@ -6,7 +6,7 @@ import {
   generateTransactionPayload,
   SimpleTransaction,
 } from '@aptos-labs/ts-sdk';
-import { decode } from '@thalalabs/multisig-utils';
+import { decode } from '../parser.js';
 import chalk from 'chalk';
 import { confirm } from '@inquirer/prompts';
 import { validateAddress } from '../validators.js';

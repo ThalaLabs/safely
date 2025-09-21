@@ -1,4 +1,9 @@
-import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
+import {
+  Aptos,
+  AptosConfig,
+  WriteSetChange,
+  WriteSetChangeWriteResource,
+} from '@aptos-labs/ts-sdk';
 import { NetworkChoice } from './constants.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -103,4 +108,120 @@ async function readFromStdin(): Promise<string> {
     process.stdin.on('end', () => resolve(data));
     process.stdin.on('error', reject);
   });
+}
+
+// Balance change utilities
+interface FungibleStore {
+  balance: string;
+  metadata: { inner: string };
+}
+
+export interface BalanceChange {
+  address: string;
+  asset: string;
+  symbol: string;
+  balanceBefore: number;
+  balanceAfter: number;
+}
+
+export function isWriteSetChangeWriteResource(
+  change: WriteSetChange
+): change is WriteSetChangeWriteResource {
+  return 'address' in change && 'data' in change && 'type' in (change.data as any);
+}
+
+export async function getStoreOwner(aptos: Aptos, storeAddress: string): Promise<string> {
+  const [owner] = await aptos.view<[string]>({
+    payload: {
+      function: '0x1::object::owner',
+      typeArguments: ['0x1::fungible_asset::FungibleStore'],
+      functionArguments: [storeAddress],
+    },
+  });
+  return owner;
+}
+
+export async function getFABalance(
+  aptos: Aptos,
+  faMetadata: string,
+  accountAddress: string
+): Promise<number> {
+  const [balance] = await aptos.view<[string]>({
+    payload: {
+      function: '0x1::primary_fungible_store::balance',
+      typeArguments: ['0x1::fungible_asset::Metadata'],
+      functionArguments: [accountAddress, faMetadata],
+    },
+  });
+
+  return Number(balance);
+}
+
+export async function getFaDecimals(aptos: Aptos, assetType: string): Promise<number> {
+  const [decimals] = await aptos.view<[number]>({
+    payload: {
+      function: '0x1::fungible_asset::decimals',
+      typeArguments: ['0x1::fungible_asset::Metadata'],
+      functionArguments: [assetType],
+    },
+  });
+
+  return decimals;
+}
+
+export async function getFaSymbol(aptos: Aptos, assetType: string): Promise<string> {
+  const [symbol] = await aptos.view<[string]>({
+    payload: {
+      function: '0x1::fungible_asset::symbol',
+      typeArguments: ['0x1::fungible_asset::Metadata'],
+      functionArguments: [assetType],
+    },
+  });
+
+  return symbol;
+}
+
+export async function getBalanceChangesData(
+  aptos: Aptos,
+  changes: WriteSetChange[]
+): Promise<BalanceChange[]> {
+  if (!changes) {
+    return [];
+  }
+
+  const resourceChanges = changes.filter(isWriteSetChangeWriteResource);
+  const balanceChanges: BalanceChange[] = [];
+
+  for (const resourceChange of resourceChanges) {
+    if (resourceChange.data.type !== '0x1::fungible_asset::FungibleStore') {
+      continue;
+    }
+    const faStore = resourceChange.data.data as FungibleStore;
+    const faType = faStore.metadata.inner;
+    const balanceAfterRaw = Number(faStore.balance);
+    const storeAddress = resourceChange.address;
+    try {
+      const [decimals, symbol, accountAddress] = await Promise.all([
+        getFaDecimals(aptos, faType),
+        getFaSymbol(aptos, faType),
+        getStoreOwner(aptos, storeAddress),
+      ]);
+      const balanceBeforeRaw = await getFABalance(aptos, faType, accountAddress);
+
+      const balanceAfter = balanceAfterRaw / 10 ** decimals;
+      const balanceBefore = balanceBeforeRaw / 10 ** decimals;
+
+      balanceChanges.push({
+        address: accountAddress,
+        asset: faType,
+        symbol,
+        balanceBefore,
+        balanceAfter,
+      });
+    } catch (error) {
+      continue;
+    }
+  }
+
+  return balanceChanges;
 }
