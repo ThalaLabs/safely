@@ -229,7 +229,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   // Handle vote
   const handleVote = async (seqNum: number, approved: boolean) => {
     try {
-      setActionMessage(chalk.yellow(`${approved ? 'Voting Yes' : 'Voting No'}...`));
+      setActionMessage(chalk.yellow(`⏳ ${approved ? 'Submitting Yes vote' : 'Submitting No vote'}... Please wait while the transaction is submitted to the blockchain.`));
       const hash = await handleVoteCommand(
         seqNum,
         approved,
@@ -249,14 +249,13 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     try {
       const action = reject ? 'Rejecting' : 'Executing';
       const actionPast = reject ? 'Reject' : 'Execute';
-      setActionMessage(chalk.yellow(`${action} transaction...`));
+      setConfirmAction(null); // Clear confirmation immediately
+      setActionMessage(chalk.yellow(`⏳ ${action} transaction... Please wait while the transaction is submitted to the blockchain.`));
       const hash = await handleExecuteCommand(multisigAddress, profile, network as any, reject, true);
       setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as any, `txn/${hash}`)}`));
-      setConfirmAction(null);
       await fetchProposals();
     } catch (error) {
       setActionMessage(chalk.red(`❌ ${reject ? 'Reject' : 'Execute'} failed: ${(error as Error).message}`));
-      setConfirmAction(null);
     }
   };
 
