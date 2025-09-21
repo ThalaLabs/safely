@@ -187,15 +187,9 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           // Fetch module changes if there are any code-related changes
           let moduleChanges: ModuleChangesByAddress | undefined;
           if (txn.simulationChanges) {
-            const hasCodeChanges = txn.simulationChanges.some(change => {
-              if (change.type === 'write_module') {
-                return true;
-              }
-              if (isWriteSetChangeWriteResource(change)) {
-                return change.data.type === '0x1::code::PackageRegistry';
-              }
-              return false;
-            });
+            const hasCodeChanges = txn.simulationChanges.some(change =>
+              isWriteSetChangeWriteResource(change) && change.data.type === '0x1::code::PackageRegistry'
+            );
 
             if (hasCodeChanges) {
               try {
@@ -574,7 +568,7 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
             </>
           )}
 
-          {proposal.moduleChanges && Object.keys(proposal.moduleChanges).length > 0 && (
+          {proposal.moduleChanges && (
             <>
               <Text></Text>
               <Text dimColor>Code Changes:</Text>
