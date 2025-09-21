@@ -131,6 +131,7 @@ Execute a multisig transaction
 Options:
   -m, --multisig-address <address>  multisig account address
   -p, --profile <string>            Profile to use for the transaction
+  --reject                          Reject the transaction instead of executing it
   --network <network>               network to use (choices: "aptos-devnet", "aptos-testnet", "aptos-mainnet", "movement-mainnet", "movement-testnet",
                                     "custom")
   -h, --help                        display help for command
