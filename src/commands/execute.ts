@@ -4,6 +4,7 @@ import {
   Aptos,
   generateRawTransaction,
   generateTransactionPayload,
+  isUserTransactionResponse,
   SimpleTransaction,
 } from '@aptos-labs/ts-sdk';
 import { decode } from '../parser.js';
@@ -36,7 +37,7 @@ export const registerExecuteCommand = (program: Command) => {
       }) => {
         try {
           const network = await ensureNetworkExists(options.network, options.profile);
-          const hash = await handleExecuteCommand(
+          const result = await handleExecuteCommand(
             await ensureMultisigAddressExists(options.multisigAddress),
             await ensureProfileExists(options.profile),
             network,
@@ -44,7 +45,17 @@ export const registerExecuteCommand = (program: Command) => {
             false
           );
           const action = options.reject ? 'Reject' : 'Execute';
-          console.log(chalk.green(`${action} ok: ${getExplorerUrl(network, `txn/${hash}`)}`));
+          if (options.reject || result.success) {
+            console.log(
+              chalk.green(`${action} ok: ${getExplorerUrl(network, `txn/${result.hash}`)}`)
+            );
+          } else {
+            console.log(
+              chalk.yellow(
+                `${action} committed but failed: ${getExplorerUrl(network, `txn/${result.hash}`)}`
+              )
+            );
+          }
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }
@@ -52,13 +63,15 @@ export const registerExecuteCommand = (program: Command) => {
     );
 };
 
+// Also returns success which represents if the multisig transaction
+// ends up being successful (it is possible txn committed but failed)
 export async function handleExecuteCommand(
   multisig: string,
   profile: string,
   network: NetworkChoice,
   reject: boolean,
   skipConfirmation: boolean
-): Promise<string> {
+): Promise<{ hash: string; success: boolean }> {
   try {
     const { signer, fullnode } = await loadProfile(profile, network);
     const aptos = initAptos(network, fullnode);
@@ -150,11 +163,18 @@ export async function handleExecuteCommand(
 
     // Sign & Submit transaction
     const pendingTxn = await signAndSubmitTransaction(aptos, signer, txn);
-    const { success, vm_status } = await aptos.waitForTransaction({
+    const committedTxn = await aptos.waitForTransaction({
       transactionHash: pendingTxn.hash,
     });
+    if (!isUserTransactionResponse(committedTxn)) {
+      throw new Error('Internal error: executed a non user transaction');
+    }
+    const { success, vm_status, events } = committedTxn;
+    const txnSuccess = events.some(
+      (event) => event.type === '0x1::multisig_account::TransactionExecutionSucceededEvent'
+    );
     if (success) {
-      return pendingTxn.hash;
+      return { hash: pendingTxn.hash, success: txnSuccess };
     } else {
       throw new Error(`${actionName} failed with status ${vm_status}`);
     }
