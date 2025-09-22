@@ -283,8 +283,12 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       const actionPast = reject ? 'Reject' : 'Execute';
       setConfirmAction(null); // Clear confirmation immediately
       setActionMessage(chalk.yellow(`⏳ ${action} transaction... Please wait while the transaction is submitted to the blockchain.`));
-      const hash = await handleExecuteCommand(multisigAddress, profile, network as NetworkChoice, reject, true);
-      setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as NetworkChoice, `txn/${hash}`)}`));
+      const result = await handleExecuteCommand(multisigAddress, profile, network as NetworkChoice, reject, true);
+      if (reject || result.success) {
+        setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as NetworkChoice, `txn/${result.hash}`)}`));
+      } else {
+        setActionMessage(chalk.yellow(`⚠️ ${actionPast} committed but failed: ${getExplorerUrl(network as NetworkChoice, `txn/${result.hash}`)}`));
+      }
       await fetchProposals();
     } catch (error) {
       setActionMessage(chalk.red(`❌ ${reject ? 'Reject' : 'Execute'} failed: ${(error as Error).message}`));
