@@ -10,7 +10,8 @@ import {
 import {
   getBalanceChangesData,
   BalanceChange,
-  isWriteSetChangeWriteResource
+  isWriteSetChangeWriteResource,
+  safeStringify
 } from '../utils.js';
 import { InputEntryFunctionData } from '@aptos-labs/ts-sdk';
 import { initAptos, getExplorerUrl } from '../utils.js';
@@ -58,15 +59,6 @@ function formatFunctionId(functionId: string): string {
   return functionId;
 }
 
-// Helper to safely stringify objects with BigInt
-function safeStringify(obj: unknown, indent: number = 2): string {
-  return JSON.stringify(obj, (_key, value) => {
-    if (typeof value === 'bigint') {
-      return value.toString();
-    }
-    return value;
-  }, indent);
-}
 
 interface ProposalViewProps {
   multisigAddress: string;
