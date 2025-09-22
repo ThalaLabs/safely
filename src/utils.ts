@@ -233,3 +233,68 @@ export async function getBalanceChangesData(
 
   return balanceChanges;
 }
+
+/**
+ * Safely stringify objects with BigInt support and vector<u8> conversion to hex.
+ * This function handles special cases for Aptos transaction payloads:
+ * - Converts BigInt to string
+ * - Converts vector<u8> (array of U8 objects) to hex string
+ * - Converts vector<vector<u8>> to array of hex strings
+ */
+export function safeStringify(obj: unknown, indent: number = 2): string {
+  return JSON.stringify(
+    obj,
+    (_key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+
+      // Handle vector<u8> which comes as array of U8 objects
+      if (Array.isArray(value) && value.length > 0) {
+        // Check if this is an array of U8-like objects (objects with only a 'value' property that's a number)
+        const isU8Array = value.every(
+          (item) =>
+            typeof item === 'object' &&
+            item !== null &&
+            'value' in item &&
+            typeof item.value === 'number' &&
+            Object.keys(item).length === 1
+        );
+
+        if (isU8Array) {
+          // Convert array of U8 objects to hex string
+          const bytes = value.map((item: any) => item.value);
+          const hexString =
+            '0x' + bytes.map((b: number) => b.toString(16).padStart(2, '0')).join('');
+          return hexString;
+        }
+
+        // Handle vector<vector<u8>> - array of arrays of U8 objects
+        const isNestedU8Array = value.every(
+          (subArray) =>
+            Array.isArray(subArray) &&
+            subArray.length > 0 &&
+            subArray.every(
+              (item) =>
+                typeof item === 'object' &&
+                item !== null &&
+                'value' in item &&
+                typeof item.value === 'number' &&
+                Object.keys(item).length === 1
+            )
+        );
+
+        if (isNestedU8Array) {
+          // Convert each inner array to hex string
+          return value.map((subArray: any[]) => {
+            const bytes = subArray.map((item: any) => item.value);
+            return '0x' + bytes.map((b: number) => b.toString(16).padStart(2, '0')).join('');
+          });
+        }
+      }
+
+      return value;
+    },
+    indent
+  );
+}
