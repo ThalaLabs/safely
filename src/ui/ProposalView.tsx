@@ -358,9 +358,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     return <Text color="red">{error}</Text>;
   }
 
-  if (proposals.length === 0) {
-    return <Text color="yellow">No pending transactions found.</Text>;
-  }
+  // Always render the full interface, even when there are no proposals
 
   return (
     <Box flexDirection="column">
@@ -372,32 +370,40 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         </Box>
       </Box>
 
-      {/* Table */}
-      <Box borderStyle="single" paddingX={1}>
-        <Box flexDirection="column">
-          {/* Table Header */}
-          <Box>
-            <Text>{'  #       │ Function                                        │ Votes         │ Simulation  │ Status'}</Text>
-          </Box>
-          <Box>
-            <Text>{'  ' + '─'.repeat(94)}</Text>
-          </Box>
+      {/* Table or Empty State */}
+      {proposals.length > 0 ? (
+        <Box borderStyle="single" paddingX={1}>
+          <Box flexDirection="column">
+            {/* Table Header */}
+            <Box>
+              <Text>{'  #       │ Function                                        │ Votes         │ Simulation  │ Status'}</Text>
+            </Box>
+            <Box>
+              <Text>{'  ' + '─'.repeat(94)}</Text>
+            </Box>
 
-          {/* Proposals */}
-          {proposals.map((proposal, index) => (
-            <ProposalRow
-              key={`proposal-${proposal.sequenceNumber}`}
-              proposal={proposal}
-              selected={index === selectedIndex}
-              expanded={index === selectedIndex && isSelectedExpanded}
-              totalOwners={owners.length}
-              signaturesRequired={signaturesRequired}
-              network={network}
-              isSmallestSeqNum={index === 0}
-            />
-          ))}
+            {/* Proposals */}
+            {proposals.map((proposal, index) => (
+              <ProposalRow
+                key={`proposal-${proposal.sequenceNumber}`}
+                proposal={proposal}
+                selected={index === selectedIndex}
+                expanded={index === selectedIndex && isSelectedExpanded}
+                totalOwners={owners.length}
+                signaturesRequired={signaturesRequired}
+                network={network}
+                isSmallestSeqNum={index === 0}
+              />
+            ))}
+          </Box>
         </Box>
-      </Box>
+      ) : (
+        <Box borderStyle="single" paddingX={1} paddingY={1}>
+          <Box flexDirection="column" alignItems="center">
+            <Text>No pending transactions</Text>
+          </Box>
+        </Box>
+      )}
 
       {/* Action message */}
       {(actionMessage || confirmAction) && (
@@ -429,24 +435,30 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       {/* Footer */}
       <Box borderStyle="single" paddingX={1}>
         <Text dimColor>
-          {proposals[selectedIndex] && (
+          {proposals.length > 0 ? (
             <>
-              #{proposals[selectedIndex].sequenceNumber}: {(() => {
-                const p = proposals[selectedIndex];
-                const isSmallest = selectedIndex === 0;
-                let actions = '[Y]es [N]o ';
-                // Only show Execute/Reject options if this is the smallest sequence number
-                if (p.canExecute && isSmallest) {
-                  actions += '[E]xecute ';
-                }
-                if (p.canReject && isSmallest) {
-                  actions += '[R]eject ';
-                }
-                return actions;
-              })()}
+              {proposals[selectedIndex] && (
+                <>
+                  #{proposals[selectedIndex].sequenceNumber}: {(() => {
+                    const p = proposals[selectedIndex];
+                    const isSmallest = selectedIndex === 0;
+                    let actions = '[Y]es [N]o ';
+                    // Only show Execute/Reject options if this is the smallest sequence number
+                    if (p.canExecute && isSmallest) {
+                      actions += '[E]xecute ';
+                    }
+                    if (p.canReject && isSmallest) {
+                      actions += '[R]eject ';
+                    }
+                    return actions;
+                  })()}
+                </>
+              )}
+              | [↑/↓] Navigate | [Enter] Expand | [L]oad | [Q]uit
             </>
+          ) : (
+            '[L]oad | [Q]uit'
           )}
-          | [↑/↓] Navigate | [Enter] Expand | [L]oad | [Q]uit
         </Text>
       </Box>
     </Box>
