@@ -171,7 +171,9 @@ export async function handleExecuteCommand(
     }
     const { success, vm_status, events } = committedTxn;
     const txnSuccess = events.some(
-      (event) => event.type === '0x1::multisig_account::TransactionExecutionSucceededEvent'
+      (event) =>
+        event.type === '0x1::multisig_account::TransactionExecutionSucceeded' ||
+        event.type === '0x1::multisig_account::TransactionExecutionSucceededEvent'
     );
     if (success) {
       return { hash: pendingTxn.hash, success: txnSuccess };
