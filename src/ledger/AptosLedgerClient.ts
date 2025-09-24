@@ -89,8 +89,7 @@ export default class AptosLedgerClient {
   async getAccount(
     path: string,
     // the type annotation is needed for doc generator
-    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-    display: boolean = false
+    display: boolean
   ): Promise<AddressData> {
     return this.getAccountRaw(path, display);
   }
@@ -98,8 +97,7 @@ export default class AptosLedgerClient {
   async getAccountRaw(
     path: string,
     // the type annotation is needed for doc generator
-    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-    display: boolean = false
+    display: boolean
   ): Promise<AddressData> {
     const pathBuffer = serializeBip32(path);
     const responseBuffer = await this.sendToDevice(

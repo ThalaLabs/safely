@@ -56,7 +56,7 @@ export async function handleVoteCommand(
   profile: string
 ): Promise<string> {
   try {
-    const { signer, fullnode } = await loadProfile(profile, network);
+    const { signer, fullnode } = await loadProfile(profile, network, true);
     const aptos = initAptos(network, fullnode);
 
     const txn = await aptos.transaction.build.simple({
