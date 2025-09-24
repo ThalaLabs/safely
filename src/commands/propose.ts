@@ -86,7 +86,7 @@ Examples:
             }
           }
 
-          const { signer, fullnode } = await loadProfile(profile, network);
+          const { signer, fullnode } = await loadProfile(profile, network, true);
           const aptos = initAptos(network, fullnode);
 
           // Process each transaction sequentially
@@ -118,7 +118,7 @@ Examples:
           // Single payload - use existing logic
           const entryFunction = parseEntryFunctionPayload(jsonContent);
 
-          const { signer, fullnode } = await loadProfile(profile, network);
+          const { signer, fullnode } = await loadProfile(profile, network, true);
           const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
             aptos,
@@ -174,7 +174,7 @@ Examples:
               };
         try {
           const network = await ensureNetworkExists(parentOptions.network, parentOptions.profile);
-          const { signer, fullnode } = await loadProfile(profile, network);
+          const { signer, fullnode } = await loadProfile(profile, network, true);
           const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
             aptos,

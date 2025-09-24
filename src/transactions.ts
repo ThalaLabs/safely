@@ -20,7 +20,7 @@ export async function proposeEntryFunction(
   entryFunction: InputEntryFunctionData,
   multisigAddress: string,
   network: NetworkChoice,
-  simulate = true
+  simulate: boolean
 ) {
   // Fetch ABI
   let entryFunctionABI = await fetchEntryFunctionAbi(

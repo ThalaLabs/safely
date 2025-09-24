@@ -26,7 +26,7 @@ type ProfileData = {
 export async function loadProfile(
   profile: string,
   network: NetworkChoice,
-  includeSigner = true
+  includeSigner: boolean
 ): Promise<Profile> {
   // Load from the network-specific config path
   const configPath = getConfigPath(network);

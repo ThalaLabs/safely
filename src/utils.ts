@@ -241,7 +241,7 @@ export async function getBalanceChangesData(
  * - Converts vector<u8> (array of U8 objects) to hex string
  * - Converts vector<vector<u8>> to array of hex strings
  */
-export function safeStringify(obj: unknown, indent: number = 2): string {
+export function safeStringify(obj: unknown, indent: number): string {
   return JSON.stringify(
     obj,
     (_key, value) => {

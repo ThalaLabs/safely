@@ -269,7 +269,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   };
 
   // Handle execute with confirmation
-  const handleExecute = async (reject: boolean = false) => {
+  const handleExecute = async (reject: boolean) => {
     try {
       const action = reject ? 'Rejecting' : 'Executing';
       const actionPast = reject ? 'Reject' : 'Execute';
@@ -483,7 +483,7 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
 }) => {
   // Memoize heavy computations
   const payloadString = useMemo(() =>
-    proposal.payload ? safeStringify(proposal.payload) : null,
+    proposal.payload ? safeStringify(proposal.payload, 2) : null,
     [proposal.payload]
   );
 

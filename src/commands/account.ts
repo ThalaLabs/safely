@@ -53,7 +53,7 @@ export const registerAccountCommand = (program: Command) => {
         try {
           const profile = await ensureProfileExists(options.profile);
           const network = await ensureNetworkExists(options.network, options.profile);
-          const { signer, fullnode } = await loadProfile(profile, network);
+          const { signer, fullnode } = await loadProfile(profile, network, true);
           const aptos = initAptos(network, fullnode);
           const preparedTxn = await aptos.transaction.build.simple({
             sender: signer.accountAddress,
@@ -124,10 +124,10 @@ export const registerAccountCommand = (program: Command) => {
           const multisig = await ensureMultisigAddressExists(options.multisigAddress);
           const profile = await ensureProfileExists(options.profile);
           const network = await ensureNetworkExists(options.network, options.profile);
-          const { signer, fullnode } = await loadProfile(profile, network);
+          const { signer, fullnode } = await loadProfile(profile, network, true);
           const aptos = initAptos(network, fullnode);
 
-          await proposeEntryFunction(aptos, signer, entryFunction, multisig, network);
+          await proposeEntryFunction(aptos, signer, entryFunction, multisig, network, true);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }

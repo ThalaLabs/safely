@@ -73,7 +73,7 @@ export async function handleExecuteCommand(
   skipConfirmation: boolean
 ): Promise<{ hash: string; success: boolean }> {
   try {
-    const { signer, fullnode } = await loadProfile(profile, network);
+    const { signer, fullnode } = await loadProfile(profile, network, true);
     const aptos = initAptos(network, fullnode);
 
     const [lastResolvedSn] = await aptos.view<[string]>({

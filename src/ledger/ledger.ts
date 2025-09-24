@@ -23,7 +23,7 @@ export async function initLedgerClient(): Promise<AptosLedgerClient> {
 export async function initLedgerSigner(ledgerIndex: number): Promise<LedgerSigner> {
   const ledgerClient = await initLedgerClient();
   const hdPath = getHDPath(ledgerIndex); // Example HD path for Aptos
-  const publicKeyResponse = await ledgerClient.getAccount(hdPath);
+  const publicKeyResponse = await ledgerClient.getAccount(hdPath, false);
 
   const signer = new LedgerSigner(
     ledgerClient,
