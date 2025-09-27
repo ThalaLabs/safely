@@ -6,6 +6,10 @@ import AptosLedgerClient, { publicKeyToAddress } from './AptosLedgerClient.js';
 import LedgerSigner from './LedgerSigner.js';
 import { AccountAddress } from '@aptos-labs/ts-sdk';
 
+// Singleton storage for active Ledger connections
+let activeSigner: LedgerSigner | null = null;
+let activeLedgerIndex: number | null = null;
+
 // Initializes a LedgerClient connection with a Ledger hardware wallet.
 // This connection must be terminated with `closeLedgerClient` when it is no longer needed.
 export async function initLedgerClient(): Promise<AptosLedgerClient> {
@@ -21,6 +25,18 @@ export async function initLedgerClient(): Promise<AptosLedgerClient> {
 
 // Initializes a LedgerSigner object from a specific key (denoted by key index) on a Ledger hardware wallet.
 export async function initLedgerSigner(ledgerIndex: number): Promise<LedgerSigner> {
+  // If we already have an active signer for the same ledger index, return it
+  if (activeSigner && activeLedgerIndex === ledgerIndex) {
+    return activeSigner;
+  }
+
+  // If we have a signer for a different index, close it first
+  if (activeSigner) {
+    await activeSigner.close();
+    activeSigner = null;
+    activeLedgerIndex = null;
+  }
+
   const ledgerClient = await initLedgerClient();
   const hdPath = getHDPath(ledgerIndex); // Example HD path for Aptos
   const publicKeyResponse = await ledgerClient.getAccount(hdPath, false);
@@ -31,6 +47,10 @@ export async function initLedgerSigner(ledgerIndex: number): Promise<LedgerSigne
     publicKeyResponse.publicKey.toString('hex'),
     AccountAddress.fromString(publicKeyResponse.address)
   );
+
+  // Store the active signer and index
+  activeSigner = signer;
+  activeLedgerIndex = ledgerIndex;
 
   return signer;
 }
@@ -56,4 +76,10 @@ export function getLedgerIndex(hdPath: string): number {
 // Note: Any time `initLedgerClient` is called, this method must be called to close the connection.
 export async function closeLedger(signer: LedgerSigner) {
   await signer.close();
+
+  // Clear singleton state if this was the active signer
+  if (activeSigner === signer) {
+    activeSigner = null;
+    activeLedgerIndex = null;
+  }
 }
