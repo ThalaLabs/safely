@@ -295,9 +295,11 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
   // Handle keyboard input
   useInput((input: string, key) => {
+    const normalizedInput = input?.toLowerCase?.() ?? '';
+
     // Handle confirmation
     if (confirmAction) {
-      if (input === 'y' || input === 'Y') {
+      if (normalizedInput === 'y') {
         handleExecute(confirmAction.type === 'reject');
       } else {
         setConfirmAction(null);
@@ -307,7 +309,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     }
 
     // Clear action message on any key if showing
-    if (actionMessage && !['y', 'n', 'e', 'r'].includes(input)) {
+    if (actionMessage && !['y', 'n', 'e', 'r'].includes(normalizedInput)) {
       setActionMessage('');
       return;
     }
@@ -321,19 +323,19 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     } else if (key.return) {
       // Toggle expand for current selection only
       setIsSelectedExpanded(prev => !prev);
-    } else if ((input === 'y' || input === 'n') && proposals[selectedIndex]) {
-      handleVote(proposals[selectedIndex].sequenceNumber, input === 'y');
-    } else if (input === 'e' && proposals[selectedIndex]) {
+    } else if ((normalizedInput === 'y' || normalizedInput === 'n') && proposals[selectedIndex]) {
+      handleVote(proposals[selectedIndex].sequenceNumber, normalizedInput === 'y');
+    } else if (normalizedInput === 'e' && proposals[selectedIndex]) {
       // Only allow execute if this is the smallest sequence number
       if (proposals[selectedIndex].canExecute && selectedIndex === 0) {
         showConfirmation('execute', proposals[selectedIndex].sequenceNumber);
       }
-    } else if (input === 'r' && proposals[selectedIndex]) {
+    } else if (normalizedInput === 'r' && proposals[selectedIndex]) {
       // Only allow reject if this is the smallest sequence number
       if (proposals[selectedIndex].canReject && selectedIndex === 0) {
         showConfirmation('reject', proposals[selectedIndex].sequenceNumber);
       }
-    } else if (input === 'l') {
+    } else if (normalizedInput === 'l') {
       setActionMessage(chalk.yellow('Loading...'));
       fetchProposals().then(() => {
         setActionMessage(chalk.green('✅ Loaded'));
@@ -341,7 +343,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       }).catch((err) => {
         setActionMessage(chalk.red(`❌ Load failed: ${err}`));
       });
-    } else if (input === 'q') {
+    } else if (normalizedInput === 'q') {
       exit();
     }
   });
