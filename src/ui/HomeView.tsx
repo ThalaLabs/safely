@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Text, useInput, useApp, render } from 'ink';
 import TextInput from 'ink-text-input';
+import Spinner from 'ink-spinner';
 import { ProfileDefault, MultisigDefault, NetworkDefault } from '../storage.js';
 import { getAllProfiles, ProfileInfo } from '../profiles.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { validateAddress } from '../validators.js';
 import ProposalView from './ProposalView.js';
 import SharedHeader from './SharedHeader.js';
+import { initAptos } from '../utils.js';
+import { AccountAddress } from '@aptos-labs/ts-sdk';
+import { loadProfile } from '../signing.js';
 
 interface HomeViewProps {
   onNavigate?: (view: 'proposal') => void;
@@ -25,6 +29,11 @@ interface MenuState {
   subIndex: number;
   multisigInput: string;
   multisigError: string;
+  isValidating: boolean;
+}
+
+interface MultisigResource {
+  owners: string[];
 }
 
 const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
@@ -36,8 +45,11 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     expandedItem: null,
     subIndex: 0,
     multisigInput: '',
-    multisigError: ''
+    multisigError: '',
+    isValidating: false
   });
+  const [multisigOwners, setMultisigOwners] = useState<string[]>([]);
+  const [profileAddress, setProfileAddress] = useState<string | null>(null);
 
   // Load configuration
   useEffect(() => {
@@ -53,14 +65,67 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         profile,
         profiles: getAllProfiles()
       });
+      // Load multisig owners if we have a multisig
+      if (network && multisig) {
+        await fetchMultisigOwners(network, multisig);
+      }
     };
     load();
   }, []);
+
+  // Fetch multisig owners from chain
+  const fetchMultisigOwners = useCallback(async (network: NetworkChoice, multisigAddress: string) => {
+    try {
+      const aptos = initAptos(network);
+      const resource = await aptos.getAccountResource<MultisigResource>({
+        accountAddress: multisigAddress,
+        resourceType: '0x1::multisig_account::MultisigAccount'
+      });
+      setMultisigOwners(resource.owners || []);
+    } catch {
+      setMultisigOwners([]);
+    }
+  }, []);
+
+  // Load profile address
+  useEffect(() => {
+    const loadProfileAddress = async () => {
+      if (config.profile && config.network) {
+        try {
+          const profile = await loadProfile(config.profile, config.network, true);
+          setProfileAddress(profile.signer.accountAddress.toString());
+        } catch {
+          setProfileAddress(null);
+        }
+      } else {
+        setProfileAddress(null);
+      }
+    };
+    loadProfileAddress();
+  }, [config.profile, config.network]);
 
   // Derived state
   const filteredProfiles = config.network
     ? config.profiles.filter(p => p.network === config.network)
     : [];
+
+  // Check if profile is an owner
+  const isProfileOwner = useMemo(() => {
+    if (!profileAddress || multisigOwners.length === 0) return false;
+    try {
+      const profileAddr = AccountAddress.from(profileAddress);
+      return multisigOwners.some(owner => {
+        try {
+          const ownerAddr = AccountAddress.from(owner);
+          return ownerAddr.equals(profileAddr);
+        } catch {
+          return false;
+        }
+      });
+    } catch {
+      return false;
+    }
+  }, [profileAddress, multisigOwners]);
 
   const canAccessProposals = !!(
     config.network &&
@@ -78,23 +143,27 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     // Save to storage
     if ('network' in updates && updates.network) {
       await NetworkDefault.set(updates.network);
-      // Clear incompatible profile
-      if (config.profile && !newConfig.profiles.some(
-        p => p.name === config.profile && p.network === updates.network
-      )) {
-        await ProfileDefault.remove();
-        newConfig.profile = undefined;
-      }
+      // Clear both multisig and profile when network changes
+      await MultisigDefault.remove();
+      await ProfileDefault.remove();
+      newConfig.multisig = undefined;
+      newConfig.profile = undefined;
+      // Clear multisig owners when network changes
+      setMultisigOwners([]);
     }
     if ('multisig' in updates && updates.multisig) {
       await MultisigDefault.set(updates.multisig);
+      // Fetch owners for new multisig
+      if (config.network) {
+        await fetchMultisigOwners(config.network, updates.multisig);
+      }
     }
     if ('profile' in updates && updates.profile) {
       await ProfileDefault.set(updates.profile);
     }
 
     setConfig(newConfig);
-  }, [config]);
+  }, [config, fetchMultisigOwners]);
 
   const collapseMenu = () => setMenu(m => ({
     ...m,
@@ -161,13 +230,39 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       if (key.escape) {
         collapseMenu();
       } else if (key.return) {
-        try {
-          validateAddress(menu.multisigInput);
-          updateConfig({ multisig: menu.multisigInput });
-          collapseMenu();
-        } catch (error) {
-          setMenu(m => ({ ...m, multisigError: String(error).replace('Error: ', '') }));
-        }
+        // Validate and save multisig address
+        (async () => {
+          try {
+            validateAddress(menu.multisigInput);
+            setMenu(m => ({ ...m, isValidating: true, multisigError: '' }));
+
+            // Check if address has MultisigAccount resource
+            const aptos = initAptos(config.network!);
+            try {
+              const resource = await aptos.getAccountResource<MultisigResource>({
+                accountAddress: menu.multisigInput,
+                resourceType: '0x1::multisig_account::MultisigAccount'
+              });
+              // Successfully got the resource, it's a valid multisig
+              setMultisigOwners(resource.owners || []);
+              await updateConfig({ multisig: menu.multisigInput });
+              collapseMenu();
+            } catch (resourceError) {
+              // Resource doesn't exist or error fetching
+              setMenu(m => ({
+                ...m,
+                multisigError: 'Address is not a multisig account',
+                isValidating: false
+              }));
+            }
+          } catch (error) {
+            setMenu(m => ({
+              ...m,
+              multisigError: String(error).replace('Error: ', ''),
+              isValidating: false
+            }));
+          }
+        })();
       }
     } else {
       // Main menu navigation
@@ -241,6 +336,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               input={multisigInput}
               error={multisigError}
               isSelected={selectedIndex === 1}
+              isValidating={menu.isValidating}
               onInputChange={value => setMenu(m => ({ ...m, multisigInput: value }))}
             />
           ) : (
@@ -266,13 +362,18 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             <MenuItem
               isSelected={selectedIndex === 2}
               label="Profile"
-              value={filteredProfiles.some(p => p.name === config.profile) ? config.profile : undefined}
+              value={
+                filteredProfiles.some(p => p.name === config.profile)
+                  ? `${config.profile}${!isProfileOwner ? ' (non-owner)' : ''}`
+                  : undefined
+              }
               placeholder={
                 !config.network ? "(Select network first)" :
                 filteredProfiles.length === 0 ? `(No profiles for ${config.network})` :
                 "(Select profile)"
               }
               disabled={!config.network}
+              warning={!!config.profile && !isProfileOwner}
             />
           )}
 
@@ -282,7 +383,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             label="Proposals"
             value={canAccessProposals ? "" : undefined}
             placeholder={canAccessProposals ? undefined : "(Configure above first)"}
-            showCheck={canAccessProposals}
+            showCheck={canAccessProposals ? true : undefined}
           />
         </Box>
       </Box>
@@ -306,11 +407,16 @@ const MenuItem: React.FC<{
   placeholder?: string;
   disabled?: boolean;
   showCheck?: boolean;
-}> = ({ isSelected, label, value, placeholder, showCheck }) => (
+  warning?: boolean;
+}> = ({ isSelected, label, value, placeholder, showCheck, warning }) => (
   <Text>
     {isSelected ? '▶' : ' '} {label}: {
       showCheck ? <Text color="green">✓</Text> :
-      value ? <Text color="cyan">{value} ✓</Text> :
+      value ? (
+        warning ?
+          <><Text color="yellow">{value}</Text> <Text color="yellow">⚠</Text></> :
+          <Text color="cyan">{value} ✓</Text>
+      ) :
       placeholder ? <Text dimColor>{placeholder}</Text> :
       null
     }
@@ -340,20 +446,27 @@ const MultisigExpanded: React.FC<{
   input: string;
   error: string;
   isSelected: boolean;
+  isValidating: boolean;
   onInputChange: (value: string) => void;
-}> = ({ input, error, isSelected, onInputChange }) => (
+}> = ({ input, error, isSelected, isValidating, onInputChange }) => (
   <>
     <Text>{isSelected ? '▼' : ' '} Multisig:</Text>
     <Box paddingLeft={2}>
       <Text>Address: </Text>
-      <TextInput
-        value={input}
-        onChange={onInputChange}
-        placeholder="0x..."
-      />
+      {isValidating ? (
+        <Text color="cyan">
+          <Spinner type="dots" /> Validating...
+        </Text>
+      ) : (
+        <TextInput
+          value={input}
+          onChange={onInputChange}
+          placeholder="0x..."
+        />
+      )}
     </Box>
     {error && <Text color="red">  ✗ {error}</Text>}
-    <Text dimColor>  [Enter] Save | [Esc] Cancel</Text>
+    {!isValidating && <Text dimColor>  [Enter] Save | [Esc] Cancel</Text>}
   </>
 );
 
