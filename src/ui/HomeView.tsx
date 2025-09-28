@@ -41,16 +41,12 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   useEffect(() => {
     const loadConfig = async () => {
       const network = await NetworkDefault.get();
-      const multisigConfig = await MultisigDefault.getConfig();
+      const multisig = await MultisigDefault.get();
       const profile = await ProfileDefault.get();
       const profiles = getAllProfiles();
 
       setCurrentNetwork(network);
-      if (multisigConfig && multisigConfig.network === network) {
-        setCurrentMultisig(multisigConfig.address);
-      } else {
-        setCurrentMultisig(undefined);
-      }
+      setCurrentMultisig(multisig);
       setCurrentProfile(profile);
       setAllProfiles(profiles);
 
@@ -93,12 +89,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     await NetworkDefault.set(network);
     setCurrentNetwork(network);
 
-    // Clear multisig if it's from a different network
-    const multisigConfig = await MultisigDefault.getConfig();
-    if (multisigConfig && multisigConfig.network !== network) {
-      setCurrentMultisig(undefined);
-    }
-
     // Clear profile if not compatible with new network
     if (currentProfile && !allProfiles.some(p => p.name === currentProfile && p.network === network)) {
       setCurrentProfile(undefined);
@@ -122,7 +112,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     try {
       validateAddress(multisigInput);
       if (currentNetwork) {
-        await MultisigDefault.set(multisigInput, currentNetwork);
+        await MultisigDefault.set(multisigInput);
         setCurrentMultisig(multisigInput);
         setMultisigError('');
         setExpandedSection(null);
