@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { getProfileByName } from '../profiles.js';
 
 interface SharedHeaderProps {
   subtitle?: string;
@@ -10,11 +9,6 @@ interface SharedHeaderProps {
 }
 
 const SharedHeader: React.FC<SharedHeaderProps> = ({ subtitle, network, profile, multisig }) => {
-  // Get profile info for display
-  const profileInfo = profile ? getProfileByName(profile) : null;
-
-  // Check for network mismatch
-  const networkMismatch = network && profile && profileInfo && profileInfo.network !== network;
 
   return (
     <>
@@ -47,11 +41,6 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ subtitle, network, profile,
               <Text color="green">{profile}</Text>
             ) : <Text color="red">Not set</Text>}
           </Text>
-          {networkMismatch && (
-            <Text color="yellow">
-              ⚠️  Network mismatch! Profile and multisig are on different networks.
-            </Text>
-          )}
         </Box>
       </Box>
     </>
