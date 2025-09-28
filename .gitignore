@@ -24,6 +24,11 @@ build/
 .env
 .env.*
 
+# Secrets
+
+.aptos/
+.movement/
+
 # Address book DB
 addressbook.json
 
