@@ -20,6 +20,7 @@ import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../signing.js';
 import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
+import { getAddressLabel } from '../labels.js';
 
 // Helper function to truncate address uniformly
 function truncateAddress(address: string): string {
@@ -39,10 +40,12 @@ interface AddressLinkProps {
 const AddressLink: React.FC<AddressLinkProps> = React.memo(({ address, network, color }) => {
   const url = getExplorerUrl(network as NetworkChoice, `account/${address}`);
   const displayAddr = truncateAddress(address);
+  const label = getAddressLabel(address);
+  const displayText = label ? `${label} (${displayAddr})` : displayAddr;
 
   return (
     <Link url={url}>
-      {color ? <Text color={color}>{displayAddr}</Text> : displayAddr}
+      <Text color={color}>{displayText}</Text>
     </Link>
   );
 });
