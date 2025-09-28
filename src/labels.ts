@@ -1,3 +1,5 @@
+import { AccountAddress } from '@aptos-labs/ts-sdk';
+
 // Copied from https://github.com/aptos-labs/explorer/blob/main/src/constants.tsx
 export const knownAddresses: Record<string, string> = {
   '0x1': 'Framework (0x1)',
@@ -107,3 +109,21 @@ export const knownAddresses: Record<string, string> = {
   '0x4b947ed016c64bde81972d69ea7d356de670d57fd2608b129f4d94ac0d0ee61': 'Emojicoin.fun Registry',
   '0xface729284ae5729100b3a9ad7f7cc025ea09739cd6e7252aff0beb53619cafe': 'Emojicoin.fun',
 };
+
+const normalizedKnownAddresses: Record<string, string> = Object.fromEntries(
+  Object.entries(knownAddresses).map(([address, label]) => [AccountAddress.from(address).toString(), label])
+);
+
+export function getAddressLabel(address: string): string | undefined {
+  if (!address) {
+    return undefined;
+  }
+
+  try {
+    const normalizedAddress = AccountAddress.from(address).toString();
+
+    return normalizedKnownAddresses[normalizedAddress];
+  } catch {
+    return undefined;
+  }
+}
