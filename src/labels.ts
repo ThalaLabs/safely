@@ -111,7 +111,10 @@ export const knownAddresses: Record<string, string> = {
 };
 
 const normalizedKnownAddresses: Record<string, string> = Object.fromEntries(
-  Object.entries(knownAddresses).map(([address, label]) => [AccountAddress.from(address).toString(), label])
+  Object.entries(knownAddresses).map(([address, label]) => [
+    AccountAddress.from(address).toString(),
+    label,
+  ])
 );
 
 export function getAddressLabel(address: string): string | undefined {

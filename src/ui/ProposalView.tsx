@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Box, Text, useInput, useApp, render } from 'ink';
+import { Box, Text, useInput, useApp } from 'ink';
 import Link from 'ink-link';
+import Spinner from 'ink-spinner';
 import chalk from 'chalk';
 import { Aptos } from '@aptos-labs/ts-sdk';
 import {
@@ -18,9 +19,10 @@ import { initAptos, getExplorerUrl } from '../utils.js';
 import { NetworkChoice } from '../constants.js';
 import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
-import { loadProfile } from '../signing.js';
+import { loadProfile } from '../profiles.js';
 import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
 import { getAddressLabel } from '../labels.js';
+import SharedHeader from './SharedHeader.js';
 
 // Helper function to truncate address uniformly
 function truncateAddress(address: string): string {
@@ -69,6 +71,7 @@ interface ProposalViewProps {
   fullnode?: string;
   profile: string;
   sequenceNumber?: number;
+  onBack?: () => void;
 }
 
 interface ProposalData {
@@ -94,7 +97,8 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   network,
   fullnode,
   profile,
-  sequenceNumber
+  sequenceNumber,
+  onBack
 }) => {
   const { exit } = useApp();
   const [proposals, setProposals] = useState<ProposalData[]>([]);
@@ -113,7 +117,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   useEffect(() => {
     const init = async () => {
       try {
-        const profileData = await loadProfile(profile, network as NetworkChoice, true);
+        const profileData = await loadProfile(profile, network as NetworkChoice);
         const { signer } = profileData;
         setSignerAddress(signer.accountAddress.toString());
 
@@ -348,31 +352,39 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       });
     } else if (normalizedInput === 'q') {
       exit();
+    } else if (normalizedInput === 'b' && onBack) {
+      onBack();
     }
   });
 
-  if (loading && proposals.length === 0) {
-    return <Text>Loading proposals...</Text>;
-  }
-
-  if (error) {
-    return <Text color="red">{error}</Text>;
-  }
-
-  // Always render the full interface, even when there are no proposals
-
+  // Always render the full interface with header
   return (
     <Box flexDirection="column">
-      {/* Header */}
-      <Box borderStyle="single" paddingX={1}>
-        <Box flexDirection="column">
-          <Text bold>{'Multisig: '.padEnd(10)}<AddressLink address={multisigAddress} network={network} /></Text>
-          <Text bold>{'Network:'.padEnd(10)}{network}</Text>
-        </Box>
-      </Box>
+      {/* Shared Header - Always visible */}
+      <SharedHeader
+        network={network}
+        profile={profile}
+        multisig={multisigAddress}
+      />
 
-      {/* Table or Empty State */}
-      {proposals.length > 0 ? (
+      {/* Content Area */}
+      {loading && proposals.length === 0 ? (
+        /* Loading State */
+        <Box borderStyle="single" paddingX={1} paddingY={1}>
+          <Box flexDirection="row" alignItems="center">
+            <Text color="cyan">
+              <Spinner type="dots" />
+            </Text>
+            <Text> Loading proposals...</Text>
+          </Box>
+        </Box>
+      ) : error ? (
+        /* Error State */
+        <Box borderStyle="single" paddingX={1} paddingY={1}>
+          <Text color="red">{error}</Text>
+        </Box>
+      ) : proposals.length > 0 ? (
+        /* Proposals Table */
         <Box borderStyle="single" paddingX={1}>
           <Box flexDirection="column">
             {/* Table Header */}
@@ -399,6 +411,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           </Box>
         </Box>
       ) : (
+        /* Empty State */
         <Box borderStyle="single" paddingX={1} paddingY={1}>
           <Box flexDirection="column" alignItems="center">
             <Text>No pending transactions</Text>
@@ -455,10 +468,10 @@ const ProposalView: React.FC<ProposalViewProps> = ({
                   })()}
                 </>
               )}
-              | [↑/↓] Navigate | [Enter] Expand | [L]oad | [Q]uit
+              | [↑/↓] Navigate | [Enter] Expand | [L]oad {onBack && '| [B]ack '} | [Q]uit
             </>
           ) : (
-            '[L]oad | [Q]uit'
+            <>{'[L]oad '}{onBack && '| [B]ack '}| [Q]uit</>
           )}
         </Text>
       </Box>
@@ -740,18 +753,4 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
   );
 });
 
-export const runProposalView = (props: ProposalViewProps) => {
-  // Check if TTY is available
-  if (!process.stdin.isTTY) {
-    console.error('Error: This command requires an interactive terminal (TTY).');
-    console.error('Please run this command in an interactive terminal.');
-    process.exit(1);
-  }
-
-  // Enable raw mode for keyboard input
-  process.stdin.setRawMode(true);
-
-  render(<ProposalView {...props} />, {
-    exitOnCtrlC: false // We'll handle exit ourselves with 'q' key
-  });
-};
+export default ProposalView;

@@ -5,7 +5,7 @@ import { resolvePayloadInput, initAptos } from '../utils.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
-import { loadProfile } from '../signing.js';
+import { loadProfile } from '../profiles.js';
 import {
   ensureMultisigAddressExists,
   ensureProfileExists,
@@ -86,7 +86,7 @@ Examples:
             }
           }
 
-          const { signer, fullnode } = await loadProfile(profile, network, true);
+          const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
 
           // Process each transaction sequentially
@@ -118,7 +118,7 @@ Examples:
           // Single payload - use existing logic
           const entryFunction = parseEntryFunctionPayload(jsonContent);
 
-          const { signer, fullnode } = await loadProfile(profile, network, true);
+          const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
             aptos,
@@ -174,7 +174,7 @@ Examples:
               };
         try {
           const network = await ensureNetworkExists(parentOptions.network, parentOptions.profile);
-          const { signer, fullnode } = await loadProfile(profile, network, true);
+          const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
             aptos,

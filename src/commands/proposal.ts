@@ -6,7 +6,9 @@ import {
   ensureNetworkExists,
   ensureProfileExists,
 } from '../storage.js';
-import { loadProfile } from '../signing.js';
+import { getProfileFullnode } from '../profiles.js';
+import { initAptos, safeStringify } from '../utils.js';
+import { fetchPendingTxns } from '../transactions.js';
 
 export const registerProposalCommand = (program: Command) => {
   program
@@ -39,22 +41,35 @@ export const registerProposalCommand = (program: Command) => {
         const profile = await ensureProfileExists(options.profile);
         let fullnode = options.fullnode;
 
-        const profileData = await loadProfile(profile, network, true);
         if (!fullnode) {
-          fullnode = profileData.fullnode;
+          fullnode = getProfileFullnode(profile, network);
         }
 
         const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
-        // Use Ink UI as default
-        const { runProposalView } = await import('../ui/ProposalView.js');
-        return runProposalView({
-          multisigAddress: multisig,
-          network,
-          fullnode,
-          profile,
-          sequenceNumber: options.sequenceNumber,
-        });
+        // Always output JSON for automation/scripting
+        const aptos = initAptos(network, fullnode);
+        const txns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
+
+        // Format proposals for JSON output
+        const proposals = txns.map((txn) => ({
+          sequenceNumber: txn.sequence_number,
+          function: txn.payload_decoded.success
+            ? txn.payload_decoded.data.function
+            : 'Failed to decode',
+          creator: txn.creator,
+          creationTime: Number(txn.creation_time_secs),
+          votes: {
+            yes: txn.yesVotes.map((v) => v.toString()),
+            no: txn.noVotes.map((v) => v.toString()),
+          },
+          simulationStatus: txn.simulationSuccess ? 'OK' : 'NOK',
+          simulationVmStatus: txn.simulationVmStatus,
+          payload: txn.payload_decoded.success ? txn.payload_decoded.data : null,
+        }));
+
+        // Use safeStringify for proper BigInt and vector<u8> handling
+        console.log(safeStringify(proposals, 2));
       }
     );
 };
