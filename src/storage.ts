@@ -1,7 +1,6 @@
 import { Low } from 'lowdb';
 import { JSONFilePreset } from 'lowdb/node';
 import { NetworkChoice } from './constants.js';
-import { getConfigPath } from './utils.js';
 import fs from 'fs';
 import { parse } from 'yaml';
 
@@ -67,7 +66,6 @@ export const AddressBook = {
       if (index === -1) throw new Error(`Alias "${alias}" not found.`);
       db.addresses.splice(index, 1);
     });
-    console.log(`Alias "${alias}" has been removed.`);
   },
 
   findAlias(safelyStorage: SafelyStorage, address: string): string | undefined {
@@ -96,10 +94,8 @@ export const MultisigDefault = {
 
   async remove() {
     await writeDb((db) => {
-      const prev = db.multisig;
       db.multisig = undefined;
       db.multisigConfig = undefined;
-      console.log(`Removed multisig default: "${prev}"`);
     });
   },
 
@@ -122,9 +118,7 @@ export const NetworkDefault = {
 
   async remove() {
     await writeDb((db) => {
-      const prev = db.network;
       db.network = undefined;
-      console.log(`Removed network default: "${prev}"`);
     });
   },
 
@@ -143,9 +137,7 @@ export const ProfileDefault = {
 
   async remove() {
     await writeDb((db) => {
-      const prev = db.profile;
       db.profile = undefined;
-      console.log(`Removed profile default: "${prev}"`);
     });
   },
 

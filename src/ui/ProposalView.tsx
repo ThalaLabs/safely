@@ -363,8 +363,9 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       {/* Shared Header - Always visible */}
       <SharedHeader
         subtitle="Proposals"
+        network={network}
         profile={profile}
-        multisig={{ address: multisigAddress, network }}
+        multisig={multisigAddress}
       />
 
       {/* Content Area */}

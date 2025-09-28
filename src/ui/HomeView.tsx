@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput, useApp, render } from 'ink';
 import TextInput from 'ink-text-input';
-import chalk from 'chalk';
 import { ProfileDefault, MultisigDefault, NetworkDefault } from '../storage.js';
 import { getAllProfiles, ProfileInfo } from '../profiles.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
@@ -64,10 +63,16 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     loadConfig();
   }, []);
 
-  // Update filtered profiles when network changes
+  // Update filtered profiles when network or profiles change
   useEffect(() => {
     if (currentNetwork) {
-      setFilteredProfiles(allProfiles.filter(p => p.network === currentNetwork));
+      const filtered = allProfiles.filter(p => p.network === currentNetwork);
+      setFilteredProfiles(filtered);
+
+      // Check if current profile is still valid
+      if (currentProfile && !filtered.some(p => p.name === currentProfile)) {
+        setCurrentProfile(undefined);
+      }
     } else {
       setFilteredProfiles([]);
     }
@@ -99,6 +104,10 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       setCurrentProfile(undefined);
       await ProfileDefault.remove();
     }
+
+    // Re-filter profiles for new network
+    const newFilteredProfiles = allProfiles.filter(p => p.network === network);
+    setFilteredProfiles(newFilteredProfiles);
 
     setExpandedSection(null);
   };
@@ -217,7 +226,12 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   return (
     <Box flexDirection="column">
       {/* Shared Header */}
-      <SharedHeader subtitle="Main Menu" />
+      <SharedHeader
+        subtitle="Main Menu"
+        network={currentNetwork}
+        profile={currentProfile}
+        multisig={currentMultisig}
+      />
 
       {/* Menu */}
       <Box borderStyle="single" paddingX={1}>
