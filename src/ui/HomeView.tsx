@@ -236,21 +236,21 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       {/* Menu */}
       <Box borderStyle="single" paddingX={1}>
         <Box flexDirection="column">
-          <Text bold>Configuration:</Text>
-
           {/* Network Section */}
           {expandedSection === 'network' ? (
             <>
-              <Text inverse={selectedIndex === 0}>▼ Network:</Text>
+              <Text>
+                {selectedIndex === 0 ? '▼' : ' '} Network:
+              </Text>
               {NETWORK_CHOICES.filter(n => n !== 'custom').map((network, index) => (
-                <Text key={network} inverse={index === networkSubIndex}>
+                <Text key={network}>
                   {'  '}{index === networkSubIndex ? '▶' : ' '} {network}
                   {network === currentNetwork && <Text color="green"> ✓</Text>}
                 </Text>
               ))}
             </>
           ) : (
-            <Text inverse={selectedIndex === 0}>
+            <Text>
               {selectedIndex === 0 ? '▶' : ' '} Network: {currentNetwork ? (
                 <Text color="cyan">{currentNetwork} ✓</Text>
               ) : (
@@ -262,7 +262,9 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           {/* Multisig Section */}
           {expandedSection === 'multisig' ? (
             <>
-              <Text inverse={selectedIndex === 1}>▼ Multisig:</Text>
+              <Text>
+                {selectedIndex === 1 ? '▼' : ' '} Multisig:
+              </Text>
               <Box paddingLeft={2}>
                 <Text>Address: </Text>
                 <TextInput
@@ -277,7 +279,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               <Text dimColor>  [Enter] Save | [Esc] Cancel</Text>
             </>
           ) : (
-            <Text inverse={selectedIndex === 1}>
+            <Text>
               {selectedIndex === 1 ? '▶' : ' '} Multisig: {!currentNetwork ? (
                 <Text dimColor>(Select network first)</Text>
               ) : currentMultisig ? (
@@ -291,10 +293,12 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           {/* Profile Section */}
           {expandedSection === 'profile' ? (
             <>
-              <Text inverse={selectedIndex === 2}>▼ Profile:</Text>
+              <Text>
+                {selectedIndex === 2 ? '▼' : ' '} Profile:
+              </Text>
               {filteredProfiles.length > 0 ? (
                 filteredProfiles.map((profile, index) => (
-                  <Text key={profile.name} inverse={index === profileSubIndex}>
+                  <Text key={profile.name}>
                     {'  '}{index === profileSubIndex ? '▶' : ' '} {profile.name}
                     {profile.name === currentProfile && <Text color="green"> ✓</Text>}
                   </Text>
@@ -304,7 +308,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               )}
             </>
           ) : (
-            <Text inverse={selectedIndex === 2}>
+            <Text>
               {selectedIndex === 2 ? '▶' : ' '} Profile: {!currentNetwork ? (
                 <Text dimColor>(Select network first)</Text>
               ) : currentProfile && filteredProfiles.some(p => p.name === currentProfile) ? (
@@ -317,11 +321,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             </Text>
           )}
 
-          <Text></Text>
-          <Text bold>Actions:</Text>
-
           {/* Proposals Section */}
-          <Text inverse={selectedIndex === 3}>
+          <Text>
             {selectedIndex === 3 ? '▶' : ' '} Proposals
             {canAccessProposals ? (
               <Text color="green"> ✓</Text>
