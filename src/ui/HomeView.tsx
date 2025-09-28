@@ -21,6 +21,8 @@ interface Config {
   multisig?: string;
   profile?: string;
   profiles: ProfileInfo[];
+  multisigOwners: string[];
+  profileAddress: string | null;
 }
 
 interface MenuState {
@@ -39,7 +41,11 @@ interface MultisigResource {
 const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   const { exit } = useApp();
   const [view, setView] = useState<'home' | 'proposal'>('home');
-  const [config, setConfig] = useState<Config>({ profiles: [] });
+  const [config, setConfig] = useState<Config>({
+    profiles: [],
+    multisigOwners: [],
+    profileAddress: null
+  });
   const [menu, setMenu] = useState<MenuState>({
     selectedIndex: 0,
     expandedItem: null,
@@ -48,8 +54,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     multisigError: '',
     isValidating: false
   });
-  const [multisigOwners, setMultisigOwners] = useState<string[]>([]);
-  const [profileAddress, setProfileAddress] = useState<string | null>(null);
 
   // Load configuration
   useEffect(() => {
@@ -59,31 +63,30 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         MultisigDefault.get(),
         ProfileDefault.get()
       ]);
+      const owners = network && multisig ? await fetchMultisigOwners(network, multisig) : [];
       setConfig({
         network,
         multisig,
         profile,
-        profiles: getAllProfiles()
+        profiles: getAllProfiles(),
+        multisigOwners: owners,
+        profileAddress: null
       });
-      // Load multisig owners if we have a multisig
-      if (network && multisig) {
-        await fetchMultisigOwners(network, multisig);
-      }
     };
     load();
   }, []);
 
   // Fetch multisig owners from chain
-  const fetchMultisigOwners = useCallback(async (network: NetworkChoice, multisigAddress: string) => {
+  const fetchMultisigOwners = useCallback(async (network: NetworkChoice, multisigAddress: string): Promise<string[]> => {
     try {
       const aptos = initAptos(network);
       const resource = await aptos.getAccountResource<MultisigResource>({
         accountAddress: multisigAddress,
         resourceType: '0x1::multisig_account::MultisigAccount'
       });
-      setMultisigOwners(resource.owners || []);
+      return resource.owners || [];
     } catch {
-      setMultisigOwners([]);
+      return [];
     }
   }, []);
 
@@ -93,12 +96,12 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       if (config.profile && config.network) {
         try {
           const profile = await loadProfile(config.profile, config.network, true);
-          setProfileAddress(profile.signer.accountAddress.toString());
+          setConfig(prev => ({ ...prev, profileAddress: profile.signer.accountAddress.toString() }));
         } catch {
-          setProfileAddress(null);
+          setConfig(prev => ({ ...prev, profileAddress: null }));
         }
       } else {
-        setProfileAddress(null);
+        setConfig(prev => ({ ...prev, profileAddress: null }));
       }
     };
     loadProfileAddress();
@@ -111,10 +114,10 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
 
   // Check if profile is an owner
   const isProfileOwner = useMemo(() => {
-    if (!profileAddress || multisigOwners.length === 0) return false;
+    if (!config.profileAddress || config.multisigOwners.length === 0) return false;
     try {
-      const profileAddr = AccountAddress.from(profileAddress);
-      return multisigOwners.some(owner => {
+      const profileAddr = AccountAddress.from(config.profileAddress);
+      return config.multisigOwners.some(owner => {
         try {
           const ownerAddr = AccountAddress.from(owner);
           return ownerAddr.equals(profileAddr);
@@ -125,7 +128,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     } catch {
       return false;
     }
-  }, [profileAddress, multisigOwners]);
+  }, [config.profileAddress, config.multisigOwners]);
 
   const canAccessProposals = !!(
     config.network &&
@@ -148,14 +151,15 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       await ProfileDefault.remove();
       newConfig.multisig = undefined;
       newConfig.profile = undefined;
-      // Clear multisig owners when network changes
-      setMultisigOwners([]);
+      newConfig.multisigOwners = [];
+      newConfig.profileAddress = null;
     }
     if ('multisig' in updates && updates.multisig) {
       await MultisigDefault.set(updates.multisig);
       // Fetch owners for new multisig
       if (config.network) {
-        await fetchMultisigOwners(config.network, updates.multisig);
+        const owners = await fetchMultisigOwners(config.network, updates.multisig);
+        newConfig.multisigOwners = owners;
       }
     }
     if ('profile' in updates && updates.profile) {
@@ -244,8 +248,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
                 resourceType: '0x1::multisig_account::MultisigAccount'
               });
               // Successfully got the resource, it's a valid multisig
-              setMultisigOwners(resource.owners || []);
-              await updateConfig({ multisig: menu.multisigInput });
+              await updateConfig({ multisig: menu.multisigInput, multisigOwners: resource.owners });
               collapseMenu();
             } catch (resourceError) {
               // Resource doesn't exist or error fetching
