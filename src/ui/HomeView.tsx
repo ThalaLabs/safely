@@ -10,7 +10,7 @@ import ProposalView from './ProposalView.js';
 import SharedHeader from './SharedHeader.js';
 import { initAptos } from '../utils.js';
 import { AccountAddress } from '@aptos-labs/ts-sdk';
-import { loadProfile } from '../signing.js';
+import { loadProfile } from '../profiles.js';
 
 interface HomeViewProps {
   onNavigate?: (view: 'proposal') => void;
@@ -95,7 +95,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     const loadProfileAddress = async () => {
       if (config.profile && config.network) {
         try {
-          const profile = await loadProfile(config.profile, config.network, true);
+          const profile = await loadProfile(config.profile, config.network);
           setConfig(prev => ({ ...prev, profileAddress: profile.signer.accountAddress.toString() }));
         } catch {
           setConfig(prev => ({ ...prev, profileAddress: null }));

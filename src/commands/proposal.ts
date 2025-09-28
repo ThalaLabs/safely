@@ -6,7 +6,7 @@ import {
   ensureNetworkExists,
   ensureProfileExists,
 } from '../storage.js';
-import { loadProfile } from '../signing.js';
+import { getProfileFullnode } from '../profiles.js';
 import { initAptos, safeStringify } from '../utils.js';
 import { fetchPendingTxns } from '../transactions.js';
 
@@ -41,9 +41,8 @@ export const registerProposalCommand = (program: Command) => {
         const profile = await ensureProfileExists(options.profile);
         let fullnode = options.fullnode;
 
-        const profileData = await loadProfile(profile, network, true);
         if (!fullnode) {
-          fullnode = profileData.fullnode;
+          fullnode = getProfileFullnode(profile, network);
         }
 
         const multisig = await ensureMultisigAddressExists(options.multisigAddress);

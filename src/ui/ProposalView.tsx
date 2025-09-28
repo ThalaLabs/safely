@@ -19,7 +19,7 @@ import { initAptos, getExplorerUrl } from '../utils.js';
 import { NetworkChoice } from '../constants.js';
 import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
-import { loadProfile } from '../signing.js';
+import { loadProfile } from '../profiles.js';
 import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
 import { getAddressLabel } from '../labels.js';
 import SharedHeader from './SharedHeader.js';
@@ -117,7 +117,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   useEffect(() => {
     const init = async () => {
       try {
-        const profileData = await loadProfile(profile, network as NetworkChoice, true);
+        const profileData = await loadProfile(profile, network as NetworkChoice);
         const { signer } = profileData;
         setSignerAddress(signer.accountAddress.toString());
 

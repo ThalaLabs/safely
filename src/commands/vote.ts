@@ -1,7 +1,8 @@
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { validateAddress, validateUInt, validateBool } from '../validators.js';
-import { loadProfile, signAndSubmitTransaction } from '../signing.js';
+import { signAndSubmitTransaction } from '../signing.js';
+import { loadProfile } from '../profiles.js';
 import {
   ensureMultisigAddressExists,
   ensureProfileExists,
@@ -56,7 +57,7 @@ export async function handleVoteCommand(
   profile: string
 ): Promise<string> {
   try {
-    const { signer, fullnode } = await loadProfile(profile, network, true);
+    const { signer, fullnode } = await loadProfile(profile, network);
     const aptos = initAptos(network, fullnode);
 
     const txn = await aptos.transaction.build.simple({
