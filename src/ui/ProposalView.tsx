@@ -520,12 +520,12 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
           <Text bold>Votes</Text>
           {proposal.yesVotes.map((voter, i) => (
             <Text key={`yes-${i}`} color="green">
-              {'  '}Y <AddressLink address={voter} network={network} />
+              {'  '}● <AddressLink address={voter} network={network} />
             </Text>
           ))}
           {proposal.noVotes.map((voter, i) => (
             <Text key={`no-${i}`} color="red">
-              {'  '}N <AddressLink address={voter} network={network} />
+              {'  '}✗ <AddressLink address={voter} network={network} />
             </Text>
           ))}
           {proposal.yesVotes.length === 0 && proposal.noVotes.length === 0 && (
