@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Box, Text, useInput, useApp, render } from 'ink';
+import { Box, Text, useInput, useApp } from 'ink';
 import Link from 'ink-link';
 import Spinner from 'ink-spinner';
 import chalk from 'chalk';
@@ -754,19 +754,3 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
 });
 
 export default ProposalView;
-
-export const runProposalView = (props: ProposalViewProps) => {
-  // Check if TTY is available
-  if (!process.stdin.isTTY) {
-    console.error('Error: This command requires an interactive terminal (TTY).');
-    console.error('Please run this command in an interactive terminal.');
-    process.exit(1);
-  }
-
-  // Enable raw mode for keyboard input
-  process.stdin.setRawMode(true);
-
-  render(<ProposalView {...props} />, {
-    exitOnCtrlC: false // We'll handle exit ourselves with 'q' key
-  });
-};

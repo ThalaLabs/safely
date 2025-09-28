@@ -32,6 +32,16 @@ build/
 # Address book DB
 addressbook.json
 
+# Safely storage file
+safelyStorage.json
+
+# Test JSON files
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!.changeset/*.json
+
 # Logs
 logs/
 *.log

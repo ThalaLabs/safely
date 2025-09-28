@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useApp, render } from 'ink';
+import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
 import chalk from 'chalk';
 import { MultisigDefault, NetworkDefault } from '../storage.js';
@@ -199,22 +199,6 @@ const MultisigView: React.FC<MultisigViewProps> = ({ onBack }) => {
       </Box>
     </Box>
   );
-};
-
-export const runMultisigView = (props?: MultisigViewProps) => {
-  // Check if TTY is available
-  if (!process.stdin.isTTY) {
-    console.error('Error: This command requires an interactive terminal (TTY).');
-    console.error('Please run this command in an interactive terminal.');
-    process.exit(1);
-  }
-
-  // Enable raw mode for keyboard input
-  process.stdin.setRawMode(true);
-
-  render(<MultisigView {...props} />, {
-    exitOnCtrlC: false
-  });
 };
 
 export default MultisigView;

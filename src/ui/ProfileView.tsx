@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useApp, render } from 'ink';
+import { Box, Text, useInput, useApp } from 'ink';
 import chalk from 'chalk';
 import { ProfileDefault, NetworkDefault } from '../storage.js';
 import { getAllProfiles, ProfileInfo } from '../profiles.js';
@@ -175,22 +175,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
       </Box>
     </Box>
   );
-};
-
-export const runProfileView = (props?: ProfileViewProps) => {
-  // Check if TTY is available
-  if (!process.stdin.isTTY) {
-    console.error('Error: This command requires an interactive terminal (TTY).');
-    console.error('Please run this command in an interactive terminal.');
-    process.exit(1);
-  }
-
-  // Enable raw mode for keyboard input
-  process.stdin.setRawMode(true);
-
-  render(<ProfileView {...props} />, {
-    exitOnCtrlC: false
-  });
 };
 
 export default ProfileView;
