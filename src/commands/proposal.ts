@@ -69,14 +69,8 @@ export const registerProposalCommand = (program: Command) => {
           payload: txn.payload_decoded.success ? txn.payload_decoded.data : null,
         }));
 
-        const output = {
-          multisig,
-          network,
-          proposals,
-        };
-
         // Use safeStringify for proper BigInt and vector<u8> handling
-        console.log(safeStringify(output, 2));
+        console.log(safeStringify(proposals, 2));
       }
     );
 };
