@@ -1,3 +1,18 @@
+## safely
+
+Enter the Terminal User Interface (TUI) for interactive multisig management
+
+```
+When no command is specified, safely launches an interactive terminal interface
+that provides a menu-driven experience for managing multisigs.
+
+Features:
+  - Visual menu navigation
+  - Interactive multisig management
+  - Proposal viewing and voting
+  - Account configuration
+```
+
 ## safely account [options] [command]
 
 Multisig account operations

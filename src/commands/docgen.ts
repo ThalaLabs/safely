@@ -12,7 +12,25 @@ export function registerDocgenCommand(program: Command) {
         .slice(1) // Remove root program
         .filter((cmd) => cmd.name() !== 'docgen'); // Remove docgen command
 
+      // Add documentation for the TUI entry point
+      const tuiDoc = `## safely
+
+Enter the Terminal User Interface (TUI) for interactive multisig management
+
+\`\`\`
+When no command is specified, safely launches an interactive terminal interface
+that provides a menu-driven experience for managing multisigs.
+
+Features:
+  - Visual menu navigation
+  - Interactive multisig management
+  - Proposal viewing and voting
+  - Account configuration
+\`\`\``;
+
       const docs =
+        tuiDoc +
+        '\n\n' +
         allCommands
           .map((command) => {
             const helpText = command.helpInformation();
@@ -21,7 +39,8 @@ export function registerDocgenCommand(program: Command) {
             const heading = fullCommand.replace('Usage: ', '## ');
             return `${heading}\n\n${description}\n\n\`\`\`\n${options.join('\n')}\n\`\`\``;
           })
-          .join('\n\n') + '\n';
+          .join('\n\n') +
+        '\n';
 
       if (options.output) {
         const outputPath = join(process.cwd(), options.output);
