@@ -362,7 +362,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     <Box flexDirection="column">
       {/* Shared Header - Always visible */}
       <SharedHeader
-        subtitle="Proposals"
         network={network}
         profile={profile}
         multisig={multisigAddress}

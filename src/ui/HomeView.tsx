@@ -308,7 +308,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   return (
     <Box flexDirection="column">
       <SharedHeader
-        subtitle="Main Menu"
         network={config.network}
         profile={config.profile}
         multisig={config.multisig}

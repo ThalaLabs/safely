@@ -8,18 +8,24 @@ interface SharedHeaderProps {
   multisig?: string;
 }
 
-const SharedHeader: React.FC<SharedHeaderProps> = ({ subtitle, network, profile, multisig }) => {
+const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig }) => {
 
   return (
     <>
       {/* Main Title */}
-      <Box borderStyle="single" paddingX={1}>
-        <Box flexDirection="column">
-          <Text bold color="cyan">
-            Safely - Multisig Management Tool
-            {subtitle && <Text color="yellow"> / {subtitle}</Text>}
-          </Text>
-        </Box>
+      <Box borderStyle="single" flexDirection="column" paddingX={1}>
+        <Text bold color="cyan">
+          ┌─────────────────────────┐
+        </Text>
+        <Text bold color="cyan">
+          │         SAFELY          │
+        </Text>
+        <Text bold color="cyan">
+          │   — Safe by Design —    │
+        </Text>
+        <Text bold color="cyan">
+          └─────────────────────────┘
+        </Text>
       </Box>
 
       {/* Current Connection */}
