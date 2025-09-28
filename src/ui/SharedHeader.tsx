@@ -17,7 +17,7 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ subtitle, network, profile,
         <Box flexDirection="column">
           <Text bold color="cyan">
             Safely - Multisig Management Tool
-            {subtitle && <Text color="white"> / {subtitle}</Text>}
+            {subtitle && <Text color="yellow"> / {subtitle}</Text>}
           </Text>
         </Box>
       </Box>
