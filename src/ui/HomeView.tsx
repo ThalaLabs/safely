@@ -70,21 +70,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       }
     } else if (normalizedInput === 'q') {
       exit();
-    } else if (normalizedInput === 'p') {
-      setCurrentView('profile');
-      if (onNavigate) {
-        onNavigate('profile');
-      }
-    } else if (normalizedInput === 'm') {
-      setCurrentView('multisig');
-      if (onNavigate) {
-        onNavigate('multisig');
-      }
-    } else if (normalizedInput === 'r' && canAccessProposals) {
-      setCurrentView('proposal');
-      if (onNavigate) {
-        onNavigate('proposal');
-      }
     }
   });
 
@@ -140,8 +125,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       {/* Footer */}
       <Box borderStyle="single" paddingX={1}>
         <Text dimColor>
-          [↑/↓] Navigate | [Enter] Select | [P]rofile | [M]ultisig
-          {canAccessProposals && ' | P[r]oposals'} | [Q]uit
+          [↑/↓] Navigate | [Enter] Select | [Q]uit
         </Text>
       </Box>
     </Box>
