@@ -42,4 +42,13 @@ registerDefaultCommand(program);
 // misc
 registerDocgenCommand(program);
 
-program.parse();
+// If no arguments provided, launch the interactive UI
+if (process.argv.length === 2) {
+  // No arguments provided, launch UI
+  import('./ui/HomeView.js').then(({ runHomeView }) => {
+    runHomeView();
+  });
+} else {
+  // Parse command line arguments normally
+  program.parse();
+}

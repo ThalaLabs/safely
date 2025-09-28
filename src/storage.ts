@@ -10,9 +10,15 @@ type Address = {
   address: string;
 };
 
+type MultisigConfig = {
+  address: string;
+  network: NetworkChoice;
+};
+
 type SafelyStorage = {
   addresses: Address[];
   multisig?: string;
+  multisigConfig?: MultisigConfig;
   network?: NetworkChoice;
   profile?: string;
 };
@@ -75,9 +81,16 @@ export const AddressBook = {
 
 // **Multisig Defaults**
 export const MultisigDefault = {
-  async set(multisigAddress: string) {
+  async set(multisigAddress: string, network?: NetworkChoice) {
     await writeDb((db) => {
       db.multisig = multisigAddress;
+      // Store new format if network provided
+      if (network) {
+        db.multisigConfig = {
+          address: multisigAddress,
+          network: network,
+        };
+      }
     });
   },
 
@@ -85,12 +98,17 @@ export const MultisigDefault = {
     await writeDb((db) => {
       const prev = db.multisig;
       db.multisig = undefined;
+      db.multisigConfig = undefined;
       console.log(`Removed multisig default: "${prev}"`);
     });
   },
 
   async get(): Promise<string | undefined> {
     return readDb((db) => db.multisig);
+  },
+
+  async getConfig(): Promise<MultisigConfig | undefined> {
+    return readDb((db) => db.multisigConfig);
   },
 };
 
@@ -230,4 +248,28 @@ export async function ensureProfileExists(profileOption?: string): Promise<strin
   }
 
   return storedProfile;
+}
+
+export async function checkNetworkCompatibility(): Promise<{
+  compatible: boolean;
+  profileNetwork?: NetworkChoice;
+  multisigNetwork?: NetworkChoice;
+}> {
+  const profileName = await ProfileDefault.get();
+  const multisigConfig = await MultisigDefault.getConfig();
+
+  if (!profileName || !multisigConfig) {
+    return { compatible: false };
+  }
+
+  const profileNetwork = inferNetworkFromProfile(profileName);
+  if (!profileNetwork) {
+    return { compatible: false };
+  }
+
+  return {
+    compatible: profileNetwork === multisigConfig.network,
+    profileNetwork,
+    multisigNetwork: multisigConfig.network,
+  };
 }
