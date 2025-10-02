@@ -14,26 +14,20 @@ export function registerEncodeCommand(program: Command) {
       'Transaction payload (file path, JSON string, or - for stdin)'
     )
     .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
-    .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
+    .addOption(new Option('--fullnode <url>', 'Fullnode URL override'))
     .addHelpText(
       'after',
       `
 Examples:
   # From file
   $ safely encode --payload payload.json --network aptos-testnet
-  
+
   # Direct JSON string
   $ safely encode --payload '{"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":["0x123",1000]}' --network aptos-testnet
-  
+
   # From stdin
   $ echo '{"function_id":"0x1::coin::transfer","type_args":["0x1::aptos_coin::AptosCoin"],"args":["0x123",1000]}' | safely encode --payload - --network aptos-testnet`
     )
-    .hook('preAction', (thisCommand) => {
-      const options = thisCommand.opts();
-      if (options.network === 'custom' && !options.fullnode) {
-        throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
-      }
-    })
     .action(async (options: { payload: string; network: NetworkChoice; fullnode: string }) => {
       const network = await ensureNetworkExists(options.network);
       const aptos = initAptos(network, options.fullnode);

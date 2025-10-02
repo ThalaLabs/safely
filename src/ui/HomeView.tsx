@@ -137,7 +137,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     filteredProfiles.some(p => p.name === config.profile)
   );
 
-  const networks = NETWORK_CHOICES.filter(n => n !== 'custom');
+  const networks = NETWORK_CHOICES;
 
   // Menu actions
   const updateConfig = useCallback(async (updates: Partial<Config>) => {
@@ -181,7 +181,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     const updates: Partial<MenuState> = { expandedItem: item };
 
     if (item === 'network') {
-      const idx = config.network && config.network !== 'custom'
+      const idx = config.network
         ? networks.indexOf(config.network as any)
         : -1;
       updates.subIndex = Math.max(0, idx);

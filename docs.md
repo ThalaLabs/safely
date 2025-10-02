@@ -37,7 +37,7 @@ Options:
   -o, --additional-owners <addresses>     Comma-separated list of additional owner addresses
   -n, --num-signatures-required <number>  Number of signatures required for execution
   -p, --profile <string>                  Profile to use for the transaction
-  --network <network>                     network to use (choices: "aptos-devnet", "aptos-testnet", "aptos-mainnet", "movement-mainnet", "movement-testnet", "custom")
+  --network <network>                     network to use (choices: "aptos-devnet", "aptos-testnet", "aptos-mainnet", "movement-mainnet", "movement-testnet")
   -h, --help                              display help for command
 ```
 
@@ -52,7 +52,7 @@ Options:
   -n, --num-signatures-required <number>  New number of signatures required for execution
   -m, --multisig-address <address>        multisig account address
   -p, --profile <string>                  Profile to use for the transaction
-  --network <network>                     network to use (choices: "aptos-devnet", "aptos-testnet", "aptos-mainnet", "movement-mainnet", "movement-testnet", "custom")
+  --network <network>                     network to use (choices: "aptos-devnet", "aptos-testnet", "aptos-mainnet", "movement-mainnet", "movement-testnet")
   -h, --help                              display help for command
 ```
 
@@ -65,9 +65,8 @@ Options:
   -m, --multisig-address <address>  multisig account address
   --network <network>               network to use (choices: "aptos-devnet",
                                     "aptos-testnet", "aptos-mainnet",
-                                    "movement-mainnet", "movement-testnet",
-                                    "custom")
-  --fullnode <url>                  Fullnode URL for custom network
+                                    "movement-mainnet", "movement-testnet")
+  --fullnode <url>                  Fullnode URL override
   -h, --help                        display help for command
 ```
 
@@ -80,8 +79,7 @@ Options:
   -m, --multisig-address <address>  multisig account address
   --network <network>               network to use (choices: "aptos-devnet",
                                     "aptos-testnet", "aptos-mainnet",
-                                    "movement-mainnet", "movement-testnet",
-                                    "custom")
+                                    "movement-mainnet", "movement-testnet")
   -p, --profile <string>            Profile to use for the transaction
   --no-simulate                     skip tx simulation
   -h, --help                        display help for command
@@ -139,8 +137,7 @@ Options:
   -m, --multisig-address <address>  multisig account address
   --network <network>               network to use (choices: "aptos-devnet",
                                     "aptos-testnet", "aptos-mainnet",
-                                    "movement-mainnet", "movement-testnet",
-                                    "custom")
+                                    "movement-mainnet", "movement-testnet")
   -p, --profile <string>            profile name of voter
   -h, --help                        display help for command
 ```
@@ -157,8 +154,7 @@ Options:
                                     it
   --network <network>               network to use (choices: "aptos-devnet",
                                     "aptos-testnet", "aptos-mainnet",
-                                    "movement-mainnet", "movement-testnet",
-                                    "custom")
+                                    "movement-mainnet", "movement-testnet")
   -h, --help                        display help for command
 ```
 
@@ -171,9 +167,8 @@ Options:
   -m, --multisig-address <address>  multisig account address
   --network <network>               network to use (choices: "aptos-devnet",
                                     "aptos-testnet", "aptos-mainnet",
-                                    "movement-mainnet", "movement-testnet",
-                                    "custom")
-  --fullnode <url>                  Fullnode URL for custom network
+                                    "movement-mainnet", "movement-testnet")
+  --fullnode <url>                  Fullnode URL override
   -s, --sequence-number <number>    fetch transaction with specific sequence
                                     number
   -h, --help                        display help for command
@@ -188,9 +183,8 @@ Options:
   -m, --multisig-address <address>  multisig account address
   --network <network>               network to use (choices: "aptos-devnet",
                                     "aptos-testnet", "aptos-mainnet",
-                                    "movement-mainnet", "movement-testnet",
-                                    "custom")
-  --fullnode <url>                  Fullnode URL for custom network
+                                    "movement-mainnet", "movement-testnet")
+  --fullnode <url>                  Fullnode URL override
   -s, --sequence-number <number>    fetch transaction with specific sequence
                                     number
   -h, --help                        display help for command
@@ -206,8 +200,8 @@ Options:
                        0x)
   --network <network>  network to use (choices: "aptos-devnet",
                        "aptos-testnet", "aptos-mainnet", "movement-mainnet",
-                       "movement-testnet", "custom")
-  --fullnode <url>     Fullnode URL for custom network
+                       "movement-testnet")
+  --fullnode <url>     Fullnode URL override
   -h, --help           display help for command
 ```
 
@@ -221,8 +215,8 @@ Options:
                        stdin)
   --network <network>  network to use (choices: "aptos-devnet",
                        "aptos-testnet", "aptos-mainnet", "movement-mainnet",
-                       "movement-testnet", "custom")
-  --fullnode <url>     Fullnode URL for custom network
+                       "movement-testnet")
+  --fullnode <url>     Fullnode URL override
   -h, --help           display help for command
 ```
 
@@ -302,7 +296,7 @@ Options:
   -m, --multisig <address>  Multisig address
   -n, --network <network>   network to use (choices: "aptos-devnet",
                             "aptos-testnet", "aptos-mainnet",
-                            "movement-mainnet", "movement-testnet", "custom")
+                            "movement-mainnet", "movement-testnet")
   -p, --profile <string>    Profile to use for transactions
   -h, --help                display help for command
 ```

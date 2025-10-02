@@ -143,13 +143,7 @@ export const registerAccountCommand = (program: Command) => {
     .description('Show multisig summary')
     .option('-m, --multisig-address <address>', 'multisig account address', validateAddress)
     .addOption(new Option('--network <network>', 'network to use').choices(NETWORK_CHOICES))
-    .addOption(new Option('--fullnode <url>', 'Fullnode URL for custom network'))
-    .hook('preAction', (thisCommand) => {
-      const options = thisCommand.opts();
-      if (options.network === 'custom' && !options.fullnode) {
-        throw new Error('When using a "custom" network, you must provide a --fullnode URL.');
-      }
-    })
+    .addOption(new Option('--fullnode <url>', 'Fullnode URL override'))
     .action(
       async (options: { fullnode?: string; multisigAddress?: string; network?: NetworkChoice }) => {
         const network = await ensureNetworkExists(options.network);
