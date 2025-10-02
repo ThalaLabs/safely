@@ -129,6 +129,49 @@ export function getProfileNetwork(profileName: string): NetworkChoice | null {
   return profile?.network ?? null;
 }
 
+export function validateProfileNetwork(profileName: string, network: NetworkChoice): void {
+  const configPath = getConfigPath(network);
+
+  if (!fs.existsSync(configPath)) {
+    throw new Error(
+      `Cannot use profile "${profileName}" with network "${network}". ` +
+        `Config file not found at ${configPath}`
+    );
+  }
+
+  try {
+    const file = fs.readFileSync(configPath, 'utf8');
+    const profiles: Record<string, ConfigProfile> = parse(file).profiles;
+    const profileData = profiles[profileName];
+
+    if (!profileData) {
+      const availableProfiles = Object.keys(profiles);
+      throw new Error(
+        `Profile "${profileName}" not found in ${configPath}. ` +
+          `Available profiles: ${availableProfiles.join(', ')}`
+      );
+    }
+
+    // Validate that the profile's network matches the requested network
+    const profileNetwork = network.startsWith('movement-')
+      ? mapNetworkName(profileData.network, 'movement')
+      : mapNetworkName(profileData.network, 'aptos');
+
+    if (profileNetwork !== network) {
+      throw new Error(
+        `Profile "${profileName}" is configured for network "${profileData.network}" ` +
+          `but --network=${network} was specified. ` +
+          `Please use a profile configured for ${network}.`
+      );
+    }
+  } catch (e) {
+    if (e instanceof Error) {
+      throw e;
+    }
+    throw new Error(`Failed to validate profile at ${configPath}: ${e}`);
+  }
+}
+
 function readProfileConfig(profile: string, network: NetworkChoice): ConfigProfile {
   const configPath = getConfigPath(network);
 

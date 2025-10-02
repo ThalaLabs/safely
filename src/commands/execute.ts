@@ -12,7 +12,7 @@ import chalk from 'chalk';
 import { confirm } from '@inquirer/prompts';
 import { validateAddress } from '../validators.js';
 import { signAndSubmitTransaction } from '../signing.js';
-import { loadProfile } from '../profiles.js';
+import { loadProfile, validateProfileNetwork } from '../profiles.js';
 import {
   ensureMultisigAddressExists,
   ensureProfileExists,
@@ -37,10 +37,12 @@ export const registerExecuteCommand = (program: Command) => {
         reject?: boolean;
       }) => {
         try {
-          const network = await ensureNetworkExists(options.network, options.profile);
+          const network = await ensureNetworkExists(options.network);
+          const profile = await ensureProfileExists(options.profile);
+          validateProfileNetwork(profile, network);
           const result = await handleExecuteCommand(
             await ensureMultisigAddressExists(options.multisigAddress),
-            await ensureProfileExists(options.profile),
+            profile,
             network,
             options.reject ?? false,
             false

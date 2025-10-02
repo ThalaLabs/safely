@@ -13,7 +13,7 @@ import {
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAddresses, validateUInt } from '../validators.js';
 import { signAndSubmitTransaction } from '../signing.js';
-import { loadProfile } from '../profiles.js';
+import { loadProfile, validateProfileNetwork } from '../profiles.js';
 import { initAptos } from '../utils.js';
 
 export const registerAccountCommand = (program: Command) => {
@@ -52,8 +52,9 @@ export const registerAccountCommand = (program: Command) => {
           ],
         };
         try {
+          const network = await ensureNetworkExists(options.network);
           const profile = await ensureProfileExists(options.profile);
-          const network = await ensureNetworkExists(options.network, options.profile);
+          validateProfileNetwork(profile, network);
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
           const preparedTxn = await aptos.transaction.build.simple({
@@ -123,8 +124,9 @@ export const registerAccountCommand = (program: Command) => {
         };
         try {
           const multisig = await ensureMultisigAddressExists(options.multisigAddress);
+          const network = await ensureNetworkExists(options.network);
           const profile = await ensureProfileExists(options.profile);
-          const network = await ensureNetworkExists(options.network, options.profile);
+          validateProfileNetwork(profile, network);
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
 

@@ -5,7 +5,7 @@ import { resolvePayloadInput, initAptos } from '../utils.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
-import { loadProfile } from '../profiles.js';
+import { loadProfile, validateProfileNetwork } from '../profiles.js';
 import {
   ensureMultisigAddressExists,
   ensureProfileExists,
@@ -63,8 +63,9 @@ Examples:
     .action(async (options: { payload: string; yes?: boolean }, cmd) => {
       const parentOptions = cmd.parent.opts();
       const multisig = await ensureMultisigAddressExists(parentOptions.multisigAddress);
+      const network = await ensureNetworkExists(parentOptions.network);
       const profile = await ensureProfileExists(parentOptions.profile);
-      const network = await ensureNetworkExists(parentOptions.network, parentOptions.profile);
+      validateProfileNetwork(profile, network);
 
       try {
         const jsonContent = await resolvePayloadInput(options.payload);
@@ -158,7 +159,9 @@ Examples:
       ) => {
         const parentOptions = cmd.parent.parent.opts();
         const multisig = await ensureMultisigAddressExists(parentOptions.multisigAddress);
+        const network = await ensureNetworkExists(parentOptions.network);
         const profile = await ensureProfileExists(parentOptions.profile);
+        validateProfileNetwork(profile, network);
 
         const entryFunction =
           options.asset.type === 'coin'
@@ -173,7 +176,6 @@ Examples:
                 functionArguments: [options.asset.address, options.recipient, options.amount],
               };
         try {
-          const network = await ensureNetworkExists(parentOptions.network, parentOptions.profile);
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
           await proposeEntryFunction(
