@@ -176,7 +176,6 @@ Options:
   --fullnode <url>                  Fullnode URL for custom network
   -s, --sequence-number <number>    fetch transaction with specific sequence
                                     number
-  -p, --profile <string>            Profile to use for the transaction
   -h, --help                        display help for command
 ```
 

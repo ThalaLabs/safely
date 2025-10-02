@@ -2,7 +2,6 @@ import { NetworkChoice } from './constants.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { getProfileNetwork } from './profiles.js';
 
 type Address = {
   alias: string;
@@ -155,32 +154,6 @@ export const ensureMultisigAddressExists = createEnsure(
   'No multisig address provided'
 );
 
-export async function ensureNetworkExists(
-  networkOption?: NetworkChoice,
-  profileOption?: string
-): Promise<NetworkChoice> {
-  // 1. CLI option
-  if (networkOption) {
-    return networkOption;
-  }
-
-  // 2. Infer from profile
-  const profileName = profileOption || (await ProfileDefault.get());
-  if (profileName) {
-    const network = getProfileNetwork(profileName);
-    if (network) {
-      return network;
-    }
-  }
-
-  // 3. Stored default
-  const storedNetwork = await NetworkDefault.get();
-  if (storedNetwork) {
-    return storedNetwork;
-  }
-
-  // 4. Hardcoded default
-  return 'aptos-mainnet';
-}
+export const ensureNetworkExists = createEnsure(NetworkDefault, 'No network provided');
 
 export const ensureProfileExists = createEnsure(ProfileDefault, 'No profile provided');

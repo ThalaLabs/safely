@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import { validateAddress, validateUInt, validateBool } from '../validators.js';
 import { signAndSubmitTransaction } from '../signing.js';
-import { loadProfile } from '../profiles.js';
+import { loadProfile, validateProfileNetwork } from '../profiles.js';
 import {
   ensureMultisigAddressExists,
   ensureProfileExists,
@@ -33,13 +33,15 @@ export const registerVoteCommand = (program: Command) => {
         profile?: string;
       }) => {
         try {
-          const network = await ensureNetworkExists(options.network, options.profile);
+          const network = await ensureNetworkExists(options.network);
+          const profile = await ensureProfileExists(options.profile);
+          validateProfileNetwork(profile, network);
           const hash = await handleVoteCommand(
             options.sequenceNumber,
             options.approve,
             await ensureMultisigAddressExists(options.multisigAddress),
             network,
-            await ensureProfileExists(options.profile)
+            profile
           );
           console.log(chalk.green(`Vote ok: ${getExplorerUrl(network, `txn/${hash}`)}`));
         } catch (error) {

@@ -1,12 +1,7 @@
 import { Command, Option } from 'commander';
 import { validateAddress, validateUInt } from '../validators.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
-import {
-  ensureMultisigAddressExists,
-  ensureNetworkExists,
-  ensureProfileExists,
-} from '../storage.js';
-import { getProfileFullnode } from '../profiles.js';
+import { ensureMultisigAddressExists, ensureNetworkExists } from '../storage.js';
 import { initAptos, safeStringify } from '../utils.js';
 import { fetchPendingTxns } from '../transactions.js';
 
@@ -28,27 +23,18 @@ export const registerProposalCommand = (program: Command) => {
       'fetch transaction with specific sequence number',
       validateUInt
     )
-    .option('-p, --profile <string>', 'Profile to use for the transaction')
     .action(
       async (options: {
         multisigAddress: string;
         network?: NetworkChoice;
-        profile?: string;
         fullnode?: string;
         sequenceNumber?: number;
       }) => {
-        const network = await ensureNetworkExists(options.network, options.profile);
-        const profile = await ensureProfileExists(options.profile);
-        let fullnode = options.fullnode;
-
-        if (!fullnode) {
-          fullnode = getProfileFullnode(profile, network);
-        }
-
+        const network = await ensureNetworkExists(options.network);
         const multisig = await ensureMultisigAddressExists(options.multisigAddress);
 
         // Always output JSON for automation/scripting
-        const aptos = initAptos(network, fullnode);
+        const aptos = initAptos(network, options.fullnode);
         const txns = await fetchPendingTxns(aptos, multisig, options.sequenceNumber);
 
         // Format proposals for JSON output
