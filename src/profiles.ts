@@ -119,16 +119,6 @@ export function getAllProfiles(): ProfileInfo[] {
   return profiles;
 }
 
-export function getProfileByName(name: string): ProfileInfo | null {
-  const profiles = getAllProfiles();
-  return profiles.find((p) => p.name === name) || null;
-}
-
-export function getProfileNetwork(profileName: string): NetworkChoice | null {
-  const profile = getProfileByName(profileName);
-  return profile?.network ?? null;
-}
-
 export function validateProfileNetwork(profileName: string, network: NetworkChoice): void {
   const configPath = getConfigPath(network);
 
