@@ -1,8 +1,8 @@
-import { Low } from 'lowdb';
-import { JSONFilePreset } from 'lowdb/node';
 import { NetworkChoice } from './constants.js';
 import fs from 'fs';
-import { parse } from 'yaml';
+import path from 'path';
+import os from 'os';
+import { getProfileNetwork } from './profiles.js';
 
 type Address = {
   alias: string;
@@ -16,49 +16,92 @@ type SafelyStorage = {
   profile?: string;
 };
 
-// Initialize DB
-const DB_PATH = 'safelyStorage.json';
+// Config path: ~/.safely/config.json
+const CONFIG_DIR = path.join(os.homedir(), '.safely');
+const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
 
-export async function getDb(): Promise<Low<SafelyStorage>> {
-  const defaultData: SafelyStorage = {
-    addresses: [],
-    multisig: undefined,
-    network: undefined,
-  };
-  const db = await JSONFilePreset<SafelyStorage>(DB_PATH, defaultData);
-  await db.read();
-  return db;
+const defaultData: SafelyStorage = {
+  addresses: [],
+  multisig: undefined,
+  network: undefined,
+  profile: undefined,
+};
+
+// Ensure config directory exists
+function ensureConfigDir(): void {
+  if (!fs.existsSync(CONFIG_DIR)) {
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
 }
 
-// **Helper functions for database operations**
-async function readDb<T>(callback: (db: SafelyStorage) => T): Promise<T> {
-  const db = await getDb();
-  return callback(db.data);
+// Read config from disk
+function readConfig(): SafelyStorage {
+  ensureConfigDir();
+
+  if (!fs.existsSync(CONFIG_PATH)) {
+    return { ...defaultData };
+  }
+
+  try {
+    const data = fs.readFileSync(CONFIG_PATH, 'utf8');
+    return { ...defaultData, ...JSON.parse(data) };
+  } catch (error) {
+    console.warn(`Warning: Could not read config file, using defaults: ${error}`);
+    return { ...defaultData };
+  }
 }
 
-async function writeDb(updateFn: (db: SafelyStorage) => void) {
-  const db = await getDb();
-  updateFn(db.data);
-  await db.write();
+// Write config to disk atomically
+function writeConfig(config: SafelyStorage): void {
+  ensureConfigDir();
+
+  const tmpPath = `${CONFIG_PATH}.tmp`;
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), 'utf8');
+    fs.renameSync(tmpPath, CONFIG_PATH);
+  } catch (error) {
+    // Clean up temp file if it exists
+    if (fs.existsSync(tmpPath)) {
+      fs.unlinkSync(tmpPath);
+    }
+    throw error;
+  }
+}
+
+// **Helper functions for config operations**
+async function readStorage<T>(callback: (config: SafelyStorage) => T): Promise<T> {
+  const config = readConfig();
+  return callback(config);
+}
+
+async function updateStorage(updateFn: (config: SafelyStorage) => void): Promise<void> {
+  const config = readConfig();
+  updateFn(config);
+  writeConfig(config);
+}
+
+// Export getDb for backward compatibility (used in account.ts)
+export async function getDb(): Promise<{ data: SafelyStorage }> {
+  return { data: readConfig() };
 }
 
 // **Address Book Operations**
 export const AddressBook = {
   async getAll(): Promise<Address[]> {
-    return readDb((db) => db.addresses);
+    return readStorage((config) => config.addresses);
   },
 
   async add(alias: string, address: string) {
-    await writeDb((db) => {
-      db.addresses.push({ alias, address });
+    await updateStorage((config) => {
+      config.addresses.push({ alias, address });
     });
   },
 
   async remove(alias: string) {
-    await writeDb((db) => {
-      const index = db.addresses.findIndex((entry) => entry.alias === alias);
+    await updateStorage((config) => {
+      const index = config.addresses.findIndex((entry) => entry.alias === alias);
       if (index === -1) throw new Error(`Alias "${alias}" not found.`);
-      db.addresses.splice(index, 1);
+      config.addresses.splice(index, 1);
     });
   },
 
@@ -71,155 +114,73 @@ export const AddressBook = {
   },
 };
 
-// **Multisig Defaults**
-export const MultisigDefault = {
-  async set(multisigAddress: string) {
-    await writeDb((db) => {
-      db.multisig = multisigAddress;
-    });
-  },
+// **Generic Default Helper**
+function createDefaultAccessor<K extends keyof SafelyStorage>(key: K) {
+  return {
+    async set(value: NonNullable<SafelyStorage[K]>) {
+      await updateStorage((config) => {
+        config[key] = value;
+      });
+    },
 
-  async remove() {
-    await writeDb((db) => {
-      db.multisig = undefined;
-    });
-  },
+    async remove() {
+      await updateStorage((config) => {
+        config[key] = undefined as SafelyStorage[K];
+      });
+    },
 
-  async get(): Promise<string | undefined> {
-    return readDb((db) => db.multisig);
-  },
-};
-
-// **Network Default**
-export const NetworkDefault = {
-  async set(network: NetworkChoice) {
-    await writeDb((db) => {
-      db.network = network;
-    });
-  },
-
-  async remove() {
-    await writeDb((db) => {
-      db.network = undefined;
-    });
-  },
-
-  async get(): Promise<NetworkChoice | undefined> {
-    return readDb((db) => db.network);
-  },
-};
-
-// **Profile Default**
-export const ProfileDefault = {
-  async set(profile: string) {
-    await writeDb((db) => {
-      db.profile = profile;
-    });
-  },
-
-  async remove() {
-    await writeDb((db) => {
-      db.profile = undefined;
-    });
-  },
-
-  async get(): Promise<string | undefined> {
-    return readDb((db) => db.profile);
-  },
-};
-
-export async function ensureMultisigAddressExists(multisigAddressOption?: string): Promise<string> {
-  if (multisigAddressOption) {
-    return multisigAddressOption;
-  }
-
-  const storedAddress = await MultisigDefault.get();
-
-  if (!storedAddress) {
-    throw new Error('No multisig address provided');
-  }
-
-  return storedAddress;
+    async get(): Promise<SafelyStorage[K]> {
+      return readStorage((config) => config[key]);
+    },
+  };
 }
 
-function inferNetworkFromProfile(profileName?: string): NetworkChoice | undefined {
-  if (!profileName) {
-    return undefined;
-  }
+// **Default Accessors**
+export const MultisigDefault = createDefaultAccessor('multisig');
+export const NetworkDefault = createDefaultAccessor('network');
+export const ProfileDefault = createDefaultAccessor('profile');
 
-  // Try both config paths to find the profile
-  const configPaths = ['.aptos/config.yaml', '.movement/config.yaml'];
-
-  for (const configPath of configPaths) {
-    if (fs.existsSync(configPath)) {
-      try {
-        const file = fs.readFileSync(configPath, 'utf8');
-        const profiles: Record<string, any> = parse(file).profiles;
-        const profileData = profiles[profileName];
-
-        if (profileData && profileData.network) {
-          const networkName = profileData.network.toLowerCase();
-
-          // Map profile network names to NetworkChoice
-          if (configPath.includes('movement')) {
-            switch (networkName) {
-              case 'testnet':
-                return 'movement-testnet';
-              case 'mainnet':
-                return 'movement-mainnet';
-            }
-          } else {
-            switch (networkName) {
-              case 'devnet':
-                return 'aptos-devnet';
-              case 'testnet':
-                return 'aptos-testnet';
-              case 'mainnet':
-                return 'aptos-mainnet';
-            }
-          }
-        }
-      } catch {
-        // Continue to next config path if this one fails
-        continue;
-      }
-    }
-  }
-
-  return undefined;
+// **Generic ensure helper for simple cases**
+function createEnsure<T>(accessor: { get: () => Promise<T | undefined> }, errorMessage: string) {
+  return async (option?: T): Promise<T> => {
+    if (option) return option;
+    const stored = await accessor.get();
+    if (!stored) throw new Error(errorMessage);
+    return stored;
+  };
 }
+
+export const ensureMultisigAddressExists = createEnsure(
+  MultisigDefault,
+  'No multisig address provided'
+);
 
 export async function ensureNetworkExists(
   networkOption?: NetworkChoice,
   profileOption?: string
 ): Promise<NetworkChoice> {
+  // 1. CLI option
   if (networkOption) {
     return networkOption;
   }
 
-  // Try to infer from profile first
+  // 2. Infer from profile
   const profileName = profileOption || (await ProfileDefault.get());
   if (profileName) {
-    const inferredNetwork = inferNetworkFromProfile(profileName);
-    if (inferredNetwork) {
-      return inferredNetwork;
+    const network = getProfileNetwork(profileName);
+    if (network) {
+      return network;
     }
   }
 
+  // 3. Stored default
   const storedNetwork = await NetworkDefault.get();
-  return storedNetwork ? storedNetwork : 'aptos-mainnet';
-}
-
-export async function ensureProfileExists(profileOption?: string): Promise<string> {
-  if (profileOption) {
-    return profileOption;
+  if (storedNetwork) {
+    return storedNetwork;
   }
 
-  const storedProfile = await ProfileDefault.get();
-
-  if (!storedProfile) {
-    throw new Error('No profile provided');
-  }
-
-  return storedProfile;
+  // 4. Hardcoded default
+  return 'aptos-mainnet';
 }
+
+export const ensureProfileExists = createEnsure(ProfileDefault, 'No profile provided');

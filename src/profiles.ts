@@ -124,6 +124,11 @@ export function getProfileByName(name: string): ProfileInfo | null {
   return profiles.find((p) => p.name === name) || null;
 }
 
+export function getProfileNetwork(profileName: string): NetworkChoice | null {
+  const profile = getProfileByName(profileName);
+  return profile?.network ?? null;
+}
+
 function readProfileConfig(profile: string, network: NetworkChoice): ConfigProfile {
   const configPath = getConfigPath(network);
 

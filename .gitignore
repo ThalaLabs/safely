@@ -32,9 +32,6 @@ build/
 # Address book DB
 addressbook.json
 
-# Safely storage file
-safelyStorage.json
-
 # Test JSON files
 *.json
 !package.json
