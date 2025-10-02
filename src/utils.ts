@@ -219,13 +219,16 @@ export async function getBalanceChangesData(
       const balanceAfter = balanceAfterRaw / 10 ** decimals;
       const balanceBefore = balanceBeforeRaw / 10 ** decimals;
 
-      balanceChanges.push({
-        address: accountAddress,
-        asset: faType,
-        symbol,
-        balanceBefore,
-        balanceAfter,
-      });
+      // Only include if balance actually changes
+      if (balanceBefore !== balanceAfter) {
+        balanceChanges.push({
+          address: accountAddress,
+          asset: faType,
+          symbol,
+          balanceBefore,
+          balanceAfter,
+        });
+      }
     } catch (error) {
       continue;
     }
