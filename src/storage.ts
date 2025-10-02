@@ -2,7 +2,7 @@ import { NetworkChoice } from './constants.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { parse } from 'yaml';
+import { getProfileNetwork } from './profiles.js';
 
 type Address = {
   alias: string;
@@ -155,72 +155,32 @@ export const ensureMultisigAddressExists = createEnsure(
   'No multisig address provided'
 );
 
-function inferNetworkFromProfile(profileName?: string): NetworkChoice | undefined {
-  if (!profileName) {
-    return undefined;
-  }
-
-  // Try both config paths to find the profile
-  const configPaths = ['.aptos/config.yaml', '.movement/config.yaml'];
-
-  for (const configPath of configPaths) {
-    if (fs.existsSync(configPath)) {
-      try {
-        const file = fs.readFileSync(configPath, 'utf8');
-        const profiles: Record<string, any> = parse(file).profiles;
-        const profileData = profiles[profileName];
-
-        if (profileData && profileData.network) {
-          const networkName = profileData.network.toLowerCase();
-
-          // Map profile network names to NetworkChoice
-          if (configPath.includes('movement')) {
-            switch (networkName) {
-              case 'testnet':
-                return 'movement-testnet';
-              case 'mainnet':
-                return 'movement-mainnet';
-            }
-          } else {
-            switch (networkName) {
-              case 'devnet':
-                return 'aptos-devnet';
-              case 'testnet':
-                return 'aptos-testnet';
-              case 'mainnet':
-                return 'aptos-mainnet';
-            }
-          }
-        }
-      } catch {
-        // Continue to next config path if this one fails
-        continue;
-      }
-    }
-  }
-
-  return undefined;
-}
-
 export async function ensureNetworkExists(
   networkOption?: NetworkChoice,
   profileOption?: string
 ): Promise<NetworkChoice> {
+  // 1. CLI option
   if (networkOption) {
     return networkOption;
   }
 
-  // Try to infer from profile first
+  // 2. Infer from profile
   const profileName = profileOption || (await ProfileDefault.get());
   if (profileName) {
-    const inferredNetwork = inferNetworkFromProfile(profileName);
-    if (inferredNetwork) {
-      return inferredNetwork;
+    const network = getProfileNetwork(profileName);
+    if (network) {
+      return network;
     }
   }
 
+  // 3. Stored default
   const storedNetwork = await NetworkDefault.get();
-  return storedNetwork ?? 'aptos-mainnet';
+  if (storedNetwork) {
+    return storedNetwork;
+  }
+
+  // 4. Hardcoded default
+  return 'aptos-mainnet';
 }
 
 export const ensureProfileExists = createEnsure(ProfileDefault, 'No profile provided');
