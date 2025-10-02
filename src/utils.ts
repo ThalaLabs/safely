@@ -22,8 +22,6 @@ export function getFullnodeUrl(network: NetworkChoice): string {
       return 'https://rpc.sentio.xyz/movement/v1';
     case 'movement-testnet':
       return 'https://full.testnet.movementinfra.xyz/v1';
-    case 'custom':
-      throw new Error('Custom network requires an explicit fullnode URL');
     default:
       throw new Error(`Unknown network: ${network}`);
   }
@@ -58,7 +56,7 @@ export function getExplorerUrl(network: NetworkChoice, path: string): string {
       case 'movement-testnet':
         return 'testnet';
       default:
-        return 'custom';
+        throw new Error(`Unknown network: ${network}`);
     }
   })();
 
