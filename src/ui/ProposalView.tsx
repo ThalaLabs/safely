@@ -69,7 +69,7 @@ interface ProposalViewProps {
   multisigAddress: string;
   network: string;
   fullnode?: string;
-  profile: string;
+  profile?: string;
   sequenceNumber?: number;
   onBack?: () => void;
 }
@@ -117,11 +117,20 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   useEffect(() => {
     const init = async () => {
       try {
-        const profileData = await loadProfile(profile, network as NetworkChoice);
-        const { signer } = profileData;
-        setSignerAddress(signer.accountAddress.toString());
+        let fullnodeUrl = fullnode;
 
-        const aptosInstance = initAptos(network as NetworkChoice, fullnode || profileData.fullnode);
+        // Load profile if provided
+        if (profile) {
+          const profileData = await loadProfile(profile, network as NetworkChoice);
+          const { signer } = profileData;
+          setSignerAddress(signer.accountAddress.toString());
+          fullnodeUrl = fullnodeUrl || profileData.fullnode;
+        } else {
+          // Read-only mode - no profile
+          setSignerAddress('');
+        }
+
+        const aptosInstance = initAptos(network as NetworkChoice, fullnodeUrl);
         setAptos(aptosInstance);
 
         // Get multisig info
@@ -259,6 +268,10 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
   // Handle vote
   const handleVote = async (seqNum: number, approved: boolean) => {
+    if (!profile) {
+      setActionMessage(chalk.red('❌ Cannot vote in read-only mode. Please select a profile.'));
+      return;
+    }
     try {
       setActionMessage(chalk.yellow(`⏳ ${approved ? 'Submitting Yes vote' : 'Submitting No vote'}... Please wait while the transaction is submitted to the blockchain.`));
       const hash = await handleVoteCommand(
@@ -277,6 +290,11 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
   // Handle execute with confirmation
   const handleExecute = async (reject: boolean) => {
+    if (!profile) {
+      setActionMessage(chalk.red(`❌ Cannot ${reject ? 'reject' : 'execute'} in read-only mode. Please select a profile.`));
+      setConfirmAction(null);
+      return;
+    }
     try {
       const action = reject ? 'Rejecting' : 'Executing';
       const actionPast = reject ? 'Reject' : 'Execute';
@@ -454,6 +472,9 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               {proposals[selectedIndex] && (
                 <>
                   #{proposals[selectedIndex].sequenceNumber}: {(() => {
+                    if (!profile) {
+                      return '(Read-only) ';
+                    }
                     const p = proposals[selectedIndex];
                     const isSmallest = selectedIndex === 0;
                     let actions = '[Y]es [N]o ';
