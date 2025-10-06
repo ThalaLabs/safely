@@ -268,10 +268,6 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
   // Handle vote
   const handleVote = async (seqNum: number, approved: boolean) => {
-    if (!profile) {
-      setActionMessage(chalk.red('❌ Cannot vote in read-only mode. Please select a profile.'));
-      return;
-    }
     try {
       setActionMessage(chalk.yellow(`⏳ ${approved ? 'Submitting Yes vote' : 'Submitting No vote'}... Please wait while the transaction is submitted to the blockchain.`));
       const hash = await handleVoteCommand(
@@ -279,7 +275,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         approved,
         multisigAddress,
         network as NetworkChoice,
-        profile
+        profile!
       );
       setActionMessage(chalk.green(`✅ Vote submitted: ${getExplorerUrl(network as NetworkChoice, `txn/${hash}`)}`));
       await fetchProposals();
@@ -290,17 +286,12 @@ const ProposalView: React.FC<ProposalViewProps> = ({
 
   // Handle execute with confirmation
   const handleExecute = async (reject: boolean) => {
-    if (!profile) {
-      setActionMessage(chalk.red(`❌ Cannot ${reject ? 'reject' : 'execute'} in read-only mode. Please select a profile.`));
-      setConfirmAction(null);
-      return;
-    }
     try {
       const action = reject ? 'Rejecting' : 'Executing';
       const actionPast = reject ? 'Reject' : 'Execute';
       setConfirmAction(null); // Clear confirmation immediately
       setActionMessage(chalk.yellow(`⏳ ${action} transaction... Please wait while the transaction is submitted to the blockchain.`));
-      const result = await handleExecuteCommand(multisigAddress, profile, network as NetworkChoice, reject, true);
+      const result = await handleExecuteCommand(multisigAddress, profile!, network as NetworkChoice, reject, true);
       if (reject || result.success) {
         setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as NetworkChoice, `txn/${result.hash}`)}`));
       } else {
@@ -348,15 +339,16 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     } else if (key.return) {
       // Toggle expand for current selection only
       setIsSelectedExpanded(prev => !prev);
-    } else if ((normalizedInput === 'y' || normalizedInput === 'n') && proposals[selectedIndex]) {
+    } else if ((normalizedInput === 'y' || normalizedInput === 'n') && proposals[selectedIndex] && profile) {
+      // Only allow voting if profile is set
       handleVote(proposals[selectedIndex].sequenceNumber, normalizedInput === 'y');
-    } else if (normalizedInput === 'e' && proposals[selectedIndex]) {
-      // Only allow execute if this is the smallest sequence number
+    } else if (normalizedInput === 'e' && proposals[selectedIndex] && profile) {
+      // Only allow execute if profile is set and this is the smallest sequence number
       if (proposals[selectedIndex].canExecute && selectedIndex === 0) {
         showConfirmation('execute', proposals[selectedIndex].sequenceNumber);
       }
-    } else if (normalizedInput === 'r' && proposals[selectedIndex]) {
-      // Only allow reject if this is the smallest sequence number
+    } else if (normalizedInput === 'r' && proposals[selectedIndex] && profile) {
+      // Only allow reject if profile is set and this is the smallest sequence number
       if (proposals[selectedIndex].canReject && selectedIndex === 0) {
         showConfirmation('reject', proposals[selectedIndex].sequenceNumber);
       }
