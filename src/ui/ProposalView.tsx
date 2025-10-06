@@ -69,7 +69,7 @@ interface ProposalViewProps {
   multisigAddress: string;
   network: string;
   fullnode?: string;
-  profile: string;
+  profile?: string;
   sequenceNumber?: number;
   onBack?: () => void;
 }
@@ -117,11 +117,20 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   useEffect(() => {
     const init = async () => {
       try {
-        const profileData = await loadProfile(profile, network as NetworkChoice);
-        const { signer } = profileData;
-        setSignerAddress(signer.accountAddress.toString());
+        let fullnodeUrl = fullnode;
 
-        const aptosInstance = initAptos(network as NetworkChoice, fullnode || profileData.fullnode);
+        // Load profile if provided
+        if (profile) {
+          const profileData = await loadProfile(profile, network as NetworkChoice);
+          const { signer } = profileData;
+          setSignerAddress(signer.accountAddress.toString());
+          fullnodeUrl = fullnodeUrl || profileData.fullnode;
+        } else {
+          // Read-only mode - no profile
+          setSignerAddress('');
+        }
+
+        const aptosInstance = initAptos(network as NetworkChoice, fullnodeUrl);
         setAptos(aptosInstance);
 
         // Get multisig info
@@ -266,7 +275,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         approved,
         multisigAddress,
         network as NetworkChoice,
-        profile
+        profile!
       );
       setActionMessage(chalk.green(`✅ Vote submitted: ${getExplorerUrl(network as NetworkChoice, `txn/${hash}`)}`));
       await fetchProposals();
@@ -282,7 +291,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       const actionPast = reject ? 'Reject' : 'Execute';
       setConfirmAction(null); // Clear confirmation immediately
       setActionMessage(chalk.yellow(`⏳ ${action} transaction... Please wait while the transaction is submitted to the blockchain.`));
-      const result = await handleExecuteCommand(multisigAddress, profile, network as NetworkChoice, reject, true);
+      const result = await handleExecuteCommand(multisigAddress, profile!, network as NetworkChoice, reject, true);
       if (reject || result.success) {
         setActionMessage(chalk.green(`✅ ${actionPast} successful: ${getExplorerUrl(network as NetworkChoice, `txn/${result.hash}`)}`));
       } else {
@@ -330,15 +339,16 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     } else if (key.return) {
       // Toggle expand for current selection only
       setIsSelectedExpanded(prev => !prev);
-    } else if ((normalizedInput === 'y' || normalizedInput === 'n') && proposals[selectedIndex]) {
+    } else if ((normalizedInput === 'y' || normalizedInput === 'n') && proposals[selectedIndex] && profile) {
+      // Only allow voting if profile is set
       handleVote(proposals[selectedIndex].sequenceNumber, normalizedInput === 'y');
-    } else if (normalizedInput === 'e' && proposals[selectedIndex]) {
-      // Only allow execute if this is the smallest sequence number
+    } else if (normalizedInput === 'e' && proposals[selectedIndex] && profile) {
+      // Only allow execute if profile is set and this is the smallest sequence number
       if (proposals[selectedIndex].canExecute && selectedIndex === 0) {
         showConfirmation('execute', proposals[selectedIndex].sequenceNumber);
       }
-    } else if (normalizedInput === 'r' && proposals[selectedIndex]) {
-      // Only allow reject if this is the smallest sequence number
+    } else if (normalizedInput === 'r' && proposals[selectedIndex] && profile) {
+      // Only allow reject if profile is set and this is the smallest sequence number
       if (proposals[selectedIndex].canReject && selectedIndex === 0) {
         showConfirmation('reject', proposals[selectedIndex].sequenceNumber);
       }
@@ -454,6 +464,9 @@ const ProposalView: React.FC<ProposalViewProps> = ({
               {proposals[selectedIndex] && (
                 <>
                   #{proposals[selectedIndex].sequenceNumber}: {(() => {
+                    if (!profile) {
+                      return '(Read-only) ';
+                    }
                     const p = proposals[selectedIndex];
                     const isSmallest = selectedIndex === 0;
                     let actions = '[Y]es [N]o ';

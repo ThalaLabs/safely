@@ -136,9 +136,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
 
   const canAccessProposals = !!(
     config.network &&
-    config.multisig &&
-    config.profile &&
-    filteredProfiles.some(p => p.name === config.profile)
+    config.multisig
   );
 
   const networks = NETWORK_CHOICES;
@@ -241,10 +239,18 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       } else if (key.upArrow) {
         setMenu(m => ({ ...m, subIndex: Math.max(0, m.subIndex - 1) }));
       } else if (key.downArrow) {
-        setMenu(m => ({ ...m, subIndex: Math.min(filteredProfiles.length - 1, m.subIndex + 1) }));
-      } else if (key.return && filteredProfiles[subIndex]) {
-        updateConfig({ profile: filteredProfiles[subIndex].name });
-        collapseMenu();
+        // Allow navigating to "Skip" option (one past the last profile)
+        setMenu(m => ({ ...m, subIndex: Math.min(filteredProfiles.length, m.subIndex + 1) }));
+      } else if (key.return) {
+        if (subIndex === filteredProfiles.length) {
+          // "Skip" option selected - clear profile for read-only mode
+          updateConfig({ profile: undefined });
+          collapseMenu();
+        } else if (filteredProfiles[subIndex]) {
+          // Profile selected
+          updateConfig({ profile: filteredProfiles[subIndex].name });
+          collapseMenu();
+        }
       }
     } else if (expandedItem === 'multisig') {
       if (key.escape) {
@@ -321,7 +327,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   if (view === 'proposal' && canAccessProposals && config.network) {
     return (
       <ProposalView
-        profile={config.profile!}
+        profile={config.profile}
         multisigAddress={config.multisig!}
         network={config.network}
         onBack={() => setView('home')}
@@ -394,14 +400,16 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               isSelected={selectedIndex === 2}
               label="Profile"
               value={
-                filteredProfiles.some(p => p.name === config.profile)
+                config.profile === undefined && config.network && config.multisig
+                  ? 'Read-only'
+                  : filteredProfiles.some(p => p.name === config.profile)
                   ? `${config.profile}${!isProfileOwner ? ' (non-owner)' : ''}`
                   : undefined
               }
               placeholder={
                 !config.network ? "(Select network first)" :
                 filteredProfiles.length === 0 ? `(No profiles for ${config.network})` :
-                "(Select profile)"
+                "(Select profile or skip)"
               }
               disabled={!config.network}
               warning={!!config.profile && !isProfileOwner}
@@ -525,14 +533,26 @@ const ProfileExpanded: React.FC<{
   <>
     <Text>{isSelected ? '▼' : ' '} Profile:</Text>
     {profiles.length > 0 ? (
-      profiles.map((profile, index) => (
-        <Text key={profile.name}>
-          {'  '}{index === subIndex ? '▶' : ' '} {profile.name}
-          {profile.name === currentProfile && <Text color="green"> ✓</Text>}
+      <>
+        {profiles.map((profile, index) => (
+          <Text key={profile.name}>
+            {'  '}{index === subIndex ? '▶' : ' '} {profile.name}
+            {profile.name === currentProfile && <Text color="green"> ✓</Text>}
+          </Text>
+        ))}
+        <Text>
+          {'  '}{subIndex === profiles.length ? '▶' : ' '} <Text dimColor>Skip (read-only)</Text>
+          {currentProfile === undefined && <Text color="green"> ✓</Text>}
         </Text>
-      ))
+      </>
     ) : (
-      <Text dimColor>  No profiles found for {network}</Text>
+      <>
+        <Text dimColor>  No profiles found for {network}</Text>
+        <Text>
+          {'  '}{subIndex === 0 ? '▶' : ' '} <Text dimColor>Skip (read-only)</Text>
+          {currentProfile === undefined && <Text color="green"> ✓</Text>}
+        </Text>
+      </>
     )}
   </>
 );
