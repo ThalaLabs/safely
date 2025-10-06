@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Text, useInput, useApp, render } from 'ink';
 import TextInput from 'ink-text-input';
 import Spinner from 'ink-spinner';
-import { ProfileDefault, MultisigDefault, NetworkDefault } from '../storage.js';
+import { ProfileDefault, MultisigDefault, NetworkDefault, MultisigHistory } from '../storage.js';
 import { getAllProfiles, ProfileInfo } from '../profiles.js';
 import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { validateAddress } from '../validators.js';
@@ -23,6 +23,7 @@ interface Config {
   profiles: ProfileInfo[];
   multisigOwners: string[];
   profileAddress: string | null;
+  multisigHistory: string[];
 }
 
 interface MenuState {
@@ -32,6 +33,7 @@ interface MenuState {
   multisigInput: string;
   multisigError: string;
   isValidating: boolean;
+  multisigInputMode: boolean;
 }
 
 interface MultisigResource {
@@ -44,7 +46,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   const [config, setConfig] = useState<Config>({
     profiles: [],
     multisigOwners: [],
-    profileAddress: null
+    profileAddress: null,
+    multisigHistory: []
   });
   const [menu, setMenu] = useState<MenuState>({
     selectedIndex: 0,
@@ -52,7 +55,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     subIndex: 0,
     multisigInput: '',
     multisigError: '',
-    isValidating: false
+    isValidating: false,
+    multisigInputMode: false
   });
 
   // Load configuration
@@ -64,13 +68,15 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         ProfileDefault.get()
       ]);
       const owners = network && multisig ? await fetchMultisigOwners(network, multisig) : [];
+      const multisigHistory = network ? await MultisigHistory.getForNetwork(network) : [];
       setConfig({
         network,
         multisig,
         profile,
         profiles: getAllProfiles(),
         multisigOwners: owners,
-        profileAddress: null
+        profileAddress: null,
+        multisigHistory
       });
     };
     load();
@@ -153,6 +159,9 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       newConfig.profile = undefined;
       newConfig.multisigOwners = [];
       newConfig.profileAddress = null;
+      // Load multisig history for new network
+      const multisigHistory = await MultisigHistory.getForNetwork(updates.network);
+      newConfig.multisigHistory = multisigHistory;
     }
     if ('multisig' in updates && updates.multisig) {
       await MultisigDefault.set(updates.multisig);
@@ -160,6 +169,11 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       if (config.network) {
         const owners = await fetchMultisigOwners(config.network, updates.multisig);
         newConfig.multisigOwners = owners;
+        // Add to history
+        await MultisigHistory.add(config.network, updates.multisig);
+        // Refresh history
+        const multisigHistory = await MultisigHistory.getForNetwork(config.network);
+        newConfig.multisigHistory = multisigHistory;
       }
     }
     if ('profile' in updates && updates.profile) {
@@ -174,7 +188,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     expandedItem: null,
     subIndex: 0,
     multisigInput: '',
-    multisigError: ''
+    multisigError: '',
+    multisigInputMode: false
   }));
 
   const expandMenuItem = (item: string) => {
@@ -190,6 +205,14 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       updates.subIndex = Math.max(0, idx);
     } else if (item === 'multisig') {
       updates.multisigInput = config.multisig || '';
+      updates.multisigInputMode = config.multisigHistory.length === 0;
+      updates.isValidating = false;
+      updates.multisigError = '';
+      // If there's history, start with first history item selected
+      if (config.multisigHistory.length > 0) {
+        const idx = config.multisig ? config.multisigHistory.indexOf(config.multisig) : -1;
+        updates.subIndex = Math.max(0, idx);
+      }
     }
 
     setMenu(m => ({ ...m, ...updates }));
@@ -233,39 +256,56 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     } else if (expandedItem === 'multisig') {
       if (key.escape) {
         collapseMenu();
-      } else if (key.return) {
-        // Validate and save multisig address
-        (async () => {
-          try {
-            validateAddress(menu.multisigInput);
-            setMenu(m => ({ ...m, isValidating: true, multisigError: '' }));
-
-            // Check if address has MultisigAccount resource
-            const aptos = initAptos(config.network!);
+      } else if (input === 'i' && !menu.multisigInputMode) {
+        // Switch to input mode
+        setMenu(m => ({ ...m, multisigInputMode: true, multisigInput: '', multisigError: '', isValidating: false }));
+      } else if (menu.multisigInputMode) {
+        // In input mode
+        if (key.return) {
+          // Validate and save multisig address
+          (async () => {
             try {
-              const resource = await aptos.getAccountResource<MultisigResource>({
-                accountAddress: menu.multisigInput,
-                resourceType: '0x1::multisig_account::MultisigAccount'
-              });
-              // Successfully got the resource, it's a valid multisig
-              await updateConfig({ multisig: menu.multisigInput, multisigOwners: resource.owners });
-              collapseMenu();
-            } catch (resourceError) {
-              // Resource doesn't exist or error fetching
+              validateAddress(menu.multisigInput);
+              setMenu(m => ({ ...m, isValidating: true, multisigError: '' }));
+
+              // Check if address has MultisigAccount resource
+              const aptos = initAptos(config.network!);
+              try {
+                const resource = await aptos.getAccountResource<MultisigResource>({
+                  accountAddress: menu.multisigInput,
+                  resourceType: '0x1::multisig_account::MultisigAccount'
+                });
+                // Successfully got the resource, it's a valid multisig
+                await updateConfig({ multisig: menu.multisigInput, multisigOwners: resource.owners });
+                collapseMenu();
+              } catch (resourceError) {
+                // Resource doesn't exist or error fetching
+                setMenu(m => ({
+                  ...m,
+                  multisigError: 'Address is not a multisig account',
+                  isValidating: false
+                }));
+              }
+            } catch (error) {
               setMenu(m => ({
                 ...m,
-                multisigError: 'Address is not a multisig account',
+                multisigError: String(error).replace('Error: ', ''),
                 isValidating: false
               }));
             }
-          } catch (error) {
-            setMenu(m => ({
-              ...m,
-              multisigError: String(error).replace('Error: ', ''),
-              isValidating: false
-            }));
-          }
-        })();
+          })();
+        }
+      } else {
+        // In selection mode (navigating history)
+        if (key.upArrow) {
+          setMenu(m => ({ ...m, subIndex: Math.max(0, m.subIndex - 1) }));
+        } else if (key.downArrow) {
+          setMenu(m => ({ ...m, subIndex: Math.min(config.multisigHistory.length - 1, m.subIndex + 1) }));
+        } else if (key.return && config.multisigHistory[subIndex]) {
+          // Select from history
+          updateConfig({ multisig: config.multisigHistory[subIndex] });
+          collapseMenu();
+        }
       }
     } else {
       // Main menu navigation
@@ -340,6 +380,10 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               isSelected={selectedIndex === 1}
               isValidating={menu.isValidating}
               onInputChange={value => setMenu(m => ({ ...m, multisigInput: value }))}
+              multisigHistory={config.multisigHistory}
+              currentMultisig={config.multisig}
+              subIndex={subIndex}
+              inputMode={menu.multisigInputMode}
             />
           ) : (
             <MenuItem
@@ -450,25 +494,44 @@ const MultisigExpanded: React.FC<{
   isSelected: boolean;
   isValidating: boolean;
   onInputChange: (value: string) => void;
-}> = ({ input, error, isSelected, isValidating, onInputChange }) => (
+  multisigHistory: string[];
+  currentMultisig?: string;
+  subIndex: number;
+  inputMode: boolean;
+}> = ({ input, error, isSelected, isValidating, onInputChange, multisigHistory, currentMultisig, subIndex, inputMode }) => (
   <>
     <Text>{isSelected ? '▼' : ' '} Multisig:</Text>
-    <Box paddingLeft={2}>
-      <Text>Address: </Text>
-      {isValidating ? (
-        <Text color="cyan">
-          <Spinner type="dots" /> Validating...
-        </Text>
-      ) : (
-        <TextInput
-          value={input}
-          onChange={onInputChange}
-          placeholder="0x..."
-        />
-      )}
-    </Box>
-    {error && <Text color="red">  ✗ {error}</Text>}
-    {!isValidating && <Text dimColor>  [Enter] Save | [Esc] Cancel</Text>}
+    {multisigHistory.length > 0 && !inputMode && (
+      <>
+        {multisigHistory.map((address, index) => (
+          <Text key={address}>
+            {'  '}{index === subIndex ? '▶' : ' '} {address.slice(0, 10)}...{address.slice(-6)}
+            {address === currentMultisig && <Text color="green"> ✓</Text>}
+          </Text>
+        ))}
+        <Text dimColor>  [I] Enter new address</Text>
+      </>
+    )}
+    {(multisigHistory.length === 0 || inputMode) && (
+      <>
+        <Box paddingLeft={2}>
+          <Text>Address: </Text>
+          {isValidating ? (
+            <Text color="cyan">
+              <Spinner type="dots" /> Validating...
+            </Text>
+          ) : (
+            <TextInput
+              value={input}
+              onChange={onInputChange}
+              placeholder="0x..."
+            />
+          )}
+        </Box>
+        {error && <Text color="red">  ✗ {error}</Text>}
+        {!isValidating && <Text dimColor>  [Enter] Save | [Esc] Cancel</Text>}
+      </>
+    )}
   </>
 );
 
