@@ -33,7 +33,6 @@ interface MenuState {
   multisigInput: string;
   multisigError: string;
   isValidating: boolean;
-  multisigInputMode: boolean;
 }
 
 interface MultisigResource {
@@ -55,8 +54,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     subIndex: 0,
     multisigInput: '',
     multisigError: '',
-    isValidating: false,
-    multisigInputMode: false
+    isValidating: false
   });
 
   // Load configuration
@@ -188,8 +186,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     expandedItem: null,
     subIndex: 0,
     multisigInput: '',
-    multisigError: '',
-    multisigInputMode: false
+    multisigError: ''
   }));
 
   const expandMenuItem = (item: string) => {
@@ -204,15 +201,11 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       const idx = filteredProfiles.findIndex(p => p.name === config.profile);
       updates.subIndex = Math.max(0, idx);
     } else if (item === 'multisig') {
-      updates.multisigInput = config.multisig || '';
-      updates.multisigInputMode = config.multisigHistory.length === 0;
+      updates.multisigInput = '';
       updates.isValidating = false;
       updates.multisigError = '';
-      // If there's history, start with first history item selected
-      if (config.multisigHistory.length > 0) {
-        const idx = config.multisig ? config.multisigHistory.indexOf(config.multisig) : -1;
-        updates.subIndex = Math.max(0, idx);
-      }
+      // Start with input field selected (subIndex = history.length means input field)
+      updates.subIndex = config.multisigHistory.length;
     }
 
     setMenu(m => ({ ...m, ...updates }));
@@ -256,13 +249,13 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     } else if (expandedItem === 'multisig') {
       if (key.escape) {
         collapseMenu();
-      } else if (input === 'i' && !menu.multisigInputMode) {
-        // Switch to input mode
-        setMenu(m => ({ ...m, multisigInputMode: true, multisigInput: '', multisigError: '', isValidating: false }));
-      } else if (menu.multisigInputMode) {
-        // In input mode
-        if (key.return) {
-          // Validate and save multisig address
+      } else if (key.upArrow) {
+        setMenu(m => ({ ...m, subIndex: Math.max(0, m.subIndex - 1) }));
+      } else if (key.downArrow) {
+        setMenu(m => ({ ...m, subIndex: Math.min(config.multisigHistory.length, m.subIndex + 1) }));
+      } else if (key.return) {
+        // If on input field (subIndex == history.length), validate and save
+        if (subIndex === config.multisigHistory.length) {
           (async () => {
             try {
               validateAddress(menu.multisigInput);
@@ -294,14 +287,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               }));
             }
           })();
-        }
-      } else {
-        // In selection mode (navigating history)
-        if (key.upArrow) {
-          setMenu(m => ({ ...m, subIndex: Math.max(0, m.subIndex - 1) }));
-        } else if (key.downArrow) {
-          setMenu(m => ({ ...m, subIndex: Math.min(config.multisigHistory.length - 1, m.subIndex + 1) }));
-        } else if (key.return && config.multisigHistory[subIndex]) {
+        } else if (config.multisigHistory[subIndex]) {
           // Select from history
           updateConfig({ multisig: config.multisigHistory[subIndex] });
           collapseMenu();
@@ -383,7 +369,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               multisigHistory={config.multisigHistory}
               currentMultisig={config.multisig}
               subIndex={subIndex}
-              inputMode={menu.multisigInputMode}
             />
           ) : (
             <MenuItem
@@ -497,43 +482,37 @@ const MultisigExpanded: React.FC<{
   multisigHistory: string[];
   currentMultisig?: string;
   subIndex: number;
-  inputMode: boolean;
-}> = ({ input, error, isSelected, isValidating, onInputChange, multisigHistory, currentMultisig, subIndex, inputMode }) => (
-  <>
-    <Text>{isSelected ? '▼' : ' '} Multisig:</Text>
-    {multisigHistory.length > 0 && !inputMode && (
-      <>
-        {multisigHistory.map((address, index) => (
-          <Text key={address}>
-            {'  '}{index === subIndex ? '▶' : ' '} {address.slice(0, 10)}...{address.slice(-6)}
-            {address === currentMultisig && <Text color="green"> ✓</Text>}
+}> = ({ input, error, isSelected, isValidating, onInputChange, multisigHistory, currentMultisig, subIndex }) => {
+  const isInputSelected = subIndex === multisigHistory.length;
+
+  return (
+    <>
+      <Text>{isSelected ? '▼' : ' '} Multisig:</Text>
+      {multisigHistory.map((address, index) => (
+        <Text key={address}>
+          {'  '}{index === subIndex ? '▶' : ' '} {address.slice(0, 10)}...{address.slice(-6)}
+          {address === currentMultisig && <Text color="green"> ✓</Text>}
+        </Text>
+      ))}
+      <Box paddingLeft={2}>
+        <Text>{isInputSelected ? '▶' : ' '} New: </Text>
+        {isValidating ? (
+          <Text color="cyan">
+            <Spinner type="dots" /> Validating...
           </Text>
-        ))}
-        <Text dimColor>  [I] Enter new address</Text>
-      </>
-    )}
-    {(multisigHistory.length === 0 || inputMode) && (
-      <>
-        <Box paddingLeft={2}>
-          <Text>Address: </Text>
-          {isValidating ? (
-            <Text color="cyan">
-              <Spinner type="dots" /> Validating...
-            </Text>
-          ) : (
-            <TextInput
-              value={input}
-              onChange={onInputChange}
-              placeholder="0x..."
-            />
-          )}
-        </Box>
-        {error && <Text color="red">  ✗ {error}</Text>}
-        {!isValidating && <Text dimColor>  [Enter] Save | [Esc] Cancel</Text>}
-      </>
-    )}
-  </>
-);
+        ) : (
+          <TextInput
+            value={input}
+            onChange={onInputChange}
+            placeholder="0x..."
+            focus={isInputSelected}
+          />
+        )}
+      </Box>
+      {error && <Text color="red">  ✗ {error}</Text>}
+    </>
+  );
+};
 
 // Component: Profile Expanded
 const ProfileExpanded: React.FC<{
