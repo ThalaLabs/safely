@@ -8,11 +8,17 @@ type Address = {
   address: string;
 };
 
+type MultisigHistoryEntry = {
+  network: NetworkChoice;
+  address: string;
+};
+
 type SafelyStorage = {
   addresses: Address[];
   multisig?: string;
   network?: NetworkChoice;
   profile?: string;
+  multisigHistory?: MultisigHistoryEntry[];
 };
 
 // Config path: ~/.safely/config.json
@@ -24,6 +30,7 @@ const defaultData: SafelyStorage = {
   multisig: undefined,
   network: undefined,
   profile: undefined,
+  multisigHistory: [],
 };
 
 // Ensure config directory exists
@@ -157,3 +164,41 @@ export const ensureMultisigAddressExists = createEnsure(
 export const ensureNetworkExists = createEnsure(NetworkDefault, 'No network provided');
 
 export const ensureProfileExists = createEnsure(ProfileDefault, 'No profile provided');
+
+// **Multisig History Operations**
+export const MultisigHistory = {
+  async getAll(): Promise<MultisigHistoryEntry[]> {
+    return readStorage((config) => config.multisigHistory || []);
+  },
+
+  async getForNetwork(network: NetworkChoice): Promise<string[]> {
+    return readStorage((config) => {
+      const history = config.multisigHistory || [];
+      return history.filter((entry) => entry.network === network).map((entry) => entry.address);
+    });
+  },
+
+  async add(network: NetworkChoice, address: string) {
+    await updateStorage((config) => {
+      if (!config.multisigHistory) {
+        config.multisigHistory = [];
+      }
+      // Dedupe: check if this network+address combo already exists
+      const exists = config.multisigHistory.some(
+        (entry) => entry.network === network && entry.address === address
+      );
+      if (!exists) {
+        config.multisigHistory.push({ network, address });
+      }
+    });
+  },
+
+  async remove(network: NetworkChoice, address: string) {
+    await updateStorage((config) => {
+      if (!config.multisigHistory) return;
+      config.multisigHistory = config.multisigHistory.filter(
+        (entry) => !(entry.network === network && entry.address === address)
+      );
+    });
+  },
+};
