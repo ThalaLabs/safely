@@ -15,7 +15,7 @@ import {
   safeStringify
 } from '../utils.js';
 import { InputEntryFunctionData } from '@aptos-labs/ts-sdk';
-import { initAptos, getExplorerUrl, getFullnodeUrl } from '../utils.js';
+import { initAptos, getExplorerUrl } from '../utils.js';
 import { NetworkChoice } from '../constants.js';
 import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
@@ -68,7 +68,7 @@ function formatFunctionId(functionId: string): string {
 interface ProposalViewProps {
   multisigAddress: string;
   network: string;
-  fullnode?: string;
+  rpcEndpoint?: string;
   profile?: string;
   sequenceNumber?: number;
   onBack?: () => void;
@@ -95,7 +95,7 @@ interface ProposalData {
 const ProposalView: React.FC<ProposalViewProps> = ({
   multisigAddress,
   network,
-  fullnode,
+  rpcEndpoint,
   profile,
   sequenceNumber,
   onBack
@@ -112,29 +112,23 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   const [signaturesRequired, setSigRequired] = useState<number>(0);
   const [signerAddress, setSignerAddress] = useState<string>('');
   const [aptos, setAptos] = useState<Aptos | null>(null);
-  const [rpcEndpoint, setRpcEndpoint] = useState<string | undefined>(undefined);
 
   // Initialize
   useEffect(() => {
     const init = async () => {
       try {
-        let fullnodeUrl = fullnode;
-
         // Load profile if provided
         if (profile) {
           const profileData = await loadProfile(profile, network as NetworkChoice);
           const { signer } = profileData;
           setSignerAddress(signer.accountAddress.toString());
-          fullnodeUrl = fullnodeUrl || profileData.fullnode;
         } else {
           // Read-only mode - no profile
           setSignerAddress('');
         }
 
-        const aptosInstance = initAptos(network as NetworkChoice, fullnodeUrl);
+        const aptosInstance = initAptos(network as NetworkChoice, rpcEndpoint);
         setAptos(aptosInstance);
-        // Always set the actual RPC endpoint - either custom or default
-        setRpcEndpoint(fullnodeUrl || getFullnodeUrl(network as NetworkChoice));
 
         // Get multisig info
         const [[ownersResult], [sigRequired]] = await Promise.all([

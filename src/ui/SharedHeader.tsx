@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import Spinner from 'ink-spinner';
 
 interface SharedHeaderProps {
   subtitle?: string;
@@ -7,9 +8,10 @@ interface SharedHeaderProps {
   profile?: string;
   multisig?: string;
   rpcEndpoint?: string;
+  isLoading?: boolean;
 }
 
-const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig, rpcEndpoint }) => {
+const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig, rpcEndpoint, isLoading = false }) => {
 
   return (
     <>
@@ -34,22 +36,30 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig,
         <Box flexDirection="column">
           <Text bold>Connection:</Text>
           <Text>
-            Network: {network ? (
+            Network: {isLoading ? (
+              <Text color="cyan"><Spinner type="dots" /> Loading...</Text>
+            ) : network ? (
               <Text color="green">{network}</Text>
             ) : <Text color="red">Not set</Text>}
           </Text>
           <Text>
-            Multisig: {multisig ? (
+            Multisig: {isLoading ? (
+              <Text color="cyan"><Spinner type="dots" /> Loading...</Text>
+            ) : multisig ? (
               <Text color="green">{multisig.slice(0, 10)}...</Text>
             ) : <Text color="red">Not set</Text>}
           </Text>
           <Text>
-            Profile: {profile ? (
+            Profile: {isLoading ? (
+              <Text color="cyan"><Spinner type="dots" /> Loading...</Text>
+            ) : profile ? (
               <Text color="green">{profile}</Text>
             ) : <Text color="red">Not set</Text>}
           </Text>
           <Text>
-            RPC: {rpcEndpoint ? (
+            RPC: {isLoading ? (
+              <Text color="cyan"><Spinner type="dots" /> Loading...</Text>
+            ) : rpcEndpoint ? (
               <Text color="green">{rpcEndpoint}</Text>
             ) : <Text color="red">Not set</Text>}
           </Text>
