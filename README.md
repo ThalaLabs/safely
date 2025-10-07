@@ -10,17 +10,27 @@ Manage your multisig accounts on Aptos & Movement **safely** through a secure CL
 npm install -g @thalalabs/safely
 ```
 
-2. Configure your Aptos profile (if not already done):
+2. Install Aptos CLI (if not already done):
 
 ```bash
+brew update
+brew install aptos
+```
+
+3. Configure your Aptos profiles (if not already done) under a folder that works for you:
+
+```bash
+cd </path/to/your/preferred/folder>
+
 aptos init --profile <profile_name>
+
 # or with Ledger hardware wallet
 aptos init --ledger --profile <profile_name>
 ```
 
 See [Aptos CLI docs](https://aptos.dev/en/build/cli/trying-things-on-chain/ledger) for more details.
 
-3. Launch the interactive terminal UI:
+4. Launch the interactive terminal UI at the same location:
 
 ```bash
 safely
