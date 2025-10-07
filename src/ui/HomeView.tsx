@@ -43,6 +43,7 @@ interface MultisigResource {
 const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   const { exit } = useApp();
   const [view, setView] = useState<'home' | 'proposal'>('home');
+  const [isLoading, setIsLoading] = useState(true);
   const [config, setConfig] = useState<Config>({
     profiles: [],
     multisigOwners: [],
@@ -77,6 +78,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         profileAddress: null,
         multisigHistory
       });
+      setIsLoading(false);
     };
     load();
   }, []);
@@ -347,12 +349,13 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   });
 
   // Show proposal view
-  if (view === 'proposal' && canAccessProposals && config.network) {
+  if (view === 'proposal' && canAccessProposals) {
     return (
       <ProposalView
         profile={config.profile}
         multisigAddress={config.multisig!}
-        network={config.network}
+        network={config.network!}
+        rpcEndpoint={config.rpcEndpoint}
         onBack={() => setView('home')}
       />
     );
@@ -367,6 +370,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         profile={config.profile}
         multisig={config.multisig}
         rpcEndpoint={config.rpcEndpoint}
+        isLoading={isLoading}
       />
 
       <Box borderStyle="single" paddingX={1}>
