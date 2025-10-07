@@ -154,7 +154,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     };
 
     init();
-  }, []);
+  }, [network, rpcEndpoint, multisigAddress, profile]);
 
   // Fetch proposals
   const fetchProposals = useCallback(async () => {
