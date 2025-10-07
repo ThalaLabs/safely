@@ -8,7 +8,7 @@ import { NETWORK_CHOICES, NetworkChoice } from '../constants.js';
 import { validateAddress } from '../validators.js';
 import ProposalView from './ProposalView.js';
 import SharedHeader from './SharedHeader.js';
-import { initAptos } from '../utils.js';
+import { initAptos, getFullnodeUrl } from '../utils.js';
 import { AccountAddress } from '@aptos-labs/ts-sdk';
 import { loadProfile } from '../profiles.js';
 
@@ -24,6 +24,7 @@ interface Config {
   multisigOwners: string[];
   profileAddress: string | null;
   multisigHistory: string[];
+  rpcEndpoint?: string;
 }
 
 interface MenuState {
@@ -94,18 +95,40 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     }
   }, []);
 
-  // Load profile address
+  // Load profile address and RPC endpoint
   useEffect(() => {
     const loadProfileAddress = async () => {
-      if (config.profile && config.network) {
+      const network = config.network;
+      if (config.profile && network) {
         try {
-          const profile = await loadProfile(config.profile, config.network);
-          setConfig(prev => ({ ...prev, profileAddress: profile.signer.accountAddress.toString() }));
+          const profile = await loadProfile(config.profile, network);
+          setConfig(prev => ({
+            ...prev,
+            profileAddress: profile.signer.accountAddress.toString(),
+            // Always use actual RPC URL - either custom or default
+            rpcEndpoint: profile.fullnode || getFullnodeUrl(network)
+          }));
         } catch {
-          setConfig(prev => ({ ...prev, profileAddress: null }));
+          setConfig(prev => ({
+            ...prev,
+            profileAddress: null,
+            // Even without profile, show default RPC if network is set
+            rpcEndpoint: getFullnodeUrl(network)
+          }));
         }
+      } else if (network) {
+        setConfig(prev => ({
+          ...prev,
+          profileAddress: null,
+          // Even without profile, show default RPC if network is set
+          rpcEndpoint: getFullnodeUrl(network)
+        }));
       } else {
-        setConfig(prev => ({ ...prev, profileAddress: null }));
+        setConfig(prev => ({
+          ...prev,
+          profileAddress: null,
+          rpcEndpoint: undefined
+        }));
       }
     };
     loadProfileAddress();
@@ -343,6 +366,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         network={config.network}
         profile={config.profile}
         multisig={config.multisig}
+        rpcEndpoint={config.rpcEndpoint}
       />
 
       <Box borderStyle="single" paddingX={1}>

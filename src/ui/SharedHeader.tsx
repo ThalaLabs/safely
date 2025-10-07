@@ -6,9 +6,10 @@ interface SharedHeaderProps {
   network?: string;
   profile?: string;
   multisig?: string;
+  rpcEndpoint?: string;
 }
 
-const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig }) => {
+const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig, rpcEndpoint }) => {
 
   return (
     <>
@@ -45,6 +46,11 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig 
           <Text>
             Profile: {profile ? (
               <Text color="green">{profile}</Text>
+            ) : <Text color="red">Not set</Text>}
+          </Text>
+          <Text>
+            RPC: {rpcEndpoint ? (
+              <Text color="green">{rpcEndpoint}</Text>
             ) : <Text color="red">Not set</Text>}
           </Text>
         </Box>
