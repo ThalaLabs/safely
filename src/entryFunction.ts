@@ -2,6 +2,8 @@ import {
   InputEntryFunctionData,
   MoveFunctionId,
   SimpleEntryFunctionArgumentTypes,
+  MoveOption,
+  AccountAddress,
 } from '@aptos-labs/ts-sdk';
 
 export async function serializeEntryFunction(functionId: string) {}
@@ -54,6 +56,7 @@ function parseSinglePayload(content: {
     throw new Error('args must be an array');
   }
 
+  // TODO: use parser.encodeArg
   // Explicitly handle hex args (which must be cast to vector<u8> or vector<vector<u8>> types)
   const hexDecodedArgs = content.args.map((arg) => {
     // Handle both object format {type, value} and direct value format
@@ -72,6 +75,14 @@ function parseSinglePayload(content: {
         if (Array.isArray(typedArg.value) && typedArg.value.every((v) => typeof v === 'string')) {
           return typedArg.value.map((hexStr) => hexToBytes(hexStr));
         }
+      }
+
+      // Option<address> handling
+      if (typedArg.type === '0x1::option::Option<address>') {
+        if (!typedArg.value || typedArg.value === '') {
+          return new MoveOption<AccountAddress>(); // None
+        }
+        return new MoveOption<AccountAddress>(AccountAddress.from(typedArg.value as string)); // Some
       }
 
       return typedArg.value;
