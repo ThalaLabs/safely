@@ -112,20 +112,48 @@ const ProposalView: React.FC<ProposalViewProps> = ({
   const [signaturesRequired, setSigRequired] = useState<number>(0);
   const [signerAddress, setSignerAddress] = useState<string>('');
   const [aptos, setAptos] = useState<Aptos | null>(null);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
+
+  // Load profile (can be called on init and when user presses "L")
+  // Returns true if successful, false if failed
+  const loadProfileData = useCallback(async (): Promise<boolean> => {
+    if (profile) {
+      try {
+        const profileData = await loadProfile(profile, network as NetworkChoice);
+        const { signer } = profileData;
+        setSignerAddress(signer.accountAddress.toString());
+        setProfileLoadError(null);
+        return true;
+      } catch (profileErr) {
+        // If profile loading fails (e.g., Ledger not connected), continue in read-only mode
+        const errorMsg = profileErr instanceof Error ? profileErr.message : String(profileErr);
+
+        // Provide user-friendly message for common Ledger errors
+        let userMessage: string;
+        if (errorMsg.includes('NoDevice') || errorMsg.includes('cannot open device')) {
+          userMessage = `Ledger not connected. Please connect your Ledger device, unlock it, open Aptos app, then press [L]oad.`;
+        } else {
+          userMessage = `Profile "${profile}" failed to load: ${errorMsg}`;
+        }
+
+        setProfileLoadError(userMessage);
+        setSignerAddress('');
+        return false;
+      }
+    } else {
+      // Read-only mode - no profile
+      setSignerAddress('');
+      setProfileLoadError(null);
+      return true;
+    }
+  }, [profile, network]);
 
   // Initialize
   useEffect(() => {
     const init = async () => {
       try {
-        // Load profile if provided
-        if (profile) {
-          const profileData = await loadProfile(profile, network as NetworkChoice);
-          const { signer } = profileData;
-          setSignerAddress(signer.accountAddress.toString());
-        } else {
-          // Read-only mode - no profile
-          setSignerAddress('');
-        }
+        // Load profile if provided (non-blocking for read-only viewing)
+        await loadProfileData();
 
         const aptosInstance = initAptos(network as NetworkChoice, rpcEndpoint);
         setAptos(aptosInstance);
@@ -155,7 +183,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
     };
 
     init();
-  }, [network, rpcEndpoint, multisigAddress, profile]);
+  }, [network, rpcEndpoint, multisigAddress, loadProfileData]);
 
   // Fetch proposals
   const fetchProposals = useCallback(async () => {
@@ -352,9 +380,17 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       }
     } else if (normalizedInput === 'l') {
       setActionMessage(chalk.yellow('Loading...'));
-      fetchProposals().then(() => {
-        setActionMessage(chalk.green('✅ Loaded'));
-        setTimeout(() => setActionMessage(''), 2000);
+      // Reload both profile and proposals
+      loadProfileData().then(async (profileSuccess) => {
+        // Fetch proposals regardless of profile load status
+        await fetchProposals();
+
+        if (profileSuccess) {
+          setActionMessage(chalk.green('✅ Loaded - Profile connected successfully'));
+        } else {
+          setActionMessage(chalk.yellow('✅ Proposals loaded - Profile still not available'));
+        }
+        setTimeout(() => setActionMessage(''), 3000);
       }).catch((err) => {
         setActionMessage(chalk.red(`❌ Load failed: ${err}`));
       });
@@ -375,6 +411,15 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         multisig={multisigAddress}
         rpcEndpoint={rpcEndpoint}
       />
+
+      {/* Profile Load Warning */}
+      {profileLoadError && (
+        <Box borderStyle="single" borderColor="yellow" paddingX={1} paddingY={1}>
+          <Box flexDirection="column">
+            <Text color="yellow">⚠️  Warning: {profileLoadError}</Text>
+          </Box>
+        </Box>
+      )}
 
       {/* Content Area */}
       {loading && proposals.length === 0 ? (
