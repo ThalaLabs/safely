@@ -129,12 +129,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         const errorMsg = profileErr instanceof Error ? profileErr.message : String(profileErr);
 
         // Provide user-friendly message for common Ledger errors
-        let userMessage: string;
-        if (errorMsg.includes('NoDevice') || errorMsg.includes('cannot open device')) {
-          userMessage = `Ledger not connected. Please connect your Ledger device, unlock it, open Aptos app, then press [L]oad.`;
-        } else {
-          userMessage = `Profile "${profile}" failed to load: ${errorMsg}`;
-        }
+        const userMessage = `Profile "${profile}" failed to load: ${errorMsg}. Please connect your Ledger device, unlock it, open Aptos app, then press [L]oad.`;
 
         setProfileLoadError(userMessage);
         setSignerAddress('');
