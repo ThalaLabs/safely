@@ -127,11 +127,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       } catch (profileErr) {
         // If profile loading fails (e.g., Ledger not connected), continue in read-only mode
         const errorMsg = profileErr instanceof Error ? profileErr.message : String(profileErr);
-
-        // Provide user-friendly message for common Ledger errors
-        const userMessage = `Profile "${profile}" failed to load: ${errorMsg}. Please connect your Ledger device, unlock it, open Aptos app, then press [L]oad.`;
-
-        setProfileLoadError(userMessage);
+        setProfileLoadError(`Ledger: ${errorMsg}. Press [L] to retry.`);
         setSignerAddress('');
         return false;
       }
@@ -375,20 +371,9 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       }
     } else if (normalizedInput === 'l') {
       setActionMessage(chalk.yellow('Loading...'));
-      // Reload both profile and proposals
-      loadProfileData().then(async (profileSuccess) => {
-        // Fetch proposals regardless of profile load status
-        await fetchProposals();
-
-        if (profileSuccess) {
-          setActionMessage(chalk.green('✅ Loaded - Profile connected successfully'));
-        } else {
-          setActionMessage(chalk.yellow('✅ Proposals loaded - Profile still not available'));
-        }
-        setTimeout(() => setActionMessage(''), 3000);
-      }).catch((err) => {
-        setActionMessage(chalk.red(`❌ Load failed: ${err}`));
-      });
+      loadProfileData()
+        .then(() => fetchProposals())
+        .finally(() => setActionMessage(''));
     } else if (normalizedInput === 'q') {
       exit();
     } else if (normalizedInput === 'b' && onBack) {
@@ -411,7 +396,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
       {profileLoadError && (
         <Box borderStyle="single" borderColor="yellow" paddingX={1} paddingY={1}>
           <Box flexDirection="column">
-            <Text color="yellow">⚠️  Warning: {profileLoadError}</Text>
+            <Text color="yellow">⚠️  {profileLoadError}</Text>
           </Box>
         </Box>
       )}
