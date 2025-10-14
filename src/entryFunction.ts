@@ -4,8 +4,6 @@ import {
   SimpleEntryFunctionArgumentTypes,
 } from '@aptos-labs/ts-sdk';
 
-export async function serializeEntryFunction(functionId: string) {}
-
 export function isBatchPayload(jsonContent: string): boolean {
   try {
     const parsed = JSON.parse(jsonContent);
@@ -39,9 +37,7 @@ export function parseEntryFunctionPayload(jsonContent: string): InputEntryFuncti
 function parseSinglePayload(content: {
   function_id: string;
   type_args: string[];
-  args: Array<
-    { type: string; value: SimpleEntryFunctionArgumentTypes } | SimpleEntryFunctionArgumentTypes
-  >;
+  args: Array<{ type: string; value: SimpleEntryFunctionArgumentTypes }>;
 }): InputEntryFunctionData {
   // Validate required fields
   if (!content.function_id) {
@@ -54,49 +50,17 @@ function parseSinglePayload(content: {
     throw new Error('args must be an array');
   }
 
-  // Explicitly handle hex args (which must be cast to vector<u8> or vector<vector<u8>> types)
-  const hexDecodedArgs = content.args.map((arg) => {
-    // Handle both object format {type, value} and direct value format
-    if (typeof arg === 'object' && arg !== null && 'type' in arg && 'value' in arg) {
-      // Object format with type field
-      const typedArg = arg as { type: string; value: SimpleEntryFunctionArgumentTypes };
-
-      // Hex args need to be decoded into vector<u8> equivalents
-      if (typedArg.type === 'hex') {
-        // vector<u8>
-        if (typeof typedArg.value === 'string') {
-          return hexToBytes(typedArg.value);
-        }
-
-        // vector<vector<u8>>
-        if (Array.isArray(typedArg.value) && typedArg.value.every((v) => typeof v === 'string')) {
-          return typedArg.value.map((hexStr) => hexToBytes(hexStr));
-        }
-      }
-
-      return typedArg.value;
+  // Extract function arguments (just the values)
+  const functionArguments = content.args.map((arg) => {
+    if (!arg.type || arg.value === undefined) {
+      throw new Error(`Invalid argument format: ${JSON.stringify(arg)}`);
     }
-
-    // Direct value format
-    return arg;
+    return arg.value;
   });
 
   return {
     function: content.function_id as MoveFunctionId,
     typeArguments: content.type_args,
-    functionArguments: hexDecodedArgs,
+    functionArguments,
   };
-}
-
-function hexToBytes(hexString: string) {
-  // Remove "0x" prefix if present
-  if (hexString.startsWith('0x')) {
-    hexString = hexString.slice(2);
-  }
-
-  const matched = hexString.match(/.{1,2}/g);
-  if (!matched) return new Uint8Array(); // Return an empty Uint8Array if no match
-
-  // Convert hex to byte array
-  return new Uint8Array(matched.map((byte) => parseInt(byte, 16)));
 }
