@@ -150,6 +150,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         setSigRequired(Number(sigRequired));
       } catch (err) {
         setError(`Failed to initialize: ${err}`);
+        setLoading(false);
       }
     };
 
