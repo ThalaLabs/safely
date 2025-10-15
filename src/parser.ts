@@ -211,12 +211,13 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
   const tt = typeTag.toString();
   const deserializer = new Deserializer(arg.bcsToBytes());
 
-  if (tt in typeMap) {
-    return typeMap[tt].deserialize(deserializer).value;
-  }
-
+  // Check address types first, before typeMap, since AccountAddress doesn't have .value
   if (tt == 'address' || tt.startsWith('0x1::object::Object')) {
     return AccountAddress.deserialize(deserializer).toString();
+  }
+
+  if (tt in typeMap) {
+    return typeMap[tt].deserialize(deserializer).value;
   }
 
   if (tt.startsWith('0x1::option::Option')) {
