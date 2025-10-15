@@ -166,6 +166,7 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
     u128: U128,
     u256: U256,
     bool: Bool,
+    address: AccountAddress,
     '0x1::string::String': MoveString,
   };
 
@@ -210,36 +211,44 @@ function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFun
   const tt = typeTag.toString();
   const deserializer = new Deserializer(arg.bcsToBytes());
 
-  if (tt in typeMap) {
-    return typeMap[tt].deserialize(deserializer).value;
-  }
-
+  // Check address types first, before typeMap, since AccountAddress doesn't have .value
   if (tt == 'address' || tt.startsWith('0x1::object::Object')) {
     return AccountAddress.deserialize(deserializer).toString();
   }
 
-  if (tt == '0x1::option::Option<address>') {
-    const isSome = arg.bcsToBytes()[0] == 1;
-    if (isSome) {
-      const addressInternal = new AccountAddress(arg.bcsToBytes().slice(1));
-      const addressOption = new MoveOption<AccountAddress>(addressInternal);
-      const optionDeserializer = new Deserializer(addressOption.bcsToBytes());
-
-      return AccountAddress.deserialize(optionDeserializer).toString();
-    }
-
-    return '';
+  if (tt in typeMap) {
+    return typeMap[tt].deserialize(deserializer).value;
   }
 
   if (tt.startsWith('0x1::option::Option')) {
-    const option = MoveOption.deserialize(deserializer, typeMap[tt]);
-
-    if (option.isSome()) {
-      // @ts-ignore
-      return option.value.value;
+    // Extract inner type from "0x1::option::Option<TYPE>"
+    const match = tt.match(/0x1::option::Option<(.+)>/);
+    if (!match) {
+      throw new Error(`[decodeArg] Invalid Option type: ${tt}`);
     }
 
-    return '';
+    const innerType = match[1];
+    const TypeConstructor = typeMap[innerType];
+
+    if (!TypeConstructor) {
+      throw new Error(`[decodeArg] Unsupported Option inner type: ${innerType}`);
+    }
+
+    const bytes = arg.bcsToBytes();
+    const optionDeserializer = new Deserializer(bytes);
+    const option = MoveOption.deserialize(optionDeserializer, TypeConstructor);
+
+    if (option.isSome()) {
+      const unwrapped = option.unwrap();
+      // For AccountAddress, call toString(); for primitives, access .value
+      if (unwrapped instanceof AccountAddress) {
+        return unwrapped.toString();
+      }
+      // @ts-ignore
+      return unwrapped.value;
+    }
+
+    return undefined;
   }
 
   if (tt in nestedVector1Map) {
