@@ -22,9 +22,6 @@ pnpm docgen
 
 # Link for local testing
 pnpm link -g
-
-# Run E2E tests
-bash tests/e2e/run.sh
 ```
 
 ## High-Level Architecture
@@ -76,4 +73,4 @@ The project is a CLI tool for managing Aptos/Movement multisig accounts, built w
 - The project uses ES modules (type: "module" in package.json)
 - Node.js >=20 and pnpm >=9 are required
 - When adding new commands, register them in `src/index.ts`
-- Transaction simulation is critical for safety - respect the `--ignore-simulate` flag carefully
+- Transaction simulation is critical for safety - all transactions are always simulated. Use `--force` or `--dry-run` flags as needed
