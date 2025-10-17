@@ -63,24 +63,43 @@ export async function proposeEntryFunction(
     withFeePayer: true,
   });
 
-  const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
-    transaction: actualTxn,
-  });
+  try {
+    const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
+      transaction: actualTxn,
+    });
 
-  if (!actualTxnSimulation.success) {
+    if (!actualTxnSimulation.success) {
+      if (force) {
+        console.log(
+          chalk.yellow(
+            `⚠️  Transaction simulation failed: ${actualTxnSimulation.vm_status}\n   Continuing due to --force flag`
+          )
+        );
+      } else {
+        throw new Error(
+          `Transaction simulation failed: ${actualTxnSimulation.vm_status}\n   Use --force to propose anyway`
+        );
+      }
+    } else {
+      console.log(chalk.green(`✓ Transaction simulation succeeded`));
+    }
+  } catch (error) {
+    // Check if this is a simulation failure we already handled
+    if ((error as Error).message.includes('Transaction simulation failed')) {
+      throw error;
+    }
+    // Otherwise it's an API/network error
     if (force) {
       console.log(
         chalk.yellow(
-          `⚠️  Transaction simulation failed: ${actualTxnSimulation.vm_status}\n   Continuing due to --force flag`
+          `⚠️  Transaction simulation error: ${(error as Error).message}\n   Continuing due to --force flag`
         )
       );
     } else {
       throw new Error(
-        `Transaction simulation failed: ${actualTxnSimulation.vm_status}\n   Use --force to propose anyway`
+        `Transaction simulation error: ${(error as Error).message}\n   Use --force to propose anyway`
       );
     }
-  } else {
-    console.log(chalk.green(`✓ Transaction simulation succeeded`));
   }
 
   // If dry-run, exit without proposing
@@ -98,20 +117,39 @@ export async function proposeEntryFunction(
     },
   });
 
-  const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
-    transaction: proposeTxn,
-  });
+  try {
+    const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
+      transaction: proposeTxn,
+    });
 
-  if (!proposeTxnSimulation.success) {
+    if (!proposeTxnSimulation.success) {
+      if (force) {
+        console.log(
+          chalk.yellow(
+            `⚠️  Proposal simulation failed: ${proposeTxnSimulation.vm_status}\n   Continuing due to --force flag`
+          )
+        );
+      } else {
+        throw new Error(
+          `Proposal simulation failed: ${proposeTxnSimulation.vm_status}\n   Use --force to propose anyway`
+        );
+      }
+    }
+  } catch (error) {
+    // Check if this is a simulation failure we already handled
+    if ((error as Error).message.includes('Proposal simulation failed')) {
+      throw error;
+    }
+    // Otherwise it's an API/network error
     if (force) {
       console.log(
         chalk.yellow(
-          `⚠️  Proposal simulation failed: ${proposeTxnSimulation.vm_status}\n   Continuing due to --force flag`
+          `⚠️  Proposal simulation error: ${(error as Error).message}\n   Continuing due to --force flag`
         )
       );
     } else {
       throw new Error(
-        `Proposal simulation failed: ${proposeTxnSimulation.vm_status}\n   Use --force to propose anyway`
+        `Proposal simulation error: ${(error as Error).message}\n   Use --force to propose anyway`
       );
     }
   }
