@@ -130,7 +130,7 @@ export const registerAccountCommand = (program: Command) => {
           const { signer, fullnode } = await loadProfile(profile, network);
           const aptos = initAptos(network, fullnode);
 
-          await proposeEntryFunction(aptos, signer, entryFunction, multisig, network, true);
+          await proposeEntryFunction(aptos, signer, entryFunction, multisig, network, false, false);
         } catch (error) {
           console.error(chalk.red(`Error: ${(error as Error).message}`));
         }

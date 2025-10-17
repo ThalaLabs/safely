@@ -81,7 +81,9 @@ Options:
                                     "aptos-testnet", "aptos-mainnet",
                                     "movement-mainnet", "movement-testnet")
   -p, --profile <string>            Profile to use for the transaction
-  --no-simulate                     skip tx simulation
+  --force                           propose transaction despite simulation
+                                    failure
+  --dry-run                         simulate transaction without proposing
   -h, --help                        display help for command
 Commands:
   raw [options]                     Propose a raw transaction from a payload
