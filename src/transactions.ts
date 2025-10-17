@@ -63,24 +63,32 @@ export async function proposeEntryFunction(
     withFeePayer: true,
   });
 
-  const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
-    transaction: actualTxn,
-  });
+  let simulationSuccess = false;
+  let simulationError: string | null = null;
 
-  if (!actualTxnSimulation.success) {
-    if (force) {
-      console.log(
-        chalk.yellow(
-          `⚠️  Transaction simulation failed: ${actualTxnSimulation.vm_status}\n   Continuing due to --force flag`
-        )
-      );
+  try {
+    const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
+      transaction: actualTxn,
+    });
+
+    if (actualTxnSimulation.success) {
+      simulationSuccess = true;
     } else {
-      throw new Error(
-        `Transaction simulation failed: ${actualTxnSimulation.vm_status}\n   Use --force to propose anyway`
-      );
+      simulationError = `Transaction simulation failed: ${actualTxnSimulation.vm_status}`;
     }
-  } else {
+  } catch (error) {
+    simulationError = `Transaction simulation error: ${(error as Error).message}`;
+  }
+
+  // Handle simulation result
+  if (simulationSuccess) {
     console.log(chalk.green(`✓ Transaction simulation succeeded`));
+  } else if (simulationError) {
+    if (force) {
+      console.log(chalk.yellow(`⚠️  ${simulationError}\n   Continuing due to --force flag`));
+    } else {
+      throw new Error(`${simulationError}\n   Use --force to propose anyway`);
+    }
   }
 
   // If dry-run, exit without proposing
@@ -98,21 +106,28 @@ export async function proposeEntryFunction(
     },
   });
 
-  const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
-    transaction: proposeTxn,
-  });
+  let proposalSimulationError: string | null = null;
 
-  if (!proposeTxnSimulation.success) {
+  try {
+    const [proposeTxnSimulation] = await aptos.transaction.simulate.simple({
+      transaction: proposeTxn,
+    });
+
+    if (!proposeTxnSimulation.success) {
+      proposalSimulationError = `Proposal simulation failed: ${proposeTxnSimulation.vm_status}`;
+    }
+  } catch (error) {
+    proposalSimulationError = `Proposal simulation error: ${(error as Error).message}`;
+  }
+
+  // Handle proposal simulation result
+  if (proposalSimulationError) {
     if (force) {
       console.log(
-        chalk.yellow(
-          `⚠️  Proposal simulation failed: ${proposeTxnSimulation.vm_status}\n   Continuing due to --force flag`
-        )
+        chalk.yellow(`⚠️  ${proposalSimulationError}\n   Continuing due to --force flag`)
       );
     } else {
-      throw new Error(
-        `Proposal simulation failed: ${proposeTxnSimulation.vm_status}\n   Use --force to propose anyway`
-      );
+      throw new Error(`${proposalSimulationError}\n   Use --force to propose anyway`);
     }
   }
 
