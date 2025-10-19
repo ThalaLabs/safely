@@ -9,7 +9,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJson = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
 
-import { registerAddressesCommand } from './commands/addresses.js';
 import { registerDecodeCommand } from './commands/decode.js';
 import { registerSimulateCommand } from './commands/simulate.js';
 import { registerEncodeCommand } from './commands/encode.js';
@@ -20,6 +19,7 @@ import { registerExecuteCommand } from './commands/execute.js';
 import { registerProposalCommand } from './commands/proposal.js';
 import { registerAccountCommand } from './commands/account.js';
 import { registerDefaultCommand } from './commands/defaults.js';
+import { registerLabelCommand } from './commands/label.js';
 
 const program = new Command();
 
@@ -36,7 +36,7 @@ registerSimulateCommand(program);
 // experimental
 registerDecodeCommand(program);
 registerEncodeCommand(program);
-registerAddressesCommand(program);
+registerLabelCommand(program);
 registerDefaultCommand(program);
 
 // misc

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
+import AddressLink from './AddressLink.js';
 
 interface SharedHeaderProps {
   subtitle?: string;
@@ -45,6 +46,8 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig,
           <Text>
             Multisig: {isLoading ? (
               <Text color="cyan"><Spinner type="dots" /> Loading...</Text>
+            ) : multisig && network ? (
+              <AddressLink address={multisig} network={network} truncate={true} color="green" />
             ) : multisig ? (
               <Text color="green">{multisig.slice(0, 10)}...</Text>
             ) : <Text color="red">Not set</Text>}
