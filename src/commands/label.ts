@@ -30,8 +30,12 @@ export function registerLabelCommand(program: Command) {
             }
             labelsJson = fs.readFileSync(file, 'utf8');
           } else {
-            // Read from stdin
-            labelsJson = fs.readFileSync(0, 'utf8'); // fd 0 is stdin
+            // Read from stdin asynchronously
+            const chunks: Buffer[] = [];
+            for await (const chunk of process.stdin) {
+              chunks.push(chunk);
+            }
+            labelsJson = Buffer.concat(chunks).toString('utf8');
           }
 
           // Parse JSON
@@ -85,7 +89,7 @@ export function registerLabelCommand(program: Command) {
           console.log(chalk.yellow(`No labels found for ${network}`));
           console.log(
             chalk.dim(
-              '\nInstall default labels: curl https://raw.githubusercontent.com/ThalaLabs/aptos-labels/main/mainnet.json | safely label apply --network aptos-mainnet'
+              '\nInstall default labels: curl -s https://raw.githubusercontent.com/ThalaLabs/aptos-labels/main/mainnet.json | safely label apply --network aptos-mainnet'
             )
           );
           return;
