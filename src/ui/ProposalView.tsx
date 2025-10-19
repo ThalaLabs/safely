@@ -21,7 +21,7 @@ import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../profiles.js';
 import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
-import { getAddressLabel } from '../labels.js';
+import { getAddressLabel } from '../labelConfig.js';
 import SharedHeader from './SharedHeader.js';
 
 // Helper function to truncate address uniformly
@@ -42,7 +42,7 @@ interface AddressLinkProps {
 const AddressLink: React.FC<AddressLinkProps> = React.memo(({ address, network, color }) => {
   const url = getExplorerUrl(network as NetworkChoice, `account/${address}`);
   const displayAddr = truncateAddress(address);
-  const label = getAddressLabel(address);
+  const label = getAddressLabel(address, network as NetworkChoice);
   const displayText = label ? `${label} (${displayAddr})` : displayAddr;
 
   return (

@@ -222,48 +222,52 @@ Options:
   -h, --help           display help for command
 ```
 
-## safely addresses [options] [command]
+## safely label [options] [command]
 
-Manage the local address book (experimental)
+Manage address labels
 
 ```
 Options:
-  -h, --help        display help for command
+  -h, --help              display help for command
 Commands:
-  add [options]     Add a new alias and address to the local address book
-  list              List all saved aliases and addresses
-  remove [options]  Remove an alias from the local address book
-  help [command]    display help for command
+  apply [options] [file]  Apply labels from a JSON file or stdin (merges with
+                          existing)
+  list [options]          List all labels for a network
+  clear [options]         Remove all labels for a network
+  help [command]          display help for command
 ```
 
-## safely addresses add [options]
+## safely label apply [options] [file]
 
-Add a new alias and address to the local address book
+Apply labels from a JSON file or stdin (merges with existing)
+
+```
+Arguments:
+  file                     Path to JSON file containing labels (omit to read
+                           from stdin)
+Options:
+  -n, --network <network>  Network to apply labels to
+  -h, --help               display help for command
+```
+
+## safely label list [options]
+
+List all labels for a network
 
 ```
 Options:
-  --alias <alias>      Alias for the address
-  --address <address>  Hexadecimal address (e.g., 0xabc)
-  -h, --help           display help for command
+  -n, --network <network>  Network to list labels for
+  -h, --help               display help for command
 ```
 
-## safely addresses list [options]
+## safely label clear [options]
 
-List all saved aliases and addresses
-
-```
-Options:
-  -h, --help  display help for command
-```
-
-## safely addresses remove [options]
-
-Remove an alias from the local address book
+Remove all labels for a network
 
 ```
 Options:
-  --alias <alias>  Alias to remove
-  -h, --help       display help for command
+  -n, --network <network>  Network to clear labels for
+  -h, --help               display help for command
 ```
 
 ## safely default [options] [command]
