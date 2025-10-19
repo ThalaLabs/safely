@@ -94,12 +94,17 @@ export function registerLabelCommand(program: Command) {
         console.log(chalk.blue(`Labels for ${network}:`));
         console.log('');
 
-        // Sort by address for consistent output
-        const sortedEntries = Object.entries(labels).sort(([a], [b]) => a.localeCompare(b));
+        const entries = Object.entries(labels);
 
-        for (const [address, label] of sortedEntries) {
-          console.log(chalk.green(`${address}`));
-          console.log(chalk.dim(`  → ${label}`));
+        // Find the longest label for padding
+        const maxLabelLength = Math.max(...entries.map(([, label]) => label.length));
+        const labelWidth = Math.min(maxLabelLength, 50); // Cap at 50 chars
+
+        for (const [address, label] of entries) {
+          // Pad label to align addresses
+          const paddedLabel = label.padEnd(labelWidth);
+
+          console.log(`${chalk.green(paddedLabel)}  ${chalk.dim(address)}`);
         }
 
         console.log('');
