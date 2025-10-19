@@ -1,5 +1,9 @@
 # @thalalabs/safely
 
+## 0.4.0
+
+- Production ready
+
 ## 0.2.1
 
 ### Patch Changes
