@@ -5,7 +5,15 @@ import chalk from 'chalk';
 import fs from 'fs';
 
 export function registerLabelCommand(program: Command) {
-  const labelCommand = program.command('label').description('Manage address labels');
+  const labelCommand = program
+    .command('label')
+    .description('Manage address labels')
+    .addHelpText(
+      'after',
+      '\nExample:\n' +
+        '  Install default labels:\n' +
+        '  $ curl -s https://raw.githubusercontent.com/ThalaLabs/aptos-labels/main/mainnet.json | safely label apply --network aptos-mainnet'
+    );
 
   labelCommand
     .command('apply')
@@ -87,11 +95,7 @@ export function registerLabelCommand(program: Command) {
 
         if (Object.keys(labels).length === 0) {
           console.log(chalk.yellow(`No labels found for ${network}`));
-          console.log(
-            chalk.dim(
-              '\nInstall default labels: curl -s https://raw.githubusercontent.com/ThalaLabs/aptos-labels/main/mainnet.json | safely label apply --network aptos-mainnet'
-            )
-          );
+          console.log(chalk.dim('\nRun "safely label --help" for installation instructions'));
           return;
         }
 
