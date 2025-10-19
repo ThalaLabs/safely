@@ -11,6 +11,7 @@ import SharedHeader from './SharedHeader.js';
 import { initAptos, getFullnodeUrl } from '../utils.js';
 import { AccountAddress } from '@aptos-labs/ts-sdk';
 import { loadProfile } from '../profiles.js';
+import AddressLink from './AddressLink.js';
 
 interface HomeViewProps {
   onNavigate?: (view: 'proposal') => void;
@@ -403,14 +404,17 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               multisigHistory={config.multisigHistory}
               currentMultisig={config.multisig}
               subIndex={subIndex}
+              network={config.network}
             />
           ) : (
             <MenuItem
               isSelected={selectedIndex === 1}
               label="Multisig"
-              value={config.multisig ? `${config.multisig.slice(0, 10)}...` : undefined}
+              value={config.multisig}
               placeholder={!config.network ? "(Select network first)" : "(Enter address)"}
               disabled={!config.network}
+              network={config.network}
+              isAddress={true}
             />
           )}
 
@@ -475,14 +479,20 @@ const MenuItem: React.FC<{
   disabled?: boolean;
   showCheck?: boolean;
   warning?: boolean;
-}> = ({ isSelected, label, value, placeholder, showCheck, warning }) => (
+  network?: string;
+  isAddress?: boolean;
+}> = ({ isSelected, label, value, placeholder, showCheck, warning, network, isAddress }) => (
   <Text>
     {isSelected ? '▶' : ' '} {label}: {
       showCheck ? <Text color="green">✓</Text> :
       value ? (
-        warning ?
-          <><Text color="yellow">{value}</Text> <Text color="yellow">⚠</Text></> :
+        warning ? (
+          <><Text color="yellow">{value}</Text> <Text color="yellow">⚠</Text></>
+        ) : isAddress && network ? (
+          <><AddressLink address={value} network={network} truncate={true} /> <Text color="green">✓</Text></>
+        ) : (
           <Text color="cyan">{value} ✓</Text>
+        )
       ) :
       placeholder ? <Text dimColor>{placeholder}</Text> :
       null
@@ -518,7 +528,8 @@ const MultisigExpanded: React.FC<{
   multisigHistory: string[];
   currentMultisig?: string;
   subIndex: number;
-}> = ({ input, error, isSelected, isValidating, onInputChange, multisigHistory, currentMultisig, subIndex }) => {
+  network?: string;
+}> = ({ input, error, isSelected, isValidating, onInputChange, multisigHistory, currentMultisig, subIndex, network }) => {
   const isInputSelected = subIndex === multisigHistory.length;
 
   return (
@@ -526,7 +537,7 @@ const MultisigExpanded: React.FC<{
       <Text>{isSelected ? '▼' : ' '} Multisig:</Text>
       {multisigHistory.map((address, index) => (
         <Text key={address}>
-          {'  '}{index === subIndex ? '▶' : ' '} {address.slice(0, 10)}...{address.slice(-6)}
+          {'  '}{index === subIndex ? '▶' : ' '} {network ? <AddressLink address={address} network={network} truncate={true} /> : `${address.slice(0, 10)}...${address.slice(-6)}`}
           {address === currentMultisig && <Text color="green"> ✓</Text>}
         </Text>
       ))}
