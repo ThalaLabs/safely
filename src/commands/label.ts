@@ -85,7 +85,7 @@ export function registerLabelCommand(program: Command) {
           console.log(chalk.yellow(`No labels found for ${network}`));
           console.log(
             chalk.dim(
-              '\nInstall default labels: curl https://raw.githubusercontent.com/ThalaLabs/safely/main/labels/aptos-mainnet.json | safely label apply'
+              '\nInstall default labels: curl https://raw.githubusercontent.com/ThalaLabs/aptos-labels/main/mainnet.json | safely label apply --network aptos-mainnet'
             )
           );
           return;
