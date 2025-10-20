@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import { Box, Text, useInput, useApp, render } from 'ink';
 import Link from 'ink-link';
 import Spinner from 'ink-spinner';
 import chalk from 'chalk';
@@ -769,5 +769,25 @@ const ProposalRow: React.FC<ProposalRowProps> = React.memo(({
     prevProps.proposal.noVotes.length === nextProps.proposal.noVotes.length
   );
 });
+
+export const runProposalView = (props: {
+  network: string;
+  multisigAddress: string;
+  profile?: string;
+  rpcEndpoint?: string;
+  sequenceNumber?: number;
+}) => {
+  if (!process.stdin.isTTY) {
+    console.error('Error: This command requires an interactive terminal (TTY).');
+    console.error('Please run this command in an interactive terminal.');
+    process.exit(1);
+  }
+
+  process.stdin.setRawMode(true);
+
+  render(<ProposalView {...props} />, {
+    exitOnCtrlC: false
+  });
+};
 
 export default ProposalView;
