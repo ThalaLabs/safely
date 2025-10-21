@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.4.1
+
+### Patch Changes
+
+- 255b5b3: support `safely --default` that goes to ProposalView directly
+
 ## 0.4.0
 
 - Production ready
