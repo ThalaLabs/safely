@@ -11,8 +11,9 @@
     "start": "node dist/index.js",
     "format": "prettier --write \"**/*.{js,ts,json,md}\" --ignore-path .gitignore",
     "docgen": "node dist/index.js docgen -o docs.md",
-    "test": "bash tests/e2e/run.sh",
-    "test:multisig": "bash tests/e2e/multisig_flow_test.sh"
+    "release:changeset": "pnpm changeset",
+    "release:version": "pnpm changeset version",
+    "release:publish": "pnpm build && pnpm changeset publish"
   },
   "keywords": [],
   "description": "A highly visible CLI tool for managing multisig on Aptos.",
