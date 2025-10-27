@@ -23,6 +23,7 @@ interface Config {
   profile?: string;
   profiles: ProfileInfo[];
   multisigOwners: string[];
+  multisigSignaturesRequired?: number;
   profileAddress: string | null;
   multisigHistory: string[];
   rpcEndpoint?: string;
@@ -68,14 +69,15 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         MultisigDefault.get(),
         ProfileDefault.get()
       ]);
-      const owners = network && multisig ? await fetchMultisigOwners(network, multisig) : [];
+      const multisigInfo = network && multisig ? await fetchMultisigInfo(network, multisig) : { owners: [], signaturesRequired: 0 };
       const multisigHistory = network ? await MultisigHistory.getForNetwork(network) : [];
       setConfig({
         network,
         multisig,
         profile,
         profiles: getAllProfiles(),
-        multisigOwners: owners,
+        multisigOwners: multisigInfo.owners,
+        multisigSignaturesRequired: multisigInfo.signaturesRequired || undefined,
         profileAddress: null,
         multisigHistory
       });
@@ -84,17 +86,28 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     load();
   }, []);
 
-  // Fetch multisig owners from chain
-  const fetchMultisigOwners = useCallback(async (network: NetworkChoice, multisigAddress: string): Promise<string[]> => {
+  // Fetch multisig info from chain
+  const fetchMultisigInfo = useCallback(async (network: NetworkChoice, multisigAddress: string): Promise<{ owners: string[]; signaturesRequired: number }> => {
     try {
       const aptos = initAptos(network);
-      const resource = await aptos.getAccountResource<MultisigResource>({
-        accountAddress: multisigAddress,
-        resourceType: '0x1::multisig_account::MultisigAccount'
-      });
-      return resource.owners || [];
+      const [resource, [sigRequired]] = await Promise.all([
+        aptos.getAccountResource<MultisigResource>({
+          accountAddress: multisigAddress,
+          resourceType: '0x1::multisig_account::MultisigAccount'
+        }),
+        aptos.view<string[]>({
+          payload: {
+            function: '0x1::multisig_account::num_signatures_required',
+            functionArguments: [multisigAddress],
+          },
+        })
+      ]);
+      return {
+        owners: resource.owners || [],
+        signaturesRequired: Number(sigRequired)
+      };
     } catch {
-      return [];
+      return { owners: [], signaturesRequired: 0 };
     }
   }, []);
 
@@ -180,6 +193,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       newConfig.multisig = undefined;
       newConfig.profile = undefined;
       newConfig.multisigOwners = [];
+      newConfig.multisigSignaturesRequired = undefined;
       newConfig.profileAddress = null;
       // Load multisig history for new network
       const multisigHistory = await MultisigHistory.getForNetwork(updates.network);
@@ -187,10 +201,11 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     }
     if ('multisig' in updates && updates.multisig) {
       await MultisigDefault.set(updates.multisig);
-      // Fetch owners for new multisig
+      // Fetch multisig info for new multisig
       if (config.network) {
-        const owners = await fetchMultisigOwners(config.network, updates.multisig);
-        newConfig.multisigOwners = owners;
+        const multisigInfo = await fetchMultisigInfo(config.network, updates.multisig);
+        newConfig.multisigOwners = multisigInfo.owners;
+        newConfig.multisigSignaturesRequired = multisigInfo.signaturesRequired || undefined;
         // Add to history
         await MultisigHistory.add(config.network, updates.multisig);
         // Refresh history
@@ -203,7 +218,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     }
 
     setConfig(newConfig);
-  }, [config, fetchMultisigOwners]);
+  }, [config, fetchMultisigInfo]);
 
   const collapseMenu = () => setMenu(m => ({
     ...m,
@@ -370,6 +385,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         network={config.network}
         profile={config.profile}
         multisig={config.multisig}
+        signaturesRequired={config.multisigSignaturesRequired}
+        totalOwners={config.multisigOwners.length > 0 ? config.multisigOwners.length : undefined}
         rpcEndpoint={config.rpcEndpoint}
         isLoading={isLoading}
       />

@@ -369,6 +369,8 @@ const ProposalView: React.FC<ProposalViewProps> = ({
         network={network}
         profile={profile}
         multisig={multisigAddress}
+        signaturesRequired={signaturesRequired > 0 ? signaturesRequired : undefined}
+        totalOwners={owners.length > 0 ? owners.length : undefined}
         rpcEndpoint={rpcEndpoint}
       />
 
