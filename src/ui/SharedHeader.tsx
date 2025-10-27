@@ -8,11 +8,13 @@ interface SharedHeaderProps {
   network?: string;
   profile?: string;
   multisig?: string;
+  signaturesRequired?: number;
+  totalOwners?: number;
   rpcEndpoint?: string;
   isLoading?: boolean;
 }
 
-const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig, rpcEndpoint, isLoading = false }) => {
+const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig, signaturesRequired, totalOwners, rpcEndpoint, isLoading = false }) => {
 
   return (
     <>
@@ -47,9 +49,12 @@ const SharedHeader: React.FC<SharedHeaderProps> = ({ network, profile, multisig,
             Multisig: {isLoading ? (
               <Text color="cyan"><Spinner type="dots" /> Loading...</Text>
             ) : multisig && network ? (
-              <AddressLink address={multisig} network={network} truncate={true} color="green" />
-            ) : multisig ? (
-              <Text color="green">{multisig.slice(0, 10)}...</Text>
+              <>
+                <AddressLink address={multisig} network={network} truncate={true} color="green" />
+                {signaturesRequired !== undefined && totalOwners !== undefined && (
+                  <Text color="green"> ({signaturesRequired}/{totalOwners})</Text>
+                )}
+              </>
             ) : <Text color="red">Not set</Text>}
           </Text>
           <Text>
