@@ -26,82 +26,421 @@ import {
   U64,
   U8,
   MoveOption,
+  Serializer,
 } from '@aptos-labs/ts-sdk';
 
-type AptosArgType = U8 | U16 | U32 | U64 | U128 | U256 | Bool | MoveString | AccountAddress;
+// ============================================================================
+// TYPE SYSTEM - Single source of truth for all Move types
+// ============================================================================
 
-class NestedVector3 {
-  inner: AptosArgType[][][];
+interface TypeConfig {
+  // SDK class constructor for deserialization
+  sdkClass: any;
 
-  constructor(inner: AptosArgType[][][]) {
-    this.inner = inner;
-  }
+  // How to normalize the deserialized value to JS primitive
+  normalize: (value: any) => any;
 
-  static deserialize(deserializer: Deserializer, argType: string): NestedVector3 {
-    const typeMap: Record<string, { new (value: any): AptosArgType }> = {
-      U8: U8,
-      U16: U16,
-      U32: U32,
-      U64: U64,
-      U128: U128,
-      U256: U256,
-      Bool: Bool,
-      AccountAddress: AccountAddress,
-      MoveString: MoveString,
-    };
-
-    const TypeConstructor = typeMap[argType];
-    if (!TypeConstructor) throw new Error(`Unsupported type: ${argType}`);
-
-    const outsideLength = deserializer.deserializeUleb128AsU32();
-    const outside: AptosArgType[][][] = [];
-    for (let i = 0; i < outsideLength; i++) {
-      const innerLength = deserializer.deserializeUleb128AsU32();
-      const inner: AptosArgType[][] = [];
-      for (let j = 0; j < innerLength; j++) {
-        // @ts-ignore
-        inner.push(MoveVector.deserialize(deserializer, TypeConstructor).values);
-      }
-      outside.push(inner);
-    }
-
-    return new NestedVector3(outside);
-  }
+  // How to encode a JS primitive back to SDK class
+  encode: (value: any) => any;
 }
 
-class NestedVector2 {
-  inner: AptosArgType[][];
+const TYPE_REGISTRY: Record<string, TypeConfig> = {
+  u8: {
+    sdkClass: U8,
+    normalize: (v: U8) => v.value,
+    encode: (v: number) => new U8(v),
+  },
+  u16: {
+    sdkClass: U16,
+    normalize: (v: U16) => v.value,
+    encode: (v: number) => new U16(v),
+  },
+  u32: {
+    sdkClass: U32,
+    normalize: (v: U32) => v.value,
+    encode: (v: number) => new U32(v),
+  },
+  u64: {
+    sdkClass: U64,
+    normalize: (v: U64) => v.value, // bigint
+    encode: (v: bigint) => new U64(v),
+  },
+  u128: {
+    sdkClass: U128,
+    normalize: (v: U128) => v.value,
+    encode: (v: bigint) => new U128(v),
+  },
+  u256: {
+    sdkClass: U256,
+    normalize: (v: U256) => v.value,
+    encode: (v: bigint) => new U256(v),
+  },
+  bool: {
+    sdkClass: Bool,
+    normalize: (v: Bool) => v.value,
+    encode: (v: boolean) => new Bool(v),
+  },
+  address: {
+    sdkClass: AccountAddress,
+    normalize: (v: AccountAddress) => v.toString(),
+    encode: (v: string) => AccountAddress.from(v),
+  },
+  '0x1::string::String': {
+    sdkClass: MoveString,
+    normalize: (v: MoveString) => v.value,
+    encode: (v: string) => new MoveString(v),
+  },
+};
 
-  constructor(inner: AptosArgType[][]) {
-    this.inner = inner;
+// ============================================================================
+// TYPE INTROSPECTION - Understanding TypeTag structure
+// ============================================================================
+
+function isVectorType(typeTag: TypeTag): boolean {
+  return (
+    'value' in typeTag &&
+    typeTag.toString().startsWith('vector<') &&
+    !('moduleName' in (typeTag.value as any))
+  );
+}
+
+function isStructType(typeTag: TypeTag): boolean {
+  return 'value' in typeTag && 'moduleName' in (typeTag.value as any);
+}
+
+function getInnerType(vectorTag: TypeTag): TypeTag {
+  if (!isVectorType(vectorTag)) {
+    throw new Error(`Not a vector type: ${vectorTag.toString()}`);
+  }
+  return (vectorTag as any).value;
+}
+
+interface StructInfo {
+  address: string;
+  module: string;
+  name: string;
+  typeArgs: TypeTag[];
+  fullName: string;
+}
+
+function getStructInfo(structTag: TypeTag): StructInfo {
+  if (!isStructType(structTag)) {
+    throw new Error(`Not a struct type: ${structTag.toString()}`);
   }
 
-  static deserialize(deserializer: Deserializer, argType: string): NestedVector2 {
-    const typeMap: Record<string, { new (value: any): AptosArgType }> = {
-      U8: U8,
-      U16: U16,
-      U32: U32,
-      U64: U64,
-      U128: U128,
-      U256: U256,
-      Bool: Bool,
-      AccountAddress: AccountAddress,
-      MoveString: MoveString,
-    };
+  const value = (structTag as any).value;
+  const address = value.address.toString();
+  const module = value.moduleName.identifier;
+  const name = value.name.identifier;
+  const fullName = `${address}::${module}::${name}`;
 
-    const TypeConstructor = typeMap[argType];
-    if (!TypeConstructor) throw new Error(`Unsupported type: ${argType}`);
+  return {
+    address,
+    module,
+    name,
+    typeArgs: value.typeArgs || [],
+    fullName,
+  };
+}
 
+// ============================================================================
+// RECURSIVE DECODER - Main decoding logic
+// ============================================================================
+
+export function decodeArg(
+  typeTag: TypeTag,
+  arg: EntryFunctionArgument
+): SimpleEntryFunctionArgumentTypes {
+  const deserializer = new Deserializer(arg.bcsToBytes());
+  return decodeWithDeserializer(typeTag, deserializer);
+}
+
+function decodeWithDeserializer(typeTag: TypeTag, deserializer: Deserializer): any {
+  const typeStr = typeTag.toString();
+
+  // 1. Handle vectors recursively
+  if (isVectorType(typeTag)) {
+    return decodeVector(typeTag, deserializer);
+  }
+
+  // 2. Handle structs (string, option, object)
+  if (isStructType(typeTag)) {
+    return decodeStruct(typeTag, deserializer);
+  }
+
+  // 3. Handle primitives
+  const config = TYPE_REGISTRY[typeStr];
+  if (!config) {
+    throw new Error(`[decodeArg] Unsupported type: ${typeStr}`);
+  }
+
+  const sdkValue = config.sdkClass.deserialize(deserializer);
+  return config.normalize(sdkValue);
+}
+
+function decodeVector(vectorTag: TypeTag, deserializer: Deserializer): any {
+  const innerTag = getInnerType(vectorTag);
+  const innerTypeStr = innerTag.toString();
+
+  // Special case: vector<u8> should be Uint8Array, not array of numbers
+  if (innerTypeStr === 'u8') {
+    const vector = MoveVector.deserialize(deserializer, U8);
+    const bytes = vector.values.map((u: U8) => u.value);
+    return Uint8Array.from(bytes);
+  }
+
+  // Get config for simple types
+  const config = TYPE_REGISTRY[innerTypeStr];
+
+  if (config) {
+    // Simple type vector - deserialize and normalize each element
+    const vector = MoveVector.deserialize(deserializer, config.sdkClass);
+    return vector.values.map(config.normalize);
+  }
+
+  // Recursive case: vector of vectors
+  if (isVectorType(innerTag)) {
     const length = deserializer.deserializeUleb128AsU32();
-    const inner: AptosArgType[][] = [];
-    for (let j = 0; j < length; j++) {
-      // @ts-ignore
-      inner.push(MoveVector.deserialize(deserializer, TypeConstructor).values);
+    const result = [];
+    for (let i = 0; i < length; i++) {
+      result.push(decodeVector(innerTag, deserializer));
+    }
+    return result;
+  }
+
+  // Recursive case: vector of structs
+  if (isStructType(innerTag)) {
+    const structInfo = getStructInfo(innerTag);
+
+    // Handle vector<0x1::string::String>
+    if (structInfo.fullName === '0x1::string::String') {
+      const vector = MoveVector.deserialize(deserializer, MoveString);
+      return vector.values.map((s: MoveString) => s.value);
     }
 
-    return new NestedVector2(inner);
+    // Handle vector<0x1::object::Object<T>>
+    if (structInfo.module === 'object' && structInfo.name === 'Object') {
+      const vector = MoveVector.deserialize(deserializer, AccountAddress);
+      return vector.values.map((addr: AccountAddress) => addr.toString());
+    }
+
+    // Handle vector<0x1::option::Option<T>>
+    if (structInfo.module === 'option' && structInfo.name === 'Option') {
+      const length = deserializer.deserializeUleb128AsU32();
+      const result = [];
+      for (let i = 0; i < length; i++) {
+        result.push(decodeOption(innerTag, deserializer));
+      }
+      return result;
+    }
+
+    throw new Error(`[decodeVector] Unsupported struct type in vector: ${structInfo.fullName}`);
   }
+
+  throw new Error(`[decodeVector] Unsupported vector inner type: ${innerTypeStr}`);
 }
+
+function decodeStruct(structTag: TypeTag, deserializer: Deserializer): any {
+  const structInfo = getStructInfo(structTag);
+
+  // Handle 0x1::string::String
+  if (structInfo.fullName === '0x1::string::String') {
+    const str = MoveString.deserialize(deserializer);
+    return str.value;
+  }
+
+  // Handle 0x1::option::Option<T>
+  if (structInfo.module === 'option' && structInfo.name === 'Option') {
+    return decodeOption(structTag, deserializer);
+  }
+
+  // Handle 0x1::object::Object<T> (treated as address)
+  if (structInfo.module === 'object' && structInfo.name === 'Object') {
+    const addr = AccountAddress.deserialize(deserializer);
+    return addr.toString();
+  }
+
+  throw new Error(`[decodeStruct] Unsupported struct: ${structInfo.fullName}`);
+}
+
+function decodeOption(optionTag: TypeTag, deserializer: Deserializer): any | undefined {
+  const structInfo = getStructInfo(optionTag);
+
+  if (structInfo.typeArgs.length !== 1) {
+    throw new Error(
+      `[decodeOption] Option must have exactly 1 type arg, got ${structInfo.typeArgs.length}`
+    );
+  }
+
+  const innerTag = structInfo.typeArgs[0];
+  const innerTypeStr = innerTag.toString();
+
+  // Handle Option<address> - special case since AccountAddress doesn't have .value
+  if (innerTypeStr === 'address' || innerTypeStr.startsWith('0x1::object::Object')) {
+    const option = MoveOption.deserialize(deserializer, AccountAddress);
+    if (!option.isSome()) {
+      return undefined;
+    }
+    const unwrapped = option.unwrap() as AccountAddress;
+    return unwrapped.toString();
+  }
+
+  const config = TYPE_REGISTRY[innerTypeStr];
+  if (!config) {
+    throw new Error(`[decodeOption] Unsupported Option inner type: ${innerTypeStr}`);
+  }
+
+  const option = MoveOption.deserialize(deserializer, config.sdkClass);
+
+  if (!option.isSome()) {
+    return undefined;
+  }
+
+  const unwrapped = option.unwrap();
+  return config.normalize(unwrapped);
+}
+
+// ============================================================================
+// RECURSIVE ENCODER - Mirror of decoder for symmetry
+// ============================================================================
+
+export function encodeArg(typeStr: string, value: any): EntryFunctionArgument {
+  const typeTag = parseTypeTag(typeStr, { allowGenerics: false });
+  return encodeWithTypeTag(typeTag, value);
+}
+
+function encodeWithTypeTag(typeTag: TypeTag, value: any): EntryFunctionArgument {
+  const typeStr = typeTag.toString();
+
+  // 1. Handle vectors
+  if (isVectorType(typeTag)) {
+    return encodeVector(typeTag, value);
+  }
+
+  // 2. Handle structs
+  if (isStructType(typeTag)) {
+    return encodeStruct(typeTag, value);
+  }
+
+  // 3. Handle primitives
+  const config = TYPE_REGISTRY[typeStr];
+  if (!config) {
+    throw new Error(`[encodeArg] Unsupported type: ${typeStr}`);
+  }
+
+  return config.encode(value);
+}
+
+function encodeVector(vectorTag: TypeTag, values: any): EntryFunctionArgument {
+  const innerTag = getInnerType(vectorTag);
+  const innerTypeStr = innerTag.toString();
+
+  // Special case: Uint8Array or hex string → vector<u8>
+  if (innerTypeStr === 'u8') {
+    let bytes: number[];
+
+    if (values instanceof Uint8Array) {
+      bytes = Array.from(values);
+    } else if (typeof values === 'string' && values.startsWith('0x')) {
+      // Convert hex to bytes
+      const hex = values.slice(2);
+      bytes = hex.match(/.{2}/g)?.map((b) => parseInt(b, 16)) || [];
+    } else {
+      throw new Error(
+        `[encodeVector] vector<u8> must be Uint8Array or hex string, got ${typeof values}`
+      );
+    }
+
+    return new MoveVector(bytes.map((b) => new U8(b)));
+  }
+
+  if (!Array.isArray(values)) {
+    throw new Error(`[encodeVector] Expected array for vector type, got ${typeof values}`);
+  }
+
+  // Get config for simple types
+  const config = TYPE_REGISTRY[innerTypeStr];
+
+  if (config) {
+    // Simple type vector
+    const encoded = values.map(config.encode);
+    return new MoveVector(encoded);
+  }
+
+  // Recursive: vector of vectors or vector of structs
+  if (isVectorType(innerTag)) {
+    // Manually serialize nested vectors
+    const serializer = new Serializer();
+    serializer.serializeU32AsUleb128(values.length);
+    for (const innerValue of values) {
+      const encoded = encodeVector(innerTag, innerValue);
+      // Append the inner vector's bytes directly without an extra length prefix
+      // Each inner vector already contains its own length field
+      const innerBytes = encoded.bcsToBytes();
+      serializer.serializeFixedBytes(innerBytes);
+    }
+
+    return {
+      bcsToBytes: () => serializer.toUint8Array(),
+    } as EntryFunctionArgument;
+  }
+
+  if (isStructType(innerTag)) {
+    const encoded = values.map((v) => encodeStruct(innerTag, v)) as any[];
+    return new MoveVector(encoded);
+  }
+
+  throw new Error(`[encodeVector] Unsupported vector inner type: ${innerTypeStr}`);
+}
+
+function encodeStruct(structTag: TypeTag, value: any): EntryFunctionArgument {
+  const structInfo = getStructInfo(structTag);
+
+  // Handle 0x1::string::String
+  if (structInfo.fullName === '0x1::string::String') {
+    return new MoveString(value);
+  }
+
+  // Handle 0x1::object::Object<T>
+  if (structInfo.module === 'object' && structInfo.name === 'Object') {
+    return AccountAddress.from(value);
+  }
+
+  // Handle 0x1::option::Option<T>
+  if (structInfo.module === 'option' && structInfo.name === 'Option') {
+    if (structInfo.typeArgs.length !== 1) {
+      throw new Error(`[encodeStruct] Option must have exactly 1 type arg`);
+    }
+
+    const innerTag = structInfo.typeArgs[0];
+    const innerTypeStr = innerTag.toString();
+
+    // Handle Option<address>
+    if (innerTypeStr === 'address' || innerTypeStr.startsWith('0x1::object::Object')) {
+      if (value === undefined || value === null) {
+        return new MoveOption();
+      }
+      return new MoveOption(AccountAddress.from(value));
+    }
+
+    const config = TYPE_REGISTRY[innerTypeStr];
+    if (!config) {
+      throw new Error(`[encodeStruct] Unsupported Option inner type: ${innerTypeStr}`);
+    }
+
+    if (value === undefined || value === null) {
+      return new MoveOption();
+    }
+
+    return new MoveOption(config.encode(value));
+  }
+
+  throw new Error(`[encodeStruct] Unsupported struct: ${structInfo.fullName}`);
+}
+
+// ============================================================================
+// PUBLIC API - Used by the rest of the application
+// ============================================================================
 
 export async function decode(
   aptos: Aptos,
@@ -146,7 +485,7 @@ export async function encode(
   const typeArgsTT = typeArgs.map((typeArg) => parseTypeTag(typeArg, { allowGenerics: false }));
   const abi = await fetchEntryFunctionAbi(packageAddress, packageName, functionName, aptos.config);
   const functionArgs = abi.parameters.map((typeTag, i) => {
-    return encodeArg(typeTag, args[i]);
+    return encodeWithTypeTag(typeTag, args[i]);
   });
   const entryFunction = new EntryFunction(
     ModuleId.fromStr(`${packageAddress}::${packageName}`),
@@ -155,143 +494,4 @@ export async function encode(
     functionArgs
   );
   return new MultiSigTransactionPayload(entryFunction);
-}
-
-function decodeArg(typeTag: TypeTag, arg: EntryFunctionArgument): SimpleEntryFunctionArgumentTypes {
-  const typeMap: Record<string, any> = {
-    u8: U8,
-    u16: U16,
-    u32: U32,
-    u64: U64,
-    u128: U128,
-    u256: U256,
-    bool: Bool,
-    address: AccountAddress,
-    '0x1::string::String': MoveString,
-  };
-
-  const nestedVector1Map: Record<string, any> = {
-    'vector<u8>': U8,
-    'vector<u16>': U16,
-    'vector<u32>': U32,
-    'vector<u64>': U64,
-    'vector<u128>': U128,
-    'vector<u256>': U256,
-    'vector<bool>': Bool,
-    'vector<address>': AccountAddress,
-    'vector<0x1::string::String>': MoveString,
-    'vector<0x1::object::Object>': AccountAddress,
-    'vector<0x1::object::Object<0x1::fungible_asset::Metadata>>': AccountAddress,
-    'vector<0x1::object::Object<0x6a01d5761d43a5b5a0ccbfc42edf2d02c0611464aae99a2ea0e0d4819f0550b5::lending::Market>>':
-      AccountAddress,
-  };
-
-  const nestedVector2Map: Record<string, string> = {
-    'vector<vector<u8>>': 'U8',
-    'vector<vector<u16>>': 'U16',
-    'vector<vector<u32>>': 'U32',
-    'vector<vector<u64>>': 'U64',
-    'vector<vector<u128>>': 'U128',
-    'vector<vector<u256>>': 'U256',
-    'vector<vector<bool>>': 'Bool',
-    'vector<vector<address>>': 'AccountAddress',
-  };
-
-  const nestedVector3Map: Record<string, string> = {
-    'vector<vector<vector<u8>>>': 'U8',
-    'vector<vector<vector<u16>>>': 'U16',
-    'vector<vector<vector<u32>>>': 'U32',
-    'vector<vector<vector<u64>>>': 'U64',
-    'vector<vector<vector<u128>>>': 'U128',
-    'vector<vector<vector<u256>>>': 'U256',
-    'vector<vector<vector<bool>>>': 'Bool',
-    'vector<vector<vector<address>>>': 'AccountAddress',
-  };
-
-  const tt = typeTag.toString();
-  const deserializer = new Deserializer(arg.bcsToBytes());
-
-  // Check address types first, before typeMap, since AccountAddress doesn't have .value
-  if (tt == 'address' || tt.startsWith('0x1::object::Object')) {
-    return AccountAddress.deserialize(deserializer).toString();
-  }
-
-  if (tt in typeMap) {
-    return typeMap[tt].deserialize(deserializer).value;
-  }
-
-  if (tt.startsWith('0x1::option::Option')) {
-    // Extract inner type from "0x1::option::Option<TYPE>"
-    const match = tt.match(/0x1::option::Option<(.+)>/);
-    if (!match) {
-      throw new Error(`[decodeArg] Invalid Option type: ${tt}`);
-    }
-
-    const innerType = match[1];
-    const TypeConstructor = typeMap[innerType];
-
-    if (!TypeConstructor) {
-      throw new Error(`[decodeArg] Unsupported Option inner type: ${innerType}`);
-    }
-
-    const bytes = arg.bcsToBytes();
-    const optionDeserializer = new Deserializer(bytes);
-    const option = MoveOption.deserialize(optionDeserializer, TypeConstructor);
-
-    if (option.isSome()) {
-      const unwrapped = option.unwrap();
-      // For AccountAddress, call toString(); for primitives, access .value
-      if (unwrapped instanceof AccountAddress) {
-        return unwrapped.toString();
-      }
-      // @ts-ignore
-      return unwrapped.value;
-    }
-
-    return undefined;
-  }
-
-  if (tt in nestedVector1Map) {
-    // @ts-ignore
-    return MoveVector.deserialize(deserializer, nestedVector1Map[tt]).values;
-  }
-
-  if (tt in nestedVector2Map) {
-    return NestedVector2.deserialize(deserializer, nestedVector2Map[tt]).inner;
-  }
-
-  if (tt in nestedVector3Map) {
-    return NestedVector3.deserialize(deserializer, nestedVector3Map[tt]).inner;
-  }
-
-  throw new Error(`[decodeArg] Unsupported type tag: ${typeTag}`);
-}
-
-function encodeArg(typeTag: TypeTag, arg: SimpleEntryFunctionArgumentTypes): EntryFunctionArgument {
-  const tt = typeTag.toString();
-  if (tt === 'u8') {
-    return new U8(arg as number);
-  }
-  if (tt === 'u16') {
-    return new U16(arg as number);
-  }
-  if (tt === 'u32') {
-    return new U32(arg as number);
-  }
-  if (tt === 'u64') {
-    return new U64(arg as bigint);
-  }
-  if (tt === 'u128') {
-    return new U128(arg as bigint);
-  }
-  if (tt === 'u256') {
-    return new U256(arg as bigint);
-  }
-  if (tt === 'bool') {
-    return new Bool(arg as boolean);
-  }
-  if (tt === 'address') {
-    return AccountAddress.from(arg as string);
-  }
-  throw new Error(`[encodeArg] Unsupported type tag: ${tt}`);
 }

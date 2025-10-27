@@ -9,6 +9,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "vitest",
+    "test:run": "vitest run",
     "format": "prettier --write \"**/*.{js,ts,json,md}\" --ignore-path .gitignore",
     "docgen": "node dist/index.js docgen -o docs.md",
     "release:changeset": "pnpm changeset",
@@ -38,7 +40,8 @@
     "husky": "^9.1.7",
     "prettier": "^3.4.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "2.1.8"
   },
   "overrides": {
     "ansi-styles": "6.2.1",
