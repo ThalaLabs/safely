@@ -532,6 +532,27 @@ describe('Parser - Round-trip Tests (Encode → Decode)', () => {
 
     expect(decoded).toBeUndefined();
   });
+
+  it('should round-trip vector<vector<u64>>', () => {
+    const value = [[100n, 200n], [300n], [400n, 500n, 600n]];
+    const encoded = encodeArg('vector<vector<u64>>', value);
+    const typeTag = parseTypeTag('vector<vector<u64>>', { allowGenerics: false });
+    const decoded = decodeArg(typeTag, encoded);
+
+    expect(decoded).toEqual(value);
+  });
+
+  it('should round-trip vector<vector<u8>>', () => {
+    const value = [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5]), new Uint8Array([6, 7, 8, 9])];
+    const encoded = encodeArg('vector<vector<u8>>', value);
+    const typeTag = parseTypeTag('vector<vector<u8>>', { allowGenerics: false });
+    const decoded = decodeArg(typeTag, encoded) as Uint8Array[];
+
+    expect(decoded).toHaveLength(3);
+    expect(Array.from(decoded[0])).toEqual([1, 2, 3]);
+    expect(Array.from(decoded[1])).toEqual([4, 5]);
+    expect(Array.from(decoded[2])).toEqual([6, 7, 8, 9]);
+  });
 });
 
 describe('Parser - Error Cases', () => {

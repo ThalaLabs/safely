@@ -374,9 +374,10 @@ function encodeVector(vectorTag: TypeTag, values: any): EntryFunctionArgument {
     serializer.serializeU32AsUleb128(values.length);
     for (const innerValue of values) {
       const encoded = encodeVector(innerTag, innerValue);
-      // Serialize the inner vector's bytes
+      // Append the inner vector's bytes directly without an extra length prefix
+      // Each inner vector already contains its own length field
       const innerBytes = encoded.bcsToBytes();
-      serializer.serializeBytes(innerBytes);
+      serializer.serializeFixedBytes(innerBytes);
     }
 
     return {
