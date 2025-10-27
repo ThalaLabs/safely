@@ -239,8 +239,8 @@ export async function getBalanceChangesData(
  * Safely stringify objects with BigInt support and vector<u8> conversion to hex.
  * This function handles special cases for Aptos transaction payloads:
  * - Converts BigInt to string
- * - Converts vector<u8> (array of U8 objects) to hex string
- * - Converts vector<vector<u8>> to array of hex strings
+ * - Converts vector<u8> (Uint8Array) to hex string
+ * - Converts vector<vector<u8>> (array of Uint8Array) to array of hex strings
  */
 export function safeStringify(obj: unknown, indent: number): string {
   return JSON.stringify(
@@ -250,48 +250,29 @@ export function safeStringify(obj: unknown, indent: number): string {
         return value.toString();
       }
 
-      // Handle vector<u8> which comes as array of U8 objects
-      if (Array.isArray(value) && value.length > 0) {
-        // Check if this is an array of U8-like objects (objects with only a 'value' property that's a number)
-        const isU8Array = value.every(
-          (item) =>
-            typeof item === 'object' &&
-            item !== null &&
-            'value' in item &&
-            typeof item.value === 'number' &&
-            Object.keys(item).length === 1
+      // Handle vector<u8> which comes as Uint8Array
+      if (value instanceof Uint8Array) {
+        return (
+          '0x' +
+          Array.from(value)
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')
         );
+      }
 
-        if (isU8Array) {
-          // Convert array of U8 objects to hex string
-          const bytes = value.map((item: any) => item.value);
-          const hexString =
-            '0x' + bytes.map((b: number) => b.toString(16).padStart(2, '0')).join('');
-          return hexString;
-        }
-
-        // Handle vector<vector<u8>> - array of arrays of U8 objects
-        const isNestedU8Array = value.every(
-          (subArray) =>
-            Array.isArray(subArray) &&
-            subArray.length > 0 &&
-            subArray.every(
-              (item) =>
-                typeof item === 'object' &&
-                item !== null &&
-                'value' in item &&
-                typeof item.value === 'number' &&
-                Object.keys(item).length === 1
-            )
+      // Handle vector<vector<u8>> - array of Uint8Array
+      if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        value.every((item) => item instanceof Uint8Array)
+      ) {
+        return value.map(
+          (uint8Array) =>
+            '0x' +
+            Array.from(uint8Array)
+              .map((b) => b.toString(16).padStart(2, '0'))
+              .join('')
         );
-
-        if (isNestedU8Array) {
-          // Convert each inner array to hex string
-          return value.map((subArray: any[]) => {
-            const bytes = subArray.map((item: any) => item.value);
-            return '0x' + bytes.map((b: number) => b.toString(16).padStart(2, '0')).join('');
-          });
-        }
       }
 
       return value;
