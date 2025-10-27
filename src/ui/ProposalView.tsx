@@ -542,6 +542,9 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
       <Box borderStyle="single" paddingX={1}>
         <Box flexDirection="column">
           <Text bold>Details</Text>
+          {proposal.payload && (
+            <Text>Contract: <AddressLink address={proposal.payload.function.split('::')[0]} network={network} /></Text>
+          )}
           <Text>Created: {createdDateString}</Text>
           <Text>Creator: <AddressLink address={proposal.creator} network={network} /></Text>
         </Box>
