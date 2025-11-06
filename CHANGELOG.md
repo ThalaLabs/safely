@@ -1,5 +1,13 @@
 # @thalalabs/safely
 
+## 0.4.2
+
+### Patch Changes
+
+- e4cc82c: add Contract field to txn detail
+- 2403567: refactor parser
+- 18db2b9: fix a bug
+
 ## 0.4.1
 
 ### Patch Changes
