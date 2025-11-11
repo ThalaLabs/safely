@@ -11,8 +11,7 @@ import {
 import {
   getBalanceChangesData,
   BalanceChange,
-  isWriteSetChangeWriteResource,
-  safeStringify
+  isWriteSetChangeWriteResource
 } from '../utils.js';
 import { InputEntryFunctionData } from '@aptos-labs/ts-sdk';
 import { initAptos, getExplorerUrl } from '../utils.js';
@@ -23,6 +22,7 @@ import { loadProfile } from '../profiles.js';
 import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
 import SharedHeader from './SharedHeader.js';
 import AddressLink from './AddressLink.js';
+import PayloadRenderer from './PayloadRenderer.js';
 
 // Helper function to truncate address uniformly
 function truncateAddress(address: string): string {
@@ -518,12 +518,6 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
   proposal,
   network
 }) => {
-  // Memoize heavy computations
-  const payloadString = useMemo(() =>
-    proposal.payload ? safeStringify(proposal.payload, 2) : null,
-    [proposal.payload]
-  );
-
   const createdDateString = useMemo(() =>
     new Date(proposal.createdAt).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -577,7 +571,11 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
         <Box flexDirection="column">
           <Text bold>Payload</Text>
           <Box paddingTop={1}>
-            <Text>{payloadString}</Text>
+            {proposal.payload ? (
+              <PayloadRenderer payload={proposal.payload} network={network} />
+            ) : (
+              <Text dimColor>No payload data</Text>
+            )}
           </Box>
         </Box>
       </Box>
