@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.4.3
+
+### Patch Changes
+
+- b2b482d: render txn payload with address link
+
 ## 0.4.2
 
 ### Patch Changes
