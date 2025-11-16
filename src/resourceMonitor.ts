@@ -30,7 +30,7 @@ export function loadMonitoredResources(): string[] {
   try {
     const data = fs.readFileSync(MONITORED_RESOURCES_FILE, 'utf8');
     const lines = data.split('\n');
-    
+
     return lines
       .map((line) => line.trim())
       .filter((line) => line.length > 0 && !line.startsWith('#')); // Ignore empty lines and comments
@@ -75,7 +75,7 @@ export async function getMonitoredResourceChanges(
         const alreadyAdded = monitoredChanges.some(
           (mc) => mc.address === change.address && mc.resourceType === resourceType
         );
-        
+
         if (!alreadyAdded) {
           // Try to fetch the current (before) state if aptos client is provided
           let beforeData: unknown | null = null;
@@ -89,7 +89,10 @@ export async function getMonitoredResourceChanges(
             } catch (error) {
               // Resource might not exist yet (new resource), or there was an error fetching it
               // beforeData remains null
-              console.debug(`Could not fetch before state for ${resourceType} at ${change.address}:`, error);
+              console.debug(
+                `Could not fetch before state for ${resourceType} at ${change.address}:`,
+                error
+              );
             }
           }
 
@@ -112,7 +115,9 @@ export async function getMonitoredResourceChanges(
  * Prompt user for confirmation when affected resources are detected
  * Throws an error if confirmation fails or is cancelled
  */
-export async function confirmAffectedResources(affectedResources: MonitoredResourceChange[]): Promise<void> {
+export async function confirmAffectedResources(
+  affectedResources: MonitoredResourceChange[]
+): Promise<void> {
   if (affectedResources.length === 0) {
     return;
   }
@@ -120,11 +125,9 @@ export async function confirmAffectedResources(affectedResources: MonitoredResou
   // For each affected resource, prompt for confirmation
   for (const change of affectedResources) {
     console.log(
-      chalk.yellow(
-        `⚠️  WARNING: This transaction affects monitored resource ${change.resourceId}.`
-      )
+      chalk.yellow(`⚠️  WARNING: This transaction affects monitored resource ${change.resourceId}.`)
     );
-    
+
     try {
       const confirmation = await input({
         message: `If this is acceptable, please enter ${change.resourceId} as confirmation:`,
@@ -144,4 +147,3 @@ export async function confirmAffectedResources(affectedResources: MonitoredResou
     }
   }
 }
-
