@@ -13,6 +13,7 @@ import chalk from 'chalk';
 import LedgerSigner from './ledger/LedgerSigner.js';
 import { signAndSubmitTransaction } from './signing.js';
 import { decode } from './parser.js';
+import { getMonitoredResourceChanges, confirmAffectedResources } from './resourceMonitor.js';
 
 export async function proposeEntryFunction(
   aptos: Aptos,
@@ -65,6 +66,7 @@ export async function proposeEntryFunction(
 
   let simulationSuccess = false;
   let simulationError: string | null = null;
+  let simulationChanges: WriteSetChange[] = [];
 
   try {
     const [actualTxnSimulation] = await aptos.transaction.simulate.simple({
@@ -73,6 +75,7 @@ export async function proposeEntryFunction(
 
     if (actualTxnSimulation.success) {
       simulationSuccess = true;
+      simulationChanges = actualTxnSimulation.changes || [];
     } else {
       simulationError = `Transaction simulation failed: ${actualTxnSimulation.vm_status}`;
     }
@@ -83,6 +86,12 @@ export async function proposeEntryFunction(
   // Handle simulation result
   if (simulationSuccess) {
     console.log(chalk.green(`✓ Transaction simulation succeeded`));
+
+    // Check for monitored resources
+    const affectedResources = await getMonitoredResourceChanges(simulationChanges, aptos);
+    if (affectedResources.length > 0) {
+      await confirmAffectedResources(affectedResources);
+    }
   } else if (simulationError) {
     if (force) {
       console.log(chalk.yellow(`⚠️  ${simulationError}\n   Continuing due to --force flag`));
