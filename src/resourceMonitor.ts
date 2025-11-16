@@ -1,4 +1,4 @@
-import { WriteSetChange } from '@aptos-labs/ts-sdk';
+import { WriteSetChange, Aptos } from '@aptos-labs/ts-sdk';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -10,7 +10,8 @@ export interface MonitoredResourceChange {
   resourceId: string;
   address: string;
   resourceType: string;
-  data: unknown;
+  beforeData: unknown | null;
+  afterData: unknown;
 }
 
 // Monitored resources file: ~/.safely/monitored-resources.txt
@@ -49,9 +50,14 @@ export function getMonitoredResourcesFilePath(): string {
 
 /**
  * Get detailed information about monitored resource changes
- * Returns an array of MonitoredResourceChange objects with address, type, and data
+ * Returns an array of MonitoredResourceChange objects with address, type, before and after data
+ * @param changes - Simulation changes from the transaction
+ * @param aptos - Aptos client instance to query current resource state
  */
-export function getMonitoredResourceChanges(changes: WriteSetChange[]): MonitoredResourceChange[] {
+export async function getMonitoredResourceChanges(
+  changes: WriteSetChange[],
+  aptos?: Aptos
+): Promise<MonitoredResourceChange[]> {
   const monitoredResources = loadMonitoredResources();
   if (monitoredResources.length === 0) {
     return [];
@@ -71,11 +77,28 @@ export function getMonitoredResourceChanges(changes: WriteSetChange[]): Monitore
         );
         
         if (!alreadyAdded) {
+          // Try to fetch the current (before) state if aptos client is provided
+          let beforeData: unknown | null = null;
+          if (aptos) {
+            try {
+              const currentResource = await aptos.getAccountResource({
+                accountAddress: change.address,
+                resourceType: resourceType,
+              });
+              beforeData = currentResource;
+            } catch (error) {
+              // Resource might not exist yet (new resource), or there was an error fetching it
+              // beforeData remains null
+              console.debug(`Could not fetch before state for ${resourceType} at ${change.address}:`, error);
+            }
+          }
+
           monitoredChanges.push({
             resourceId: monitoredId,
             address: change.address,
             resourceType: resourceType,
-            data: change.data.data,
+            beforeData: beforeData,
+            afterData: change.data.data,
           });
         }
       }

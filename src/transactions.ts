@@ -88,7 +88,7 @@ export async function proposeEntryFunction(
     console.log(chalk.green(`✓ Transaction simulation succeeded`));
 
     // Check for monitored resources
-    const affectedResources = getMonitoredResourceChanges(simulationChanges);
+    const affectedResources = await getMonitoredResourceChanges(simulationChanges, aptos);
     if (affectedResources.length > 0) {
       await confirmAffectedResources(affectedResources);
     }

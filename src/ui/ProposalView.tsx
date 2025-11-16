@@ -216,7 +216,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           let affectedMonitoredResources: MonitoredResourceChange[] | undefined;
           if (txn.simulationChanges && txn.simulationSuccess) {
             try {
-              const changes = getMonitoredResourceChanges(txn.simulationChanges);
+              const changes = await getMonitoredResourceChanges(txn.simulationChanges, aptos);
               if (changes.length > 0) {
                 affectedMonitoredResources = changes;
               }
@@ -530,6 +530,71 @@ interface ProposalExpandedContentProps {
   network: string;
 }
 
+interface MonitoredResourceWarningProps {
+  changes: MonitoredResourceChange[];
+}
+
+// Helper function to truncate JSON strings
+const truncateString = (str: string, maxLines: number): string => {
+  const lines = str.split('\n');
+  const truncated = lines.slice(0, maxLines);
+  return truncated.join('\n') + (lines.length > maxLines ? '\n  ...' : '');
+};
+
+// Helper component for displaying resource state
+const ResourceStateDisplay: React.FC<{ label: string; data: string }> = ({ label, data }) => (
+  <>
+    <Text dimColor>{label}:</Text>
+    <Box paddingLeft={2}>
+      <Text dimColor>{truncateString(data, 10)}</Text>
+    </Box>
+  </>
+);
+
+// Component for a single resource change
+const ResourceChangeItem: React.FC<{ change: MonitoredResourceChange; isFirst: boolean }> = ({
+  change,
+  isFirst,
+}) => {
+  const beforeStr = change.beforeData ? safeStringify(change.beforeData, 2) : null;
+  const afterStr = safeStringify(change.afterData, 2);
+
+  return (
+    <Box flexDirection="column" marginTop={isFirst ? 0 : 1}>
+      <Text color="yellow">Resource: {change.resourceType}</Text>
+      <Text dimColor>Address: {change.address}</Text>
+      {change.beforeData !== null ? (
+        <>
+          <ResourceStateDisplay label="Before" data={beforeStr!} />
+          <ResourceStateDisplay label="After" data={afterStr} />
+        </>
+      ) : (
+        <ResourceStateDisplay label="New State (resource doesn't exist yet)" data={afterStr} />
+      )}
+    </Box>
+  );
+};
+
+const MonitoredResourceWarning: React.FC<MonitoredResourceWarningProps> = ({ changes }) => {
+  if (!changes || changes.length === 0) return null;
+
+  return (
+    <>
+      <Text></Text>
+      <Box borderStyle="single" borderColor="yellow" paddingX={1} paddingY={1}>
+        <Box flexDirection="column">
+          <Text bold color="yellow">
+            ⚠️  WARNING: Affects monitored resources. Please proceed with caution.
+          </Text>
+          {changes.map((change, i) => (
+            <ResourceChangeItem key={i} change={change} isFirst={i === 0} />
+          ))}
+        </Box>
+      </Box>
+    </>
+  );
+};
+
 // Separate component for expanded content - always shows fresh data when mounted
 const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
   proposal,
@@ -612,33 +677,7 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
             <Text color="red">VM Status: {proposal.simulationError}</Text>
           )}
 
-          {proposal.affectedMonitoredResources && proposal.affectedMonitoredResources.length > 0 && (
-            <>
-              <Text></Text>
-              <Box borderStyle="single" borderColor="yellow" paddingX={1} paddingY={1}>
-                <Box flexDirection="column">
-                  <Text bold color="yellow">
-                    ⚠️  WARNING: Affects monitored resources. Please proceed with caution.
-                  </Text>
-                  {proposal.affectedMonitoredResources.map((change, i) => {
-                    const dataStr = safeStringify(change.data, 2);
-                    const dataLines = dataStr.split('\n');
-                    const truncated = dataLines.slice(0, 10).join('\n') + (dataLines.length > 10 ? '\n  ...' : '');
-                    return (
-                      <Box key={i} flexDirection="column" marginTop={i > 0 ? 1 : 0}>
-                        <Text color="yellow">Resource: {change.resourceType}</Text>
-                        <Text dimColor>Address: {change.address}</Text>
-                        <Text dimColor>New State:</Text>
-                        <Box paddingLeft={2}>
-                          <Text dimColor>{truncated}</Text>
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Box>
-            </>
-          )}
+          <MonitoredResourceWarning changes={proposal.affectedMonitoredResources || []} />
 
           {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
             <>
