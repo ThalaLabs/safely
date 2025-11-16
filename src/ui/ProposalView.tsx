@@ -20,7 +20,8 @@ import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../profiles.js';
 import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
-import { checkForMonitoredResources } from '../resourceMonitor.js';
+import { getMonitoredResourceChanges, MonitoredResourceChange } from '../resourceMonitor.js';
+import { safeStringify } from '../utils.js';
 import SharedHeader from './SharedHeader.js';
 import AddressLink from './AddressLink.js';
 import PayloadRenderer from './PayloadRenderer.js';
@@ -67,7 +68,7 @@ interface ProposalData {
   simulationError?: string;
   balanceChanges?: BalanceChange[];
   moduleChanges?: ModuleChangesByAddress;
-  affectedMonitoredResources?: string[];
+  affectedMonitoredResources?: MonitoredResourceChange[];
   txn: MultisigTransactionDecoded;
   canExecute: boolean;
   canReject: boolean;
@@ -212,12 +213,12 @@ const ProposalView: React.FC<ProposalViewProps> = ({
           }
 
           // Check for monitored resources
-          let affectedMonitoredResources: string[] | undefined;
+          let affectedMonitoredResources: MonitoredResourceChange[] | undefined;
           if (txn.simulationChanges && txn.simulationSuccess) {
             try {
-              const affected = checkForMonitoredResources(txn.simulationChanges);
-              if (affected.length > 0) {
-                affectedMonitoredResources = affected;
+              const changes = getMonitoredResourceChanges(txn.simulationChanges);
+              if (changes.length > 0) {
+                affectedMonitoredResources = changes;
               }
             } catch (err) {
               console.debug('Could not check monitored resources:', err);
@@ -615,9 +616,26 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
             <>
               <Text></Text>
               <Box borderStyle="single" borderColor="yellow" paddingX={1} paddingY={1}>
-                <Text bold color="yellow">
-                  ⚠️  WARNING: Affects monitored resources: {proposal.affectedMonitoredResources.join(', ')}. Please proceed with caution.
-                </Text>
+                <Box flexDirection="column">
+                  <Text bold color="yellow">
+                    ⚠️  WARNING: Affects monitored resources. Please proceed with caution.
+                  </Text>
+                  {proposal.affectedMonitoredResources.map((change, i) => {
+                    const dataStr = safeStringify(change.data, 2);
+                    const dataLines = dataStr.split('\n');
+                    const truncated = dataLines.slice(0, 10).join('\n') + (dataLines.length > 10 ? '\n  ...' : '');
+                    return (
+                      <Box key={i} flexDirection="column" marginTop={i > 0 ? 1 : 0}>
+                        <Text color="yellow">Resource: {change.resourceType}</Text>
+                        <Text dimColor>Address: {change.address}</Text>
+                        <Text dimColor>New State:</Text>
+                        <Box paddingLeft={2}>
+                          <Text dimColor>{truncated}</Text>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
               </Box>
             </>
           )}

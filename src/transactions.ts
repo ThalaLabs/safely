@@ -13,7 +13,7 @@ import chalk from 'chalk';
 import LedgerSigner from './ledger/LedgerSigner.js';
 import { signAndSubmitTransaction } from './signing.js';
 import { decode } from './parser.js';
-import { checkForMonitoredResources, confirmAffectedResources } from './resourceMonitor.js';
+import { getMonitoredResourceChanges, confirmAffectedResources } from './resourceMonitor.js';
 
 export async function proposeEntryFunction(
   aptos: Aptos,
@@ -88,7 +88,7 @@ export async function proposeEntryFunction(
     console.log(chalk.green(`✓ Transaction simulation succeeded`));
 
     // Check for monitored resources
-    const affectedResources = checkForMonitoredResources(simulationChanges);
+    const affectedResources = getMonitoredResourceChanges(simulationChanges);
     if (affectedResources.length > 0) {
       await confirmAffectedResources(affectedResources);
     }

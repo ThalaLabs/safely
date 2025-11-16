@@ -6,6 +6,13 @@ import chalk from 'chalk';
 import { input } from '@inquirer/prompts';
 import { isWriteSetChangeWriteResource } from './utils.js';
 
+export interface MonitoredResourceChange {
+  resourceId: string;
+  address: string;
+  resourceType: string;
+  data: unknown;
+}
+
 // Monitored resources file: ~/.safely/monitored-resources.txt
 const MONITORED_RESOURCES_FILE = path.join(os.homedir(), '.safely', 'monitored-resources.txt');
 
@@ -41,59 +48,68 @@ export function getMonitoredResourcesFilePath(): string {
 }
 
 /**
- * Check if any of the simulation changes involve monitored resources
- * Returns an array of resource IDs that were found in the changes
+ * Get detailed information about monitored resource changes
+ * Returns an array of MonitoredResourceChange objects with address, type, and data
  */
-export function checkForMonitoredResources(changes: WriteSetChange[]): string[] {
+export function getMonitoredResourceChanges(changes: WriteSetChange[]): MonitoredResourceChange[] {
   const monitoredResources = loadMonitoredResources();
   if (monitoredResources.length === 0) {
     return [];
   }
 
-  const foundResources: string[] = [];
   const resourceChanges = changes.filter(isWriteSetChangeWriteResource);
+  const monitoredChanges: MonitoredResourceChange[] = [];
 
   for (const change of resourceChanges) {
     const resourceType = change.data.type;
     // Check if the resource type matches any monitored resource
-    // Support both exact match and partial match (if monitored resource is a prefix)
     for (const monitoredId of monitoredResources) {
       if (resourceType === monitoredId || resourceType.includes(monitoredId)) {
-        if (!foundResources.includes(monitoredId)) {
-          foundResources.push(monitoredId);
+        // Check if we've already added this resource change
+        const alreadyAdded = monitoredChanges.some(
+          (mc) => mc.address === change.address && mc.resourceType === resourceType
+        );
+        
+        if (!alreadyAdded) {
+          monitoredChanges.push({
+            resourceId: monitoredId,
+            address: change.address,
+            resourceType: resourceType,
+            data: change.data.data,
+          });
         }
       }
     }
   }
 
-  return foundResources;
+  return monitoredChanges;
 }
 
 /**
  * Prompt user for confirmation when affected resources are detected
  * Throws an error if confirmation fails or is cancelled
  */
-export async function confirmAffectedResources(affectedResources: string[]): Promise<void> {
+export async function confirmAffectedResources(affectedResources: MonitoredResourceChange[]): Promise<void> {
   if (affectedResources.length === 0) {
     return;
   }
 
   // For each affected resource, prompt for confirmation
-  for (const resourceId of affectedResources) {
+  for (const change of affectedResources) {
     console.log(
       chalk.yellow(
-        `⚠️  WARNING: This transaction affects monitored resource ${resourceId}.`
+        `⚠️  WARNING: This transaction affects monitored resource ${change.resourceId}.`
       )
     );
     
     try {
       const confirmation = await input({
-        message: `If this is acceptable, please enter ${resourceId} as confirmation:`,
+        message: `If this is acceptable, please enter ${change.resourceId} as confirmation:`,
       });
 
-      if (confirmation !== resourceId) {
+      if (confirmation !== change.resourceId) {
         throw new Error(
-          `Confirmation failed. Expected "${resourceId}" but got "${confirmation}". Transaction proposal cancelled.`
+          `Confirmation failed. Expected "${change.resourceId}" but got "${confirmation}". Transaction proposal cancelled.`
         );
       }
     } catch (error) {
