@@ -20,6 +20,7 @@ import { handleExecuteCommand } from '../commands/execute.js';
 import { handleVoteCommand } from '../commands/vote.js';
 import { loadProfile } from '../profiles.js';
 import { analyzeModuleChanges, ModuleChangesByAddress } from '../moduleAnalyzer.js';
+import { checkForMonitoredResources } from '../resourceMonitor.js';
 import SharedHeader from './SharedHeader.js';
 import AddressLink from './AddressLink.js';
 import PayloadRenderer from './PayloadRenderer.js';
@@ -66,6 +67,7 @@ interface ProposalData {
   simulationError?: string;
   balanceChanges?: BalanceChange[];
   moduleChanges?: ModuleChangesByAddress;
+  affectedMonitoredResources?: string[];
   txn: MultisigTransactionDecoded;
   canExecute: boolean;
   canReject: boolean;
@@ -209,6 +211,19 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             }
           }
 
+          // Check for monitored resources
+          let affectedMonitoredResources: string[] | undefined;
+          if (txn.simulationChanges && txn.simulationSuccess) {
+            try {
+              const affected = checkForMonitoredResources(txn.simulationChanges);
+              if (affected.length > 0) {
+                affectedMonitoredResources = affected;
+              }
+            } catch (err) {
+              console.debug('Could not check monitored resources:', err);
+            }
+          }
+
           // Get function display
           const functionDisplay = txn.payload_decoded.success
             ? formatFunctionId(txn.payload_decoded.data.function)
@@ -236,6 +251,7 @@ const ProposalView: React.FC<ProposalViewProps> = ({
             simulationError,
             balanceChanges,
             moduleChanges,
+            affectedMonitoredResources,
             txn,
             canExecute,
             canReject,
@@ -593,6 +609,17 @@ const ProposalExpandedContent: React.FC<ProposalExpandedContentProps> = ({
           </Text>
           {proposal.simulationError && (
             <Text color="red">VM Status: {proposal.simulationError}</Text>
+          )}
+
+          {proposal.affectedMonitoredResources && proposal.affectedMonitoredResources.length > 0 && (
+            <>
+              <Text></Text>
+              <Box borderStyle="single" borderColor="yellow" paddingX={1} paddingY={1}>
+                <Text bold color="yellow">
+                  ⚠️  WARNING: Affects monitored resources: {proposal.affectedMonitoredResources.join(', ')}. Please proceed with caution.
+                </Text>
+              </Box>
+            </>
           )}
 
           {proposal.balanceChanges && proposal.balanceChanges.length > 0 && (
