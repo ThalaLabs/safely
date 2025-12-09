@@ -20,6 +20,8 @@ export function getFullnodeUrl(network: NetworkChoice): string {
       return 'https://api.devnet.aptoslabs.com/v1';
     case 'movement-mainnet':
       return 'https://rpc.sentio.xyz/movement/v1';
+    case 'movement-previewnet':
+      return 'https://previewnet.devnet.movementnetwork.xyz/v1';
     case 'movement-testnet':
       return 'https://full.testnet.movementinfra.xyz/v1';
     default:
@@ -52,6 +54,9 @@ export function getExplorerUrl(network: NetworkChoice, path: string): string {
       case 'aptos-devnet':
         return 'devnet';
       case 'movement-mainnet':
+        return 'mainnet';
+      // TODO: remove this after movement previewnet ends
+      case 'movement-previewnet':
         return 'mainnet';
       case 'movement-testnet':
         return 'testnet';
