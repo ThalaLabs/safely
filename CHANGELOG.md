@@ -1,5 +1,11 @@
 # @thalalabs/safely
 
+## 0.4.5
+
+### Patch Changes
+
+- 768e4ed: fix movement previewnet support
+
 ## 0.4.4
 
 ### Patch Changes
