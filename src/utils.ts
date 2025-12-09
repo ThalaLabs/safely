@@ -20,6 +20,8 @@ export function getFullnodeUrl(network: NetworkChoice): string {
       return 'https://api.devnet.aptoslabs.com/v1';
     case 'movement-mainnet':
       return 'https://rpc.sentio.xyz/movement/v1';
+    case 'movement-previewnet':
+      return 'https://previewnet.devnet.movementnetwork.xyz/v1';
     case 'movement-testnet':
       return 'https://full.testnet.movementinfra.xyz/v1';
     default:
