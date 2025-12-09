@@ -1,5 +1,12 @@
 # @thalalabs/safely
 
+## 0.4.4
+
+### Patch Changes
+
+- 50afc1a: display resource change on monitored resources
+- b20414d: support movement previewnet
+
 ## 0.4.3
 
 ### Patch Changes
