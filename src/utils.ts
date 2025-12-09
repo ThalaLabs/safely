@@ -38,7 +38,7 @@ export function initAptos(network: NetworkChoice, fullnode?: string): Aptos {
 }
 
 export function getConfigPath(network: NetworkChoice): string {
-  if (network === 'movement-mainnet' || network === 'movement-testnet') {
+  if (network.startsWith('movement-')) {
     return '.movement/config.yaml';
   }
   return '.aptos/config.yaml';
@@ -65,7 +65,7 @@ export function getExplorerUrl(network: NetworkChoice, path: string): string {
     }
   })();
 
-  if (network === 'movement-mainnet' || network === 'movement-testnet') {
+  if (network.startsWith('movement-')) {
     return `https://explorer.movementlabs.xyz/${path}?network=${networkParam}`;
   }
 
