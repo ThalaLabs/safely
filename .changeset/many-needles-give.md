@@ -2,4 +2,4 @@
 '@thalalabs/safely': patch
 ---
 
-fix movement previewnet support
+fix small ui bug

@@ -116,7 +116,13 @@ Examples:
             }
           }
 
-          console.log(chalk.green(`\nSuccessfully proposed all ${payloads.length} transactions.`));
+          if (parentOptions.dryRun) {
+            console.log(chalk.green(`\nDry run complete for all ${payloads.length} transactions.`));
+          } else {
+            console.log(
+              chalk.green(`\nSuccessfully proposed all ${payloads.length} transactions.`)
+            );
+          }
         } else {
           // Single payload - use existing logic
           const entryFunction = parseEntryFunctionPayload(jsonContent);
