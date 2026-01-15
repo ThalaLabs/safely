@@ -1,7 +1,7 @@
 import { Command, Option } from 'commander';
 import { MoveFunctionId } from '@aptos-labs/ts-sdk';
 import { parseEntryFunctionPayload, isBatchPayload, parseBatchPayload } from '../entryFunction.js';
-import { resolvePayloadInput, initAptos } from '../utils.js';
+import { resolvePayloadInput, initAptos, getErrorMessage } from '../utils.js';
 import chalk from 'chalk';
 import { proposeEntryFunction } from '../transactions.js';
 import { validateAddress, validateAsset } from '../validators.js';
@@ -108,7 +108,7 @@ Examples:
             } catch (error) {
               console.error(
                 chalk.red(
-                  `\nTransaction ${i + 1}/${payloads.length} failed: ${(error as Error).message}`
+                  `\nTransaction ${i + 1}/${payloads.length} failed: ${getErrorMessage(error)}`
                 )
               );
               console.error(chalk.red('Stopping batch processing due to failure.'));
@@ -140,7 +140,7 @@ Examples:
           );
         }
       } catch (error) {
-        console.error(chalk.red(`Error: ${(error as Error).message}`));
+        console.error(chalk.red(`Error: ${getErrorMessage(error)}`));
         process.exit(1);
       }
     });
@@ -197,7 +197,7 @@ Examples:
             parentOptions.dryRun ?? false
           );
         } catch (error) {
-          console.error(chalk.red(`Error: ${(error as Error).message}`));
+          console.error(chalk.red(`Error: ${getErrorMessage(error)}`));
         }
       }
     );

@@ -241,6 +241,40 @@ export async function getBalanceChangesData(
 }
 
 /**
+ * Extract a useful error message from any error type.
+ * Handles standard Error objects, Aptos SDK errors, and other error formats.
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    // Check for nested error messages (common in Aptos SDK errors)
+    const anyError = error as {
+      data?: { message?: string };
+      response?: { body?: { message?: string } };
+    };
+    if (anyError.data?.message) {
+      return anyError.data.message;
+    }
+    if (anyError.response?.body?.message) {
+      return anyError.response.body.message;
+    }
+    if (error.message) {
+      return error.message;
+    }
+  }
+
+  // Try to stringify if it's an object
+  if (typeof error === 'object' && error !== null) {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+}
+
+/**
  * Safely stringify objects with BigInt support and vector<u8> conversion to hex.
  * This function handles special cases for Aptos transaction payloads:
  * - Converts BigInt to string
