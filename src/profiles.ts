@@ -38,8 +38,6 @@ function mapNetworkName(network: string, source: 'aptos' | 'movement'): NetworkC
         return 'movement-testnet';
       case 'mainnet':
         return 'movement-mainnet';
-      case 'previewnet':
-        return 'movement-previewnet';
       default:
         return null;
     }

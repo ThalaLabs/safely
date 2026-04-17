@@ -3,7 +3,6 @@ export const NETWORK_CHOICES = [
   'aptos-testnet',
   'aptos-mainnet',
   'movement-mainnet',
-  'movement-previewnet',
   'movement-testnet',
 ] as const;
 
